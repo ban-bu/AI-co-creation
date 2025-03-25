@@ -139,11 +139,55 @@ def match_background_to_shirt(design_image, shirt_image):
     design_image.putdata(newData)
     return design_image
 
+def apply_color_to_shirt(image, color_hex):
+    """给T恤应用新颜色
+    
+    Args:
+        image: 原始T恤图像
+        color_hex: 十六进制颜色代码，如 "#FFFFFF"
+        
+    Returns:
+        应用新颜色后的T恤图像
+    """
+    # 转换十六进制颜色为RGB
+    color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+    
+    # 创建副本避免修改原图
+    colored_image = image.copy().convert("RGBA")
+    
+    # 获取图像数据
+    data = colored_image.getdata()
+    
+    # 创建新数据
+    new_data = []
+    # 白色阈值 - 调整这个值可以控制哪些像素被视为白色/浅色并被改变
+    threshold = 200
+    
+    for item in data:
+        # 判断是否是白色/浅色区域 (RGB值都很高)
+        if item[0] > threshold and item[1] > threshold and item[2] > threshold and item[3] > 0:
+            # 保持原透明度，改变颜色
+            new_color = (color_rgb[0], color_rgb[1], color_rgb[2], item[3])
+            new_data.append(new_color)
+        else:
+            # 保持其他颜色不变
+            new_data.append(item)
+    
+    # 更新图像数据
+    colored_image.putdata(new_data)
+    return colored_image
+
 # AI Design Group design page
 def show_low_complexity_popup_sales():
     st.title("👕 AI Co-Creation Experiment Platform")
     st.markdown("### Low Task Complexity-Pop up Sales - Create Your Unique T-shirt Design")
     
+    # 初始化T恤颜色状态变量
+    if 'original_white_shirt' not in st.session_state:
+        st.session_state.original_white_shirt = None  # 保存原始白色T恤图像
+    if 'current_shirt_color' not in st.session_state:
+        st.session_state.current_shirt_color = "#FFFFFF"  # 默认白色
+        
     # 添加Pop-up Sales情境描述
     st.info("""
     **Pop-up Store Environment**
@@ -176,7 +220,13 @@ def show_low_complexity_popup_sales():
         # Load T-shirt base image
         if st.session_state.base_image is None:
             try:
+                # 加载原始白色T恤图像
                 base_image = Image.open("white_shirt.png").convert("RGBA")
+                # 保存原始白色T恤图像供后续颜色变化使用
+                st.session_state.original_white_shirt = base_image.copy()
+                # 应用当前选择的颜色（如果不是白色）
+                if st.session_state.current_shirt_color != "#FFFFFF":
+                    base_image = apply_color_to_shirt(base_image, st.session_state.current_shirt_color)
                 st.session_state.base_image = base_image
                 # Initialize by drawing selection box in the center
                 initial_image, initial_pos = draw_selection_box(base_image)
@@ -214,7 +264,54 @@ def show_low_complexity_popup_sales():
             # 简化设计选项 - 只保留主题和颜色选择
             theme = st.text_input("Design theme or keyword (required)", "Elegant pattern")
             
+            # 添加T恤颜色选择
+            st.markdown("### T-shirt Color")
+            shirt_color = st.color_picker("Choose your T-shirt color:", "#FFFFFF")
+            
+            # 如果颜色变化，更新T恤颜色
+            if "current_shirt_color" not in st.session_state:
+                st.session_state.current_shirt_color = "#FFFFFF"
+                
+            if st.session_state.current_shirt_color != shirt_color:
+                st.session_state.current_shirt_color = shirt_color
+                
+                # 重新给白色T恤上色
+                if st.session_state.base_image is not None:
+                    # 给T恤重新上色
+                    colored_shirt = apply_color_to_shirt(st.session_state.original_white_shirt.copy(), shirt_color)
+                    st.session_state.base_image = colored_shirt
+                    
+                    # 更新当前图像以反映选择框
+                    new_image, new_pos = draw_selection_box(colored_shirt, st.session_state.current_box_position)
+                    st.session_state.current_image = new_image
+                    st.session_state.current_box_position = new_pos
+                    
+                    # 如果已有最终设计，重新应用
+                    if st.session_state.final_design is not None:
+                        # 暂时保存生成的设计，并在有新的彩色T恤后重新应用
+                        if st.session_state.generated_design is not None:
+                            custom_design = st.session_state.generated_design
+                            composite_image = colored_shirt.copy()
+                            
+                            # 放置设计在当前选择位置
+                            left, top = st.session_state.current_box_position
+                            box_size = int(1024 * 0.25)
+                            
+                            # 缩放生成的图案到选择区域大小
+                            scaled_design = custom_design.resize((box_size, box_size), Image.LANCZOS)
+                            
+                            try:
+                                # 确保使用透明通道进行粘贴
+                                composite_image.paste(scaled_design, (left, top), scaled_design)
+                            except Exception as e:
+                                composite_image.paste(scaled_design, (left, top))
+                            
+                            st.session_state.final_design = composite_image
+                    
+                    st.rerun()
+            
             # 简化颜色选择
+            st.markdown("### Design Colors")
             color_scheme_options = [
                 "Soft warm tones (pink, gold, light orange)",
                 "Fresh cool tones (blue, mint, white)",
@@ -350,6 +447,34 @@ def show_low_complexity_popup_sales():
     # Display final effect - move out of col2, place at bottom of overall page
     if st.session_state.final_design is not None:
         st.markdown("### Final Result")
+        
+        # 添加T恤规格信息显示
+        st.markdown("### Your T-shirt Specifications")
+        # 创建颜色名称映射词典
+        color_names = {
+            "#FFFFFF": "White",
+            "#000000": "Black",
+            "#FF0000": "Red",
+            "#00FF00": "Green",
+            "#0000FF": "Blue",
+            "#FFFF00": "Yellow",
+            "#FF00FF": "Magenta",
+            "#00FFFF": "Cyan",
+            "#FFA500": "Orange",
+            "#800080": "Purple",
+            "#008000": "Dark Green",
+            "#800000": "Maroon",
+            "#008080": "Teal",
+            "#000080": "Navy",
+            "#808080": "Gray"
+        }
+        
+        # 尝试匹配确切颜色，如果不存在则显示十六进制代码
+        color_hex = st.session_state.current_shirt_color
+        color_name = color_names.get(color_hex.upper(), f"Custom ({color_hex})")
+        
+        # 显示颜色信息
+        st.markdown(f"**Color:** {color_name}")
         
         # 添加清空设计按钮
         if st.button("🗑️ Clear All Designs", key="clear_designs"):

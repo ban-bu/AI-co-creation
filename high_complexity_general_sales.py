@@ -240,7 +240,6 @@ def show_high_complexity_general_sales():
     <b>Advanced Customization Options</b>: In this experience, you can customize your T-shirt with these extensive options:
     <ul>
         <li>Select fabric types and materials</li>
-        <li>Choose T-shirt color</li>
         <li>Create detailed design patterns</li>
         <li>Position your design precisely on the T-shirt</li>
         <li>Add text and logo to your design</li>
@@ -248,9 +247,9 @@ def show_high_complexity_general_sales():
     </div>
     """, unsafe_allow_html=True)
     
-    # 初始化T恤颜色状态变量
+    # 初始化T恤颜色状态变量 - 固定为白色
     if 'shirt_color_hex' not in st.session_state:
-        st.session_state.shirt_color_hex = "#FFFFFF"  # 默认白色
+        st.session_state.shirt_color_hex = "#FFFFFF"  # 固定为白色
     if 'original_base_image' not in st.session_state:
         st.session_state.original_base_image = None  # 保存原始白色T恤图像
     if 'fabric_type' not in st.session_state:
@@ -272,10 +271,10 @@ def show_high_complexity_general_sales():
                 # 保存原始白色T恤图像 - 这是非常重要的！
                 st.session_state.original_base_image = original_image.copy()
                 
-                # 使用当前选择的颜色
+                # 使用白色T恤并应用当前选择的面料纹理
                 colored_image = change_shirt_color(
                     original_image, 
-                    st.session_state.shirt_color_hex, 
+                    "#FFFFFF",  # 固定使用白色
                     apply_texture=True,  # 默认应用纹理
                     fabric_type=st.session_state.fabric_type  # 使用当前选择的面料
                 )
@@ -360,42 +359,6 @@ def show_high_complexity_general_sales():
                                       index=fabric_options.index(st.session_state.fabric_type)
                                       if st.session_state.fabric_type in fabric_options else 0)
             
-            # 添加颜色选择器
-            shirt_color = st.color_picker("T-shirt color", st.session_state.shirt_color_hex)
-            
-            # 如果颜色发生变化，更新T恤颜色
-            if shirt_color != st.session_state.shirt_color_hex:
-                st.session_state.shirt_color_hex = shirt_color
-                
-                # 重新着色T恤图像
-                if st.session_state.original_base_image is not None:
-                    # 对原始白色T恤应用新颜色和当前面料纹理
-                    # 确保无论颜色如何变化，都应用面料纹理
-                    new_colored_image = change_shirt_color(
-                        st.session_state.original_base_image, 
-                        shirt_color,
-                        apply_texture=True, 
-                        fabric_type=st.session_state.fabric_type
-                    )
-                    st.session_state.base_image = new_colored_image
-                    
-                    # 更新当前图像
-                    if st.session_state.active_tab == "Design Pattern":
-                        # 在Design Pattern标签页中显示红框
-                        new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
-                    else:
-                        # 在T-shirt标签页中不显示红框
-                        new_current_image = new_colored_image.copy()
-                        
-                    st.session_state.current_image = new_current_image
-                    
-                    # 如果有最终设计，也需要更新
-                    if st.session_state.final_design is not None:
-                        # 暂时重置最终设计，让用户重新应用设计元素
-                        st.session_state.final_design = None
-                    
-                    st.rerun()
-            
             # 应用T恤样式按钮
             if st.button("Apply Fabric", key="apply_style"):
                 # 更新存储的样式值
@@ -405,10 +368,10 @@ def show_high_complexity_general_sales():
                 # 无论面料类型是否改变，都应用纹理
                 if st.session_state.original_base_image is not None:
                     try:
-                        # 应用颜色和纹理，确保始终应用纹理效果
+                        # 应用纹理，使用固定白色
                         new_colored_image = change_shirt_color(
                             st.session_state.original_base_image, 
-                            st.session_state.shirt_color_hex,
+                            "#FFFFFF",  # 固定使用白色
                             apply_texture=True, 
                             fabric_type=fabric_type
                         )
@@ -716,26 +679,7 @@ def show_high_complexity_general_sales():
         st.image(st.session_state.final_design, use_container_width=True)
         
         # 添加T恤规格信息
-        specs_col1, specs_col2 = st.columns(2)
-        
-        with specs_col1:
-            st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
-        
-        with specs_col2:
-            # 显示当前颜色
-            color_name = {
-                "#FFFFFF": "White",
-                "#000000": "Black",
-                "#FF0000": "Red",
-                "#00FF00": "Green",
-                "#0000FF": "Blue",
-                "#FFFF00": "Yellow",
-                "#FF00FF": "Magenta",
-                "#00FFFF": "Cyan",
-                "#C0C0C0": "Silver",
-                "#808080": "Gray"
-            }.get(st.session_state.shirt_color_hex.upper(), "Custom")
-            st.markdown(f"**Color:** {color_name} ({st.session_state.shirt_color_hex})")
+        st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
         
         # Provide download option
         col1, col2 = st.columns(2)

@@ -139,9 +139,16 @@ def match_background_to_shirt(design_image, shirt_image):
     design_image.putdata(newData)
     return design_image
 
-# 添加一个用于改变T恤颜色的函数
-def change_shirt_color(image, color_hex):
-    """改变T恤的颜色"""
+def apply_color_to_shirt(image, color_hex):
+    """给T恤应用新颜色
+    
+    Args:
+        image: 原始T恤图像
+        color_hex: 十六进制颜色代码，如 "#FFFFFF"
+        
+    Returns:
+        应用新颜色后的T恤图像
+    """
     # 转换十六进制颜色为RGB
     color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
     
@@ -216,10 +223,10 @@ def show_high_complexity_popup_sales():
             try:
                 # 加载原始白色T恤图像
                 original_image = Image.open("white_shirt.png").convert("RGBA")
-                st.session_state.original_base_image = original_image
+                st.session_state.original_base_image = original_image.copy()
                 
-                # 使用当前选择的颜色
-                colored_image = change_shirt_color(original_image, st.session_state.shirt_color_hex)
+                # 应用当前选择的颜色
+                colored_image = apply_color_to_shirt(original_image, st.session_state.shirt_color_hex)
                 st.session_state.base_image = colored_image
                 
                 # Initialize by drawing selection box in the center
@@ -265,30 +272,27 @@ def show_high_complexity_popup_sales():
         with tab1:
             st.markdown("### T-shirt Customization")
             
-            # 领口样式选择
-            collar_options = ["Round", "V-neck", "Henley", "Polo", "Crew", "Scoop"]
-            collar_style = st.selectbox("Collar style:", collar_options, 
-                                       index=collar_options.index(st.session_state.collar_style) 
+            # 添加衣领风格选择
+            collar_options = ["Crew Neck", "V-Neck", "Polo", "Henley", "Scoop Neck"]
+            collar_style = st.selectbox("Collar style:", collar_options,
+                                       index=collar_options.index(st.session_state.collar_style)
                                        if st.session_state.collar_style in collar_options else 0)
             
-            # 袖子样式选择
-            sleeve_options = ["Short", "Long", "3/4 Length", "Cap", "Raglan", "Sleeveless"]
+            # 添加袖子风格选择
+            sleeve_options = ["Short Sleeve", "Long Sleeve", "3/4 Sleeve", "Sleeveless", "Raglan"]
             sleeve_style = st.selectbox("Sleeve style:", sleeve_options,
                                        index=sleeve_options.index(st.session_state.sleeve_style)
                                        if st.session_state.sleeve_style in sleeve_options else 0)
             
             # 面料选择
-            fabric_options = ["Cotton", "Polyester", "Cotton-Polyester Blend", "Jersey", "Linen", "Bamboo"]
+            fabric_options = ["Cotton", "Polyester", "Cotton-Polyester Blend", "Jersey Knit", "Organic Cotton"]
             fabric_type = st.selectbox("Fabric type:", fabric_options,
                                       index=fabric_options.index(st.session_state.fabric_type)
                                       if st.session_state.fabric_type in fabric_options else 0)
             
-            # 添加尺寸选择
-            size_options = ["XS", "S", "M", "L", "XL", "XXL", "3XL"]
-            size = st.selectbox("Size:", size_options, index=2)  # 默认选择M
-            
-            # 修改颜色选择器，实时更改T恤颜色
-            shirt_color = st.color_picker("T-shirt base color:", st.session_state.shirt_color_hex)
+            # 添加T恤颜色选择
+            st.markdown("### T-shirt Color")
+            shirt_color = st.color_picker("Choose your T-shirt color:", st.session_state.shirt_color_hex)
             
             # 如果颜色发生变化，更新T恤颜色
             if shirt_color != st.session_state.shirt_color_hex:
@@ -297,7 +301,7 @@ def show_high_complexity_popup_sales():
                 # 重新着色T恤图像
                 if st.session_state.original_base_image is not None:
                     # 对原始白色T恤应用新颜色
-                    new_colored_image = change_shirt_color(st.session_state.original_base_image, shirt_color)
+                    new_colored_image = apply_color_to_shirt(st.session_state.original_base_image, shirt_color)
                     st.session_state.base_image = new_colored_image
                     
                     # 更新当前图像（带红框的）
@@ -306,16 +310,10 @@ def show_high_complexity_popup_sales():
                     
                     # 如果有最终设计，也需要更新
                     if st.session_state.final_design is not None:
-                        # 保存当前设计元素
-                        # 将来可以添加更复杂的逻辑来保留设计元素
-                        # 现在仅重置最终设计，让用户重新应用设计元素
+                        # 重置最终设计，让用户重新应用设计元素
                         st.session_state.final_design = None
                     
                     st.rerun()
-            
-            # 衣服剪裁选择
-            fit_options = ["Regular Fit", "Slim Fit", "Relaxed Fit", "Athletic Fit"]
-            fit_type = st.selectbox("Fit type:", fit_options)
             
             # 应用T恤样式按钮
             if st.button("Apply T-shirt Style", key="apply_style"):
@@ -614,34 +612,41 @@ def show_high_complexity_popup_sales():
         
         st.image(st.session_state.final_design, use_container_width=True)
         
-        # 添加T恤规格信息
-        specs_col1, specs_col2, specs_col3 = st.columns(3)
+        # 显示当前的T恤规格
+        # 创建颜色名称映射词典
+        color_names = {
+            "#FFFFFF": "White",
+            "#000000": "Black",
+            "#FF0000": "Red",
+            "#00FF00": "Green",
+            "#0000FF": "Blue",
+            "#FFFF00": "Yellow",
+            "#FF00FF": "Magenta",
+            "#00FFFF": "Cyan",
+            "#FFA500": "Orange",
+            "#800080": "Purple",
+            "#008000": "Dark Green",
+            "#800000": "Maroon",
+            "#008080": "Teal",
+            "#000080": "Navy",
+            "#808080": "Gray"
+        }
         
-        with specs_col1:
-            st.markdown(f"**Style:** {st.session_state.collar_style} collar")
-            st.markdown(f"**Sleeves:** {st.session_state.sleeve_style}")
+        # 尝试匹配确切颜色，如果不存在则显示十六进制代码
+        color_hex = st.session_state.shirt_color_hex
+        color_name = color_names.get(color_hex.upper(), f"Custom ({color_hex})")
         
-        with specs_col2:
-            st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
-            if 'size' in locals():
-                st.markdown(f"**Size:** {size}")
+        st.markdown(f"""
+        #### Current T-shirt Specifications:
         
-        with specs_col3:
-            if 'fit_type' in locals():
-                st.markdown(f"**Fit:** {fit_type}")
-            
-            # 显示当前颜色
-            color_name = {
-                "#FFFFFF": "白色",
-                "#000000": "黑色",
-                "#FF0000": "红色",
-                "#0000FF": "蓝色",
-                "#00FF00": "绿色",
-            }.get(st.session_state.shirt_color_hex.upper(), "自定义颜色")
-            st.markdown(f"**Color:** {color_name} ({st.session_state.shirt_color_hex})")
-            
-            # 提示剩余时间（仅针对popup环境）
-            st.warning("⏱️ Please finish your design soon - other customers are waiting!")
+        - **Collar**: {st.session_state.collar_style}
+        - **Sleeves**: {st.session_state.sleeve_style}
+        - **Fabric**: {st.session_state.fabric_type}
+        - **Color**: {color_name}
+        """)
+        
+        # 提示剩余时间（仅针对popup环境）
+        st.warning("⏱️ Please finish your design soon - other customers are waiting!")
         
         # Provide download option
         col1, col2 = st.columns(2)

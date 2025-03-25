@@ -139,6 +139,37 @@ def match_background_to_shirt(design_image, shirt_image):
     design_image.putdata(newData)
     return design_image
 
+# 添加一个用于改变T恤颜色的函数
+def change_shirt_color(image, color_hex):
+    """改变T恤的颜色"""
+    # 转换十六进制颜色为RGB
+    color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+    
+    # 创建副本避免修改原图
+    colored_image = image.copy().convert("RGBA")
+    
+    # 获取图像数据
+    data = colored_image.getdata()
+    
+    # 创建新数据
+    new_data = []
+    # 白色阈值 - 调整这个值可以控制哪些像素被视为白色/浅色并被改变
+    threshold = 200
+    
+    for item in data:
+        # 判断是否是白色/浅色区域 (RGB值都很高)
+        if item[0] > threshold and item[1] > threshold and item[2] > threshold and item[3] > 0:
+            # 保持原透明度，改变颜色
+            new_color = (color_rgb[0], color_rgb[1], color_rgb[2], item[3])
+            new_data.append(new_color)
+        else:
+            # 保持其他颜色不变
+            new_data.append(item)
+    
+    # 更新图像数据
+    colored_image.putdata(new_data)
+    return colored_image
+
 # AI Customization Group design page
 def show_low_complexity_general_sales():
     st.title("👕 AI Co-Creation Experiment Platform")
@@ -159,13 +190,19 @@ def show_low_complexity_general_sales():
     <div style="background-color:#f0f0f0; padding:10px; border-radius:5px; margin-bottom:15px">
     <b>Basic Customization Options</b>: In this experience, you can customize your T-shirt with simple options:
     <ul>
-        <li>Choose colors for your design</li>
+        <li>Choose T-shirt color</li>
         <li>Add text or logo elements</li>
         <li>Generate design patterns</li>
         <li>Position your design on the T-shirt</li>
     </ul>
     </div>
     """, unsafe_allow_html=True)
+    
+    # 初始化T恤颜色状态变量
+    if 'shirt_color_hex' not in st.session_state:
+        st.session_state.shirt_color_hex = "#FFFFFF"  # 默认白色
+    if 'original_base_image' not in st.session_state:
+        st.session_state.original_base_image = None  # 保存原始白色T恤图像
     
     # Create two-column layout
     col1, col2 = st.columns([3, 2])
@@ -176,10 +213,17 @@ def show_low_complexity_general_sales():
         # Load T-shirt base image
         if st.session_state.base_image is None:
             try:
-                base_image = Image.open("white_shirt.png").convert("RGBA")
-                st.session_state.base_image = base_image
+                # 加载原始白色T恤图像
+                original_image = Image.open("white_shirt.png").convert("RGBA")
+                # 保存原始白色T恤图像
+                st.session_state.original_base_image = original_image.copy()
+                
+                # 应用当前选择的颜色
+                colored_image = change_shirt_color(original_image, st.session_state.shirt_color_hex)
+                st.session_state.base_image = colored_image
+                
                 # Initialize by drawing selection box in the center
-                initial_image, initial_pos = draw_selection_box(base_image)
+                initial_image, initial_pos = draw_selection_box(colored_image)
                 st.session_state.current_image = initial_image
                 st.session_state.current_box_position = initial_pos
             except Exception as e:
@@ -211,8 +255,34 @@ def show_low_complexity_general_sales():
         tab1, tab2 = st.tabs(["Generate Design", "Add Text/Logo"])
         
         with tab1:
-            # 简化设计选项 - 只保留主题和颜色选择
-            theme = st.text_input("Design theme or keyword (required)", "Elegant pattern")
+            st.markdown("### Design Options")
+            
+            # 添加颜色选择器
+            shirt_color = st.color_picker("T-shirt color:", st.session_state.shirt_color_hex)
+            
+            # 如果颜色发生变化，更新T恤颜色
+            if shirt_color != st.session_state.shirt_color_hex:
+                st.session_state.shirt_color_hex = shirt_color
+                
+                # 重新着色T恤图像
+                if st.session_state.original_base_image is not None:
+                    # 对原始白色T恤应用新颜色
+                    new_colored_image = change_shirt_color(st.session_state.original_base_image, shirt_color)
+                    st.session_state.base_image = new_colored_image
+                    
+                    # 更新当前图像（带红框的）
+                    new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                    st.session_state.current_image = new_current_image
+                    
+                    # 如果有最终设计，也需要更新
+                    if st.session_state.final_design is not None:
+                        # 重置最终设计，让用户重新应用设计元素
+                        st.session_state.final_design = None
+                    
+                    st.rerun()
+            
+            # 设计生成主题
+            theme = st.text_input("Theme or keyword (required)", "Elegant pattern")
             
             # 简化颜色选择
             color_scheme_options = [
@@ -364,9 +434,28 @@ def show_low_complexity_general_sales():
         
         st.image(st.session_state.final_design, use_container_width=True)
         
+        # 添加T恤规格信息
+        specs_col1, specs_col2 = st.columns(2)
+        
+        with specs_col1:
+            # 显示当前颜色
+            color_name = {
+                "#FFFFFF": "White",
+                "#000000": "Black",
+                "#FF0000": "Red",
+                "#00FF00": "Green",
+                "#0000FF": "Blue",
+                "#FFFF00": "Yellow",
+                "#FF00FF": "Magenta",
+                "#00FFFF": "Cyan",
+                "#C0C0C0": "Silver",
+                "#808080": "Gray"
+            }.get(st.session_state.shirt_color_hex.upper(), "Custom")
+            st.markdown(f"**Color:** {color_name} ({st.session_state.shirt_color_hex})")
+        
         # Provide download option
-        col1, col2 = st.columns(2)
-        with col1:
+        download_col1, download_col2 = st.columns(2)
+        with download_col1:
             buf = BytesIO()
             st.session_state.final_design.save(buf, format="PNG")
             buf.seek(0)
@@ -377,7 +466,7 @@ def show_low_complexity_general_sales():
                 mime="image/png"
             )
         
-        with col2:
+        with download_col2:
             # Confirm completion button
             if st.button("Confirm Completion"):
                 st.session_state.page = "survey"
