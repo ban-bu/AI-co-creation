@@ -140,7 +140,7 @@ def match_background_to_shirt(design_image, shirt_image):
     return design_image
 
 # 添加一个用于改变T恤颜色的函数
-def change_shirt_color(image, color_hex):
+def change_shirt_color(image, color_hex, opacity=1.0):
     """改变T恤的颜色"""
     # 转换十六进制颜色为RGB
     color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
@@ -154,21 +154,39 @@ def change_shirt_color(image, color_hex):
     # 创建新数据
     new_data = []
     # 白色阈值 - 调整这个值可以控制哪些像素被视为白色/浅色并被改变
-    threshold = 200
+    # 降低阈值以确保更多的T恤区域被着色
+    threshold = 180
     
     for item in data:
         # 判断是否是白色/浅色区域 (RGB值都很高)
         if item[0] > threshold and item[1] > threshold and item[2] > threshold and item[3] > 0:
-            # 保持原透明度，改变颜色
-            new_color = (color_rgb[0], color_rgb[1], color_rgb[2], item[3])
+            # 保持原透明度，改变颜色，但增强颜色强度
+            alpha = item[3]
+            # 增强颜色强度并应用透明度
+            new_color = (color_rgb[0], color_rgb[1], color_rgb[2], int(alpha * opacity))
             new_data.append(new_color)
+        elif item[3] > 0:  # 如果不是白色区域但有透明度
+            # 轻微调整非白色区域，使其更符合选择的颜色
+            # 混合原始颜色和新颜色
+            r = int(item[0] * 0.7 + color_rgb[0] * 0.3)
+            g = int(item[1] * 0.7 + color_rgb[1] * 0.3)
+            b = int(item[2] * 0.7 + color_rgb[2] * 0.3)
+            alpha = item[3]
+            new_data.append((r, g, b, alpha))
         else:
-            # 保持其他颜色不变
+            # 完全透明的像素保持不变
             new_data.append(item)
     
     # 更新图像数据
     colored_image.putdata(new_data)
-    return colored_image
+    
+    # 创建一个白色背景
+    background = Image.new("RGBA", colored_image.size, (255, 255, 255, 255))
+    
+    # 将着色后的T恤图像合成到白色背景上
+    final_image = Image.alpha_composite(background, colored_image)
+    
+    return final_image
 
 # AI Creation Group design page
 def show_high_complexity_popup_sales():
@@ -201,7 +219,7 @@ def show_high_complexity_popup_sales():
     
     # 初始化T恤颜色状态变量
     if 'shirt_color_hex' not in st.session_state:
-        st.session_state.shirt_color_hex = "#FFFFFF"  # 默认白色
+        st.session_state.shirt_color_hex = "#000000"  # 默认黑色
     if 'original_base_image' not in st.session_state:
         st.session_state.original_base_image = None  # 保存原始白色T恤图像
     
@@ -288,30 +306,57 @@ def show_high_complexity_popup_sales():
             size = st.selectbox("Size:", size_options, index=2)  # 默认选择M
             
             # 修改颜色选择器，实时更改T恤颜色
-            shirt_color = st.color_picker("T-shirt base color:", st.session_state.shirt_color_hex)
+            color_presets = ["#FFFFFF", "#000000", "#FF0000", "#0000FF", "#00FF00", "#FFA500", "#800080", "#A52A2A"]
+            preset_names = ["白色", "黑色", "红色", "蓝色", "绿色", "橙色", "紫色", "棕色"]
             
-            # 如果颜色发生变化，更新T恤颜色
-            if shirt_color != st.session_state.shirt_color_hex:
-                st.session_state.shirt_color_hex = shirt_color
+            # 添加预设颜色选择
+            color_row1, color_row2 = st.columns([3, 1])
+            with color_row1:
+                selected_preset = st.radio("预设颜色:", preset_names, horizontal=True, index=color_presets.index(st.session_state.shirt_color_hex) if st.session_state.shirt_color_hex in color_presets else 0)
+                preset_index = preset_names.index(selected_preset)
+                preset_color = color_presets[preset_index]
                 
-                # 重新着色T恤图像
-                if st.session_state.original_base_image is not None:
-                    # 对原始白色T恤应用新颜色
-                    new_colored_image = change_shirt_color(st.session_state.original_base_image, shirt_color)
-                    st.session_state.base_image = new_colored_image
+                # 如果选择了预设颜色，更新颜色
+                if preset_color != st.session_state.shirt_color_hex:
+                    st.session_state.shirt_color_hex = preset_color
+                    # 更新T恤颜色
+                    if st.session_state.original_base_image is not None:
+                        new_colored_image = change_shirt_color(st.session_state.original_base_image, preset_color)
+                        st.session_state.base_image = new_colored_image
+                        new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                        st.session_state.current_image = new_current_image
+                        # 重置最终设计
+                        if st.session_state.final_design is not None:
+                            st.session_state.final_design = None
+                        st.rerun()
+            
+            with color_row2:
+                # 自定义颜色选择器
+                st.markdown("#### 自定义颜色")
+                shirt_color = st.color_picker("选择颜色:", st.session_state.shirt_color_hex)
+                
+                # 如果颜色发生变化，更新T恤颜色
+                if shirt_color != st.session_state.shirt_color_hex:
+                    st.session_state.shirt_color_hex = shirt_color
                     
-                    # 更新当前图像（带红框的）
-                    new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
-                    st.session_state.current_image = new_current_image
-                    
-                    # 如果有最终设计，也需要更新
-                    if st.session_state.final_design is not None:
-                        # 保存当前设计元素
-                        # 将来可以添加更复杂的逻辑来保留设计元素
-                        # 现在仅重置最终设计，让用户重新应用设计元素
-                        st.session_state.final_design = None
-                    
-                    st.rerun()
+                    # 重新着色T恤图像
+                    if st.session_state.original_base_image is not None:
+                        # 对原始白色T恤应用新颜色
+                        new_colored_image = change_shirt_color(st.session_state.original_base_image, shirt_color)
+                        st.session_state.base_image = new_colored_image
+                        
+                        # 更新当前图像（带红框的）
+                        new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                        st.session_state.current_image = new_current_image
+                        
+                        # 如果有最终设计，也需要更新
+                        if st.session_state.final_design is not None:
+                            # 保存当前设计元素
+                            # 将来可以添加更复杂的逻辑来保留设计元素
+                            # 现在仅重置最终设计，让用户重新应用设计元素
+                            st.session_state.final_design = None
+                        
+                        st.rerun()
             
             # 衣服剪裁选择
             fit_options = ["Regular Fit", "Slim Fit", "Relaxed Fit", "Athletic Fit"]
@@ -637,6 +682,9 @@ def show_high_complexity_popup_sales():
                 "#FF0000": "红色",
                 "#0000FF": "蓝色",
                 "#00FF00": "绿色",
+                "#FFA500": "橙色",
+                "#800080": "紫色",
+                "#A52A2A": "棕色"
             }.get(st.session_state.shirt_color_hex.upper(), "自定义颜色")
             st.markdown(f"**Color:** {color_name} ({st.session_state.shirt_color_hex})")
             
