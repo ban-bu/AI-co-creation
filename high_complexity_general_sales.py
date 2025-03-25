@@ -597,6 +597,7 @@ def show_high_complexity_general_sales():
         # Provide download option
         col1, col2 = st.columns(2)
         with col1:
+            from io import BytesIO  # 确保BytesIO在此处可用
             buf = BytesIO()
             st.session_state.final_design.save(buf, format="PNG")
             buf.seek(0)
