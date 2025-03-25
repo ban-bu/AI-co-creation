@@ -139,54 +139,132 @@ def match_background_to_shirt(design_image, shirt_image):
     design_image.putdata(newData)
     return design_image
 
-# 添加一个用于改变T恤颜色的函数
+# 添加一个用于改变T恤颜色的函数 - 全新方法
 def change_shirt_color(image, color_hex, opacity=1.0):
-    """改变T恤的颜色"""
+    """改变T恤的颜色 - 增强版"""
     # 转换十六进制颜色为RGB
     color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
     
     # 创建副本避免修改原图
     colored_image = image.copy().convert("RGBA")
+    width, height = colored_image.size
     
-    # 获取图像数据
+    # 创建一个新的纯色图层
+    color_layer = Image.new("RGBA", (width, height), (*color_rgb, 180))  # 降低透明度以保留细节
+    
+    # 创建一个遮罩，只在T恤区域应用颜色
+    mask = Image.new("L", (width, height), 0)  # L模式用于单通道灰度图像
+    mask_draw = ImageDraw.Draw(mask)
+    
+    # 获取图像数据来创建遮罩
     data = colored_image.getdata()
     
-    # 创建新数据
-    new_data = []
-    # 白色阈值 - 调整这个值可以控制哪些像素被视为白色/浅色并被改变
-    # 降低阈值以确保更多的T恤区域被着色
-    threshold = 180
+    # 使用更高级的方法检测T恤区域 - 改善连通性算法
+    visited = set()
+    shirt_pixels = []
     
-    for item in data:
-        # 判断是否是白色/浅色区域 (RGB值都很高)
-        if item[0] > threshold and item[1] > threshold and item[2] > threshold and item[3] > 0:
-            # 保持原透明度，改变颜色，但增强颜色强度
-            alpha = item[3]
-            # 增强颜色强度并应用透明度
-            new_color = (color_rgb[0], color_rgb[1], color_rgb[2], int(alpha * opacity))
-            new_data.append(new_color)
-        elif item[3] > 0:  # 如果不是白色区域但有透明度
-            # 轻微调整非白色区域，使其更符合选择的颜色
-            # 混合原始颜色和新颜色
-            r = int(item[0] * 0.7 + color_rgb[0] * 0.3)
-            g = int(item[1] * 0.7 + color_rgb[1] * 0.3)
-            b = int(item[2] * 0.7 + color_rgb[2] * 0.3)
-            alpha = item[3]
-            new_data.append((r, g, b, alpha))
-        else:
-            # 完全透明的像素保持不变
-            new_data.append(item)
+    # 定义种子点 - 通常T恤在图像中央位置
+    center_x, center_y = width // 2, height // 2
+    queue = [(center_x, center_y)]
     
-    # 更新图像数据
-    colored_image.putdata(new_data)
+    # 广度优先搜索查找连通区域
+    while queue:
+        x, y = queue.pop(0)
+        if (x, y) in visited or not (0 <= x < width and 0 <= y < height):
+            continue
+            
+        visited.add((x, y))
+        
+        # 检查这个像素是否属于T恤区域（非透明且亮度适中）
+        pixel = colored_image.getpixel((x, y))
+        if pixel[3] > 30 and 100 < sum(pixel[:3])/3 < 250:  # 放宽亮度范围
+            shirt_pixels.append((x, y))
+            
+            # 将邻居加入队列
+            for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+                queue.append((x + dx, y + dy))
+    
+    # 如果找到的区域太小，可能是检测有问题，使用替代方法
+    if len(shirt_pixels) < (width * height) * 0.1:  # 如果T恤区域小于图像的10%
+        # 备用方法：扫描整个图像
+        shirt_pixels = []
+        for y in range(height):
+            for x in range(width):
+                pixel = colored_image.getpixel((x, y))
+                # 使用更宽松的条件
+                if pixel[3] > 10:  # 只要有一点点不透明就考虑
+                    shirt_pixels.append((x, y))
+    
+    # 在遮罩上填充T恤区域
+    for x, y in shirt_pixels:
+        mask.putpixel((x, y), 255)  # 255表示完全不透明
+    
+    # 给T恤添加清晰的边缘轮廓，增强轮廓对比度
+    edge_mask = mask.copy()
+    edge_draw = ImageDraw.Draw(edge_mask)
+    
+    # 查找T恤轮廓
+    outline_pixels = []
+    for x, y in shirt_pixels:
+        # 检查周围8个像素点，如果有任何一个不在shirt_pixels中，则这是边缘
+        is_edge = False
+        for dx, dy in [(-1,-1), (-1,0), (-1,1), (0,-1), (0,1), (1,-1), (1,0), (1,1)]:
+            nx, ny = x+dx, y+dy
+            if 0 <= nx < width and 0 <= ny < height and (nx, ny) not in shirt_pixels:
+                is_edge = True
+                break
+        if is_edge:
+            outline_pixels.append((x, y))
+    
+    # 创建一个新图像来绘制T恤轮廓
+    outline_image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    
+    # 使用更宽的边缘轮廓，提高可见度
+    for x, y in outline_pixels:
+        # 绘制3像素宽的黑色轮廓
+        for dx, dy in [(0,0), (-1,0), (1,0), (0,-1), (0,1), (-1,-1), (-1,1), (1,-1), (1,1)]:
+            nx, ny = x+dx, y+dy
+            if 0 <= nx < width and 0 <= ny < height:
+                outline_image.putpixel((nx, ny), (0, 0, 0, 200))  # 设置深色边缘
+    
+    # 添加阴影效果以增强立体感
+    shadow_image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    shadow_pixels = []
+    
+    # 在轮廓周围添加更多像素作为阴影
+    for x, y in outline_pixels:
+        for dx in range(1, 4):  # 向右下方延伸3像素
+            for dy in range(1, 4):
+                nx, ny = x+dx, y+dy
+                if 0 <= nx < width and 0 <= ny < height and (nx, ny) not in shirt_pixels:
+                    shadow_pixels.append((nx, ny))
+    
+    # 绘制阴影，透明度从里到外逐渐降低
+    for x, y in shadow_pixels:
+        # 检查是否靠近轮廓
+        min_dist = 100
+        for ox, oy in outline_pixels:
+            dist = ((x-ox)**2 + (y-oy)**2)**0.5
+            if dist < min_dist:
+                min_dist = dist
+        
+        # 根据距离设置不同的透明度
+        alpha = max(0, int(100 - min_dist * 30))
+        if alpha > 0:
+            shadow_image.putpixel((x, y), (0, 0, 0, alpha))
     
     # 创建一个白色背景
-    background = Image.new("RGBA", colored_image.size, (255, 255, 255, 255))
+    background = Image.new("RGBA", (width, height), (255, 255, 255, 255))
     
-    # 将着色后的T恤图像合成到白色背景上
-    final_image = Image.alpha_composite(background, colored_image)
+    # 使用遮罩将颜色层合成到T恤区域
+    colored_shirt = Image.composite(color_layer, colored_image, mask)
     
-    return final_image
+    # 合成背景、着色的T恤和轮廓
+    result = Image.alpha_composite(background, colored_shirt)
+    result = Image.alpha_composite(result, outline_image)
+    result = Image.alpha_composite(result, shadow_image)
+    
+    return result
 
 # AI Creation Group design page
 def show_high_complexity_popup_sales():
@@ -219,7 +297,7 @@ def show_high_complexity_popup_sales():
     
     # 初始化T恤颜色状态变量
     if 'shirt_color_hex' not in st.session_state:
-        st.session_state.shirt_color_hex = "#000000"  # 默认黑色
+        st.session_state.shirt_color_hex = "#1E90FF"  # 默认使用亮蓝色，可能比黑色更容易看到
     if 'original_base_image' not in st.session_state:
         st.session_state.original_base_image = None  # 保存原始白色T恤图像
     
