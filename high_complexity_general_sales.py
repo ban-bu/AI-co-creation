@@ -1,8 +1,54 @@
 import streamlit as st
 from PIL import Image, ImageDraw
 import os
+import requests
+from io import BytesIO
+import cairosvg
+from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
 from streamlit_drawable_canvas import st_canvas
+
+# API配置信息 - 实际使用时应从主文件传入或使用环境变量
+API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
+BASE_URL = "https://api.deepbricks.ai/v1/"
+
+def generate_vector_image(prompt):
+    """Generate an image based on the prompt"""
+    client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
+    try:
+        resp = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            n=1,
+            size="1024x1024",
+            quality="standard"
+        )
+    except Exception as e:
+        st.error(f"Error calling API: {e}")
+        return None
+
+    if resp and len(resp.data) > 0 and resp.data[0].url:
+        image_url = resp.data[0].url
+        try:
+            image_resp = requests.get(image_url)
+            if image_resp.status_code == 200:
+                content_type = image_resp.headers.get("Content-Type", "")
+                if "svg" in content_type.lower():
+                    try:
+                        png_data = cairosvg.svg2png(bytestring=image_resp.content)
+                        return Image.open(BytesIO(png_data)).convert("RGBA")
+                    except Exception as conv_err:
+                        st.error(f"Error converting SVG to PNG: {conv_err}")
+                        return None
+                else:
+                    return Image.open(BytesIO(image_resp.content)).convert("RGBA")
+            else:
+                st.error(f"Failed to download image, status code: {image_resp.status_code}")
+        except Exception as download_err:
+            st.error(f"Error requesting image: {download_err}")
+    else:
+        st.error("Could not get image URL from API response.")
+    return None
 
 # 复用ai_design_group等文件中的draw_selection_box函数
 def draw_selection_box(image, point=None):
