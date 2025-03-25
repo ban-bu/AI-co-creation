@@ -144,6 +144,16 @@ def show_low_complexity_general_sales():
     st.title("👕 AI Co-Creation Experiment Platform")
     st.markdown("### Low Task Complexity-General Sales - Create Your Unique T-shirt Design")
     
+    # 添加General Sales情境描述
+    st.info("""
+    **General Sales Environment**
+    
+    Welcome to our regular T-shirt customization service available in our standard online store. 
+    You are browsing our website from the comfort of your home or office, with no time pressure. 
+    Take your time to explore the design options and create a T-shirt that matches your personal style.
+    This is a typical online shopping experience where you can customize at your own pace.
+    """)
+    
     # Create two-column layout
     col1, col2 = st.columns([3, 2])
     

@@ -144,6 +144,16 @@ def show_high_complexity_popup_sales():
     st.title("👕 AI Co-Creation Experiment Platform")
     st.markdown("### High Task Complexity-Pop up Sales - Create Your Unique T-shirt Design")
     
+    # 添加Pop-up Sales情境描述
+    st.info("""
+    **Pop-up Store Environment**
+    
+    You are visiting our temporary pop-up store in a busy shopping mall. There are other customers 
+    waiting for their turn to use this customization kiosk. The store staff has informed you that 
+    the experience is limited to 15 minutes per customer. Please design your T-shirt efficiently 
+    while enjoying this exclusive in-person customization opportunity.
+    """)
+    
     # Create two-column layout
     col1, col2 = st.columns([3, 2])
     

@@ -59,6 +59,16 @@ def show_high_complexity_general_sales():
     st.title("👕 Preset Design Experiment Platform")
     st.markdown("### High Task Complexity-General Sales - Choose Your Favorite T-shirt Design")
     
+    # 添加General Sales情境描述
+    st.info("""
+    **General Sales Environment**
+    
+    Welcome to our regular T-shirt customization service available in our standard online store. 
+    You are browsing our website from the comfort of your home or office, with no time pressure. 
+    Take your time to explore the design options and create a T-shirt that matches your personal style.
+    This is a typical online shopping experience where you can customize at your own pace.
+    """)
+    
     # 创建两列布局：左侧T恤区域，右侧设计选择区域
     design_area_col, options_col = st.columns([3, 2])
     
