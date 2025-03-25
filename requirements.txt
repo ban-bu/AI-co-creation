@@ -1,0 +1,9 @@
+streamlit==1.43.2
+streamlit-drawable-canvas==0.9.3
+openai==1.66.3
+requests==2.32.3
+Pillow==11.1.0
+cairosvg==2.7.1
+numpy==2.2.3
+streamlit-image-coordinates==0.2.0
+opencv-python-headless
