@@ -284,6 +284,7 @@ def show_high_complexity_general_sales():
                 # 重新着色T恤图像
                 if st.session_state.original_base_image is not None:
                     # 对原始白色T恤应用新颜色和当前面料纹理
+                    # 确保无论颜色如何变化，都应用面料纹理
                     new_colored_image = change_shirt_color(
                         st.session_state.original_base_image, 
                         shirt_color,
@@ -292,15 +293,19 @@ def show_high_complexity_general_sales():
                     )
                     st.session_state.base_image = new_colored_image
                     
-                    # 更新当前图像（带红框的）
-                    new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                    # 更新当前图像
+                    if st.session_state.active_tab == "Design Pattern":
+                        # 在Design Pattern标签页中显示红框
+                        new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                    else:
+                        # 在T-shirt标签页中不显示红框
+                        new_current_image = new_colored_image.copy()
+                        
                     st.session_state.current_image = new_current_image
                     
                     # 如果有最终设计，也需要更新
                     if st.session_state.final_design is not None:
-                        # 保存当前设计元素
-                        # 将来可以添加更复杂的逻辑来保留设计元素
-                        # 现在仅重置最终设计，让用户重新应用设计元素
+                        # 暂时重置最终设计，让用户重新应用设计元素
                         st.session_state.final_design = None
                     
                     st.rerun()
@@ -314,7 +319,7 @@ def show_high_complexity_general_sales():
                 # 无论面料类型是否改变，都应用纹理
                 if st.session_state.original_base_image is not None:
                     try:
-                        # 应用颜色和纹理
+                        # 应用颜色和纹理，确保始终应用纹理效果
                         new_colored_image = change_shirt_color(
                             st.session_state.original_base_image, 
                             st.session_state.shirt_color_hex,
@@ -323,8 +328,14 @@ def show_high_complexity_general_sales():
                         )
                         st.session_state.base_image = new_colored_image
                         
-                        # 更新当前图像（带红框的）
-                        new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                        # 根据当前活动标签页更新图像
+                        if st.session_state.active_tab == "Design Pattern":
+                            # 在Design Pattern标签页中显示红框
+                            new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                        else:
+                            # 在T-shirt标签页中不显示红框
+                            new_current_image = new_colored_image.copy()
+                            
                         st.session_state.current_image = new_current_image
                         
                         # 如果有最终设计，也需要更新
