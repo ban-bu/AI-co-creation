@@ -7,6 +7,9 @@ import cairosvg
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
 from streamlit_drawable_canvas import st_canvas
+import numpy as np
+# 导入面料纹理模块
+from fabric_texture import apply_fabric_texture
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
@@ -50,9 +53,9 @@ def generate_vector_image(prompt):
         st.error("Could not get image URL from API response.")
     return None
 
-# 添加一个用于改变T恤颜色的函数
-def change_shirt_color(image, color_hex):
-    """改变T恤的颜色"""
+# 修改改变T恤颜色的函数，添加纹理支持
+def change_shirt_color(image, color_hex, apply_texture=False, fabric_type=None):
+    """改变T恤的颜色，可选择应用面料纹理"""
     # 转换十六进制颜色为RGB
     color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
     
@@ -79,6 +82,11 @@ def change_shirt_color(image, color_hex):
     
     # 更新图像数据
     colored_image.putdata(new_data)
+    
+    # 如果需要应用纹理
+    if apply_texture and fabric_type:
+        return apply_fabric_texture(colored_image, fabric_type)
+    
     return colored_image
 
 # 复用ai_design_group等文件中的draw_selection_box函数
@@ -257,8 +265,13 @@ def show_high_complexity_general_sales():
                 
                 # 重新着色T恤图像
                 if st.session_state.original_base_image is not None:
-                    # 对原始白色T恤应用新颜色
-                    new_colored_image = change_shirt_color(st.session_state.original_base_image, shirt_color)
+                    # 对原始白色T恤应用新颜色和当前面料纹理
+                    new_colored_image = change_shirt_color(
+                        st.session_state.original_base_image, 
+                        shirt_color,
+                        apply_texture=True, 
+                        fabric_type=st.session_state.fabric_type
+                    )
                     st.session_state.base_image = new_colored_image
                     
                     # 更新当前图像（带红框的）
@@ -283,7 +296,32 @@ def show_high_complexity_general_sales():
                 # 更新存储的样式值
                 st.session_state.collar_style = collar_style
                 st.session_state.sleeve_style = sleeve_style
+                old_fabric = st.session_state.fabric_type
                 st.session_state.fabric_type = fabric_type
+                
+                # 如果面料类型改变，重新应用颜色和纹理
+                if old_fabric != fabric_type and st.session_state.original_base_image is not None:
+                    try:
+                        # 应用颜色和纹理
+                        new_colored_image = change_shirt_color(
+                            st.session_state.original_base_image, 
+                            st.session_state.shirt_color_hex,
+                            apply_texture=True, 
+                            fabric_type=fabric_type
+                        )
+                        st.session_state.base_image = new_colored_image
+                        
+                        # 更新当前图像（带红框的）
+                        new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                        st.session_state.current_image = new_current_image
+                        
+                        # 如果有最终设计，也需要更新
+                        if st.session_state.final_design is not None:
+                            st.session_state.final_design = None
+                        
+                        st.rerun()
+                    except Exception as e:
+                        st.warning(f"应用面料纹理时出错: {e}")
                 
                 # 显示确认信息
                 st.success(f"T-shirt style updated: {collar_style} collar, {sleeve_style} sleeves, {fabric_type} fabric")
