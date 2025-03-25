@@ -237,23 +237,34 @@ def show_high_complexity_general_sales():
         # 修改选项卡布局：从三个改为两个，将T-shirt Style和Text/Logo合并
         tab1, tab2 = st.tabs(["T-shirt & Text/Logo", "Design Pattern"])
         
+        # 创建一个用于切换标签页的radio按钮，但隐藏显示
+        active_tab = st.radio(
+            "选择标签页",
+            ["T-shirt & Text/Logo", "Design Pattern"],
+            key="visible_tab", 
+            label_visibility="collapsed",
+            horizontal=True,
+            index=0 if st.session_state.active_tab == "T-shirt & Text/Logo" else 1
+        )
+        
         # 检测标签页变化
         current_tab = st.session_state.get('active_tab')
-        if tab1._is_active():
-            st.session_state.active_tab = "T-shirt & Text/Logo"
-            # 在T-shirt标签页激活时，更新当前图像为没有红框的版本
-            if current_tab != "T-shirt & Text/Logo" and st.session_state.base_image is not None:
+        if active_tab != current_tab:
+            st.session_state.active_tab = active_tab
+            
+            # 根据标签页切换更新图像
+            if active_tab == "T-shirt & Text/Logo" and st.session_state.base_image is not None:
+                # 在T-shirt标签页激活时，更新当前图像为没有红框的版本
                 st.session_state.current_image = st.session_state.base_image.copy()
                 st.rerun()
-        elif tab2._is_active():
-            st.session_state.active_tab = "Design Pattern"
-            # 在Design标签页激活时，重新显示红框
-            if current_tab != "Design Pattern" and st.session_state.base_image is not None:
+            elif active_tab == "Design Pattern" and st.session_state.base_image is not None:
+                # 在Design标签页激活时，重新显示红框
                 new_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
                 st.session_state.current_image = new_image
                 st.rerun()
         
-        with tab1:
+        # 根据当前激活的标签页显示相应内容
+        if active_tab == "T-shirt & Text/Logo":
             # T-shirt Customization部分
             st.markdown("### T-shirt Customization")
             
@@ -476,7 +487,7 @@ def show_high_complexity_general_sales():
                         except Exception as e:
                             st.error(f"Error processing logo: {e}")
         
-        with tab2:
+        elif active_tab == "Design Pattern":
             # User input for personalization parameters
             theme = st.text_input("Theme or keyword (required)", "Elegant floral pattern")
             
