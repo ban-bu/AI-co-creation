@@ -754,8 +754,7 @@ def show_high_complexity_general_sales():
             st.session_state.current_image = temp_image
             st.rerun()
         
-        st.image(st.session_state.final_design, use_container_width=True)
-        
+            st.image(st.session_state.final_design, use_container_width=True)
         # 添加T恤规格信息
             st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
         
