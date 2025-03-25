@@ -154,6 +154,19 @@ def show_low_complexity_general_sales():
     This is a typical online shopping experience where you can customize at your own pace.
     """)
     
+    # 任务复杂度说明
+    st.markdown("""
+    <div style="background-color:#f0f0f0; padding:10px; border-radius:5px; margin-bottom:15px">
+    <b>Basic Customization Options</b>: In this experience, you can customize your T-shirt with simple options:
+    <ul>
+        <li>Choose colors for your design</li>
+        <li>Add text or logo elements</li>
+        <li>Generate design patterns</li>
+        <li>Position your design on the T-shirt</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
     # Create two-column layout
     col1, col2 = st.columns([3, 2])
     
@@ -194,128 +207,145 @@ def show_low_complexity_general_sales():
     with col2:
         st.markdown("## Design Parameters")
         
-        # User input for personalization parameters - improved prompts and defaults
-        theme = st.text_input("Theme or keyword (required)", "Elegant floral pattern")
+        # Simplified design option tabs
+        tab1, tab2 = st.tabs(["Generate Design", "Add Text/Logo"])
         
-        # Add style selection dropdown with more professional style options
-        style_options = [
-            "Watercolor style", "Sketch style", "Geometric shapes", "Minimalist", 
-            "Vintage style", "Pop art", "Japanese style", "Nordic design",
-            "Classical ornament", "Digital illustration", "Abstract art", "Ethnic motifs"
-        ]
-        style = st.selectbox("Design style", style_options, index=0)
-        
-        # Improved color selection
-        color_scheme_options = [
-            "Soft warm tones (pink, gold, light orange)",
-            "Fresh cool tones (blue, mint, white)",
-            "Nature colors (green, brown, beige)",
-            "Bright and vibrant (red, yellow, orange)",
-            "Elegant deep tones (navy, purple, dark green)",
-            "Black and white contrast",
-            "Colorful mix",
-            "Custom colors"
-        ]
-        color_scheme = st.selectbox("Color scheme", color_scheme_options)
-        
-        # If custom colors are selected, show input field
-        if color_scheme == "Custom colors":
-            colors = st.text_input("Enter desired colors (comma separated)", "pink, gold, sky blue")
-        else:
-            # Set corresponding color values based on selected scheme
-            color_mapping = {
-                "Soft warm tones (pink, gold, light orange)": "pink, gold, light orange, cream",
-                "Fresh cool tones (blue, mint, white)": "sky blue, mint green, white, light gray",
-                "Nature colors (green, brown, beige)": "forest green, brown, beige, olive",
-                "Bright and vibrant (red, yellow, orange)": "bright red, yellow, orange, lemon yellow",
-                "Elegant deep tones (navy, purple, dark green)": "navy blue, violet, dark green, burgundy",
-                "Black and white contrast": "black, white, gray",
-                "Colorful mix": "red, blue, yellow, green, purple, orange"
-            }
-            colors = color_mapping[color_scheme]
-        
-        # Improved design details options
-        details_options = [
-            "Fine outlines and lines",
-            "Smooth gradient effects",
-            "Floral and plant elements",
-            "Geometric shapes and patterns",
-            "Waves and curves",
-            "Dotted textures",
-            "Repeating patterns",
-            "Randomly distributed elements",
-            "Custom details"
-        ]
-        details_type = st.selectbox("Detail type", details_options)
-        
-        if details_type == "Custom details":
-            details = st.text_area("Describe desired design details", "Elegant curves and swirling shapes")
-        else:
-            # Preset detail descriptions
-            details_mapping = {
-                "Fine outlines and lines": "Design includes fine outlines and smooth lines, highlighting the shape and contours of the pattern.",
-                "Smooth gradient effects": "Design uses smooth color gradients, elegantly transitioning from one color to another.",
-                "Floral and plant elements": "Design incorporates delicate flowers, leaves and other plant elements with a natural organic feel.",
-                "Geometric shapes and patterns": "Design uses clean geometric shapes like triangles, circles, squares arranged in attractive patterns.",
-                "Waves and curves": "Design incorporates flowing waves and elegant curves creating a sense of movement and rhythm.",
-                "Dotted textures": "Design uses dot patterns to create texture and depth, similar to pointillism technique.",
-                "Repeating patterns": "Design contains regularly repeating elements forming a unified, harmonious pattern.",
-                "Randomly distributed elements": "Elements in the design are randomly distributed, creating a natural, irregular appearance."
-            }
-            details = details_mapping[details_type]
-        
-        # Add design complexity option
-        complexity = st.slider("Design complexity", 1, 10, 5, 
-                              help="1 means very simple, 10 means very complex")
-        
-        # Automatically set detail level based on complexity
-        detail_level = "low" if complexity <= 3 else "medium" if complexity <= 7 else "high"
-        
-        # Improved design generation button
-        if st.button("🎨 Generate AI Design"):
-            if not theme.strip():
-                st.warning("Please enter at least a theme or keyword!")
+        with tab1:
+            # 简化设计选项 - 只保留主题和颜色选择
+            theme = st.text_input("Design theme or keyword (required)", "Elegant pattern")
+            
+            # 简化颜色选择
+            color_scheme_options = [
+                "Soft warm tones (pink, gold, light orange)",
+                "Fresh cool tones (blue, mint, white)",
+                "Nature colors (green, brown, beige)",
+                "Bright and vibrant (red, yellow, orange)",
+                "Black and white contrast",
+                "Custom colors"
+            ]
+            color_scheme = st.selectbox("Color scheme", color_scheme_options)
+            
+            # If custom colors are selected, show input field
+            if color_scheme == "Custom colors":
+                colors = st.text_input("Enter desired colors (comma separated)", "pink, gold, sky blue")
             else:
-                # Generate more professional and detailed prompt text
-                prompt_text = (
-                    f"Design a T-shirt pattern with '{theme}' theme using {style}. "
-                    f"Use the following colors: {colors}. "
-                    f"Design details: {details}. "
-                    f"Design complexity is {complexity}/10 with {detail_level} level of detail. "
-                    f"The pattern should have an attractive, balanced composition suitable for a T-shirt print. "
-                    f"Create a PNG format image with transparent background, ensuring only the design elements are visible with no background. "
-                    f"The design style should be professional and modern, appropriate for clothing prints. "
-                    f"Ensure the pattern has crisp edges and a high-quality appearance. "
-                    f"The output must be PNG with alpha channel transparency."
-                )
-                
-                with st.spinner("🔮 Generating design... please wait"):
-                    custom_design = generate_vector_image(prompt_text)
+                # Set corresponding color values based on selected scheme
+                color_mapping = {
+                    "Soft warm tones (pink, gold, light orange)": "pink, gold, light orange, cream",
+                    "Fresh cool tones (blue, mint, white)": "sky blue, mint green, white, light gray",
+                    "Nature colors (green, brown, beige)": "forest green, brown, beige, olive",
+                    "Bright and vibrant (red, yellow, orange)": "bright red, yellow, orange, lemon yellow",
+                    "Black and white contrast": "black, white, gray",
+                }
+                colors = color_mapping.get(color_scheme, "blue, green, red")
+            
+            # 设计风格 - 简化选项
+            style_options = ["Minimalist", "Artistic", "Geometric", "Abstract"]
+            style = st.selectbox("Design style", style_options)
+            
+            # 简化复杂度选项
+            complexity = st.slider("Design complexity", 1, 10, 5)
+            
+            # 自动设置详细程度
+            detail_level = "low" if complexity <= 3 else "medium" if complexity <= 7 else "high"
+            
+            # 生成AI设计按钮
+            if st.button("🎨 Generate Design"):
+                if not theme.strip():
+                    st.warning("Please enter at least a theme or keyword!")
+                else:
+                    # 简化提示文本
+                    prompt_text = (
+                        f"Design a T-shirt pattern with '{theme}' theme in {style} style. "
+                        f"Use the following colors: {colors}. "
+                        f"Design complexity is {complexity}/10. "
+                        f"Create a PNG format image with transparent background, suitable for T-shirt printing."
+                    )
                     
-                    if custom_design:
-                        st.session_state.generated_design = custom_design
+                    with st.spinner("🔮 Generating design... please wait"):
+                        custom_design = generate_vector_image(prompt_text)
                         
-                        # Composite on the original image
-                        composite_image = st.session_state.base_image.copy()
+                        if custom_design:
+                            st.session_state.generated_design = custom_design
+                            
+                            # Composite on the original image
+                            composite_image = st.session_state.base_image.copy()
+                            
+                            # Place design at current selection position
+                            left, top = st.session_state.current_box_position
+                            box_size = int(1024 * 0.25)
+                            
+                            # Scale generated pattern to selection area size
+                            scaled_design = custom_design.resize((box_size, box_size), Image.LANCZOS)
+                            
+                            try:
+                                # Ensure transparency channel is used for pasting
+                                composite_image.paste(scaled_design, (left, top), scaled_design)
+                            except Exception as e:
+                                st.warning(f"Transparent channel paste failed, direct paste: {e}")
+                                composite_image.paste(scaled_design, (left, top))
+                            
+                            st.session_state.final_design = composite_image
+                            st.rerun()
+                        else:
+                            st.error("Failed to generate image, please try again later.")
+        
+        with tab2:
+            # 添加文字/Logo选项
+            st.write("Add text or logo to your design:")
+            
+            # 文字选项
+            text_content = st.text_input("Enter text to add:", "My Brand")
+            
+            # 文字颜色
+            text_color = st.color_picker("Text color:", "#000000")
+            
+            # 文字大小
+            text_size = st.slider("Text size:", 10, 50, 24)
+            
+            # 添加文字按钮
+            if st.button("Add Text to Design"):
+                if not text_content.strip():
+                    st.warning("Please enter some text!")
+                else:
+                    # 创建带有文字的设计
+                    if st.session_state.base_image is None:
+                        st.warning("Please wait for the T-shirt image to load")
+                    else:
+                        # 创建一个新的设计或使用现有最终设计
+                        if st.session_state.final_design is not None:
+                            new_design = st.session_state.final_design.copy()
+                        else:
+                            new_design = st.session_state.base_image.copy()
                         
-                        # Place design at current selection position
+                        # 准备绘图对象
+                        draw = ImageDraw.Draw(new_design)
+                        
+                        # 导入字体(使用默认字体)
+                        try:
+                            from PIL import ImageFont
+                            font = ImageFont.truetype("arial.ttf", text_size)
+                        except:
+                            font = None
+                        
+                        # 获取当前选择框位置
                         left, top = st.session_state.current_box_position
                         box_size = int(1024 * 0.25)
                         
-                        # Scale generated pattern to selection area size
-                        scaled_design = custom_design.resize((box_size, box_size), Image.LANCZOS)
+                        # 在选择框中居中绘制文字
+                        text_bbox = draw.textbbox((0, 0), text_content, font=font)
+                        text_width = text_bbox[2] - text_bbox[0]
+                        text_height = text_bbox[3] - text_bbox[1]
                         
-                        try:
-                            # Ensure transparency channel is used for pasting
-                            composite_image.paste(scaled_design, (left, top), scaled_design)
-                        except Exception as e:
-                            st.warning(f"Transparent channel paste failed, direct paste: {e}")
-                            composite_image.paste(scaled_design, (left, top))
+                        text_x = left + (box_size - text_width) // 2
+                        text_y = top + (box_size - text_height) // 2
                         
-                        st.session_state.final_design = composite_image
+                        # 绘制文字
+                        draw.text((text_x, text_y), text_content, fill=text_color, font=font)
+                        
+                        # 更新设计
+                        st.session_state.final_design = new_design
                         st.rerun()
-                    else:
-                        st.error("Failed to generate image, please try again later.")
     
     # Display final effect - move out of col2, place at bottom of overall page
     if st.session_state.final_design is not None:

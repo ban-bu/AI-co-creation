@@ -56,8 +56,8 @@ def draw_selection_box(image, point=None):
 
 # Preset Design Group design page
 def show_high_complexity_general_sales():
-    st.title("👕 Preset Design Experiment Platform")
-    st.markdown("### High Task Complexity-General Sales - Choose Your Favorite T-shirt Design")
+    st.title("👕 AI Co-Creation Experiment Platform")
+    st.markdown("### High Task Complexity-General Sales - Create Your Unique T-shirt Design")
     
     # 添加General Sales情境描述
     st.info("""
@@ -69,12 +69,26 @@ def show_high_complexity_general_sales():
     This is a typical online shopping experience where you can customize at your own pace.
     """)
     
-    # 创建两列布局：左侧T恤区域，右侧设计选择区域
-    design_area_col, options_col = st.columns([3, 2])
+    # 任务复杂度说明
+    st.markdown("""
+    <div style="background-color:#f0f0f0; padding:10px; border-radius:5px; margin-bottom:15px">
+    <b>Advanced Customization Options</b>: In this experience, you can customize your T-shirt with these extensive options:
+    <ul>
+        <li>Choose from different collar styles</li>
+        <li>Adjust sleeve length and style</li>
+        <li>Select fabric types and materials</li>
+        <li>Create detailed design patterns</li>
+        <li>Position your design precisely on the T-shirt</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
     
-    with design_area_col:
+    # Create two-column layout
+    col1, col2 = st.columns([3, 2])
+    
+    with col1:
         st.markdown("## Design Area")
-        
+    
         # Load T-shirt base image
         if st.session_state.base_image is None:
             try:
@@ -90,33 +104,18 @@ def show_high_complexity_general_sales():
         
         st.markdown("**👇 Click anywhere on the T-shirt to move the design frame**")
         
-        # 初始化临时设计变量（如果需要）
-        if 'temp_preset_design' not in st.session_state:
-            st.session_state.temp_preset_design = None
-        if 'temp_preset_position' not in st.session_state:
-            st.session_state.temp_preset_position = (0, 0)
-        if 'temp_preset_scale' not in st.session_state:
-            st.session_state.temp_preset_scale = 40
-        if 'design_mode' not in st.session_state:
-            st.session_state.design_mode = "preset"  # 默认使用预设设计模式
-            
-        # 准备显示的图像（带有预览效果）
-        display_image = st.session_state.current_image.copy()
-        
-        # 如果有临时预设设计且正在调整位置，直接在红框中显示预览
-        if st.session_state.temp_preset_design is not None and st.session_state.design_mode == "preset":
-            # 在当前图像上绘制预览
-            display_image = draw_design_preview(
-                display_image,
-                st.session_state.temp_preset_design,
-                st.session_state.current_box_position,
-                st.session_state.temp_preset_position,
-                st.session_state.temp_preset_scale
-            )
+        # 初始化T恤样式状态变量
+        if 'collar_style' not in st.session_state:
+            st.session_state.collar_style = "Round"
+        if 'sleeve_style' not in st.session_state:
+            st.session_state.sleeve_style = "Short"
+        if 'fabric_type' not in st.session_state:
+            st.session_state.fabric_type = "Cotton"
         
         # Display current image and get click coordinates
+        current_image = st.session_state.current_image
         coordinates = streamlit_image_coordinates(
-            display_image,
+            current_image,
             key="shirt_image"
         )
         
@@ -129,225 +128,378 @@ def show_high_complexity_general_sales():
             st.session_state.current_box_position = new_pos
             st.rerun()
 
-        # 显示最终设计结果（如果有）
-        if st.session_state.final_design is not None:
-            st.markdown("### Final Result")
-            
-            # 修改清空设计按钮
-            if st.button("🗑️ Clear All Designs", key="clear_designs"):
-                # 保存当前红框位置
-                current_left, current_top = st.session_state.current_box_position
-                box_size = int(1024 * 0.25)
-                
-                # 计算红框中心点坐标
-                center_x = current_left + box_size // 2
-                center_y = current_top + box_size // 2
-                
-                # 清空所有设计相关的状态变量
-                st.session_state.preset_design = None
-                st.session_state.drawn_design = None
-                st.session_state.temp_preset_design = None
-                st.session_state.preset_position = (0, 0)
-                st.session_state.preset_scale = 40
-                # 重置最终设计为基础T恤图像
-                st.session_state.final_design = None
-                
-                # 使用中心点坐标重新绘制选择框
-                temp_image, new_pos = draw_selection_box(st.session_state.base_image, (center_x, center_y))
-                st.session_state.current_image = temp_image
-                st.session_state.current_box_position = new_pos
-                st.rerun()
-            
-            st.image(st.session_state.final_design, use_container_width=True)
-            
-            # Provide download and completion options
-            download_col, complete_col = st.columns(2)
-            with download_col:
-                from io import BytesIO
-                buf = BytesIO()
-                st.session_state.final_design.save(buf, format="PNG")
-                buf.seek(0)
-                st.download_button(
-                    label="💾 Download Custom Design",
-                    data=buf,
-                    file_name="custom_tshirt.png",
-                    mime="image/png"
-                )
-            
-            with complete_col:
-                # Add confirm completion button that navigates to the survey page
-                if st.button("Confirm Completion"):
-                    st.session_state.page = "survey"
-                    st.rerun()
-
-    # 设计选择区域
-    with options_col:
-        st.markdown("## Design Options")
+    with col2:
+        st.markdown("## Design Parameters")
         
-        # 添加设计模式选择
-        design_mode = st.radio(
-            "Choose design method:",
-            options=["Use preset design", "Draw your own design"],
-            horizontal=True,
-            index=0 if st.session_state.design_mode == "preset" else 1
-        )
+        # 创建高级选项卡
+        tab1, tab2, tab3 = st.tabs(["T-shirt Style", "Design Pattern", "Text/Logo"])
         
-        # 更新设计模式
-        if (design_mode == "Use preset design" and st.session_state.design_mode != "preset") or \
-           (design_mode == "Draw your own design" and st.session_state.design_mode != "draw"):
-            st.session_state.design_mode = "preset" if design_mode == "Use preset design" else "draw"
+        with tab1:
+            st.markdown("### T-shirt Customization")
+            
+            # 领口样式选择
+            collar_options = ["Round", "V-neck", "Henley", "Polo", "Crew", "Scoop"]
+            collar_style = st.selectbox("Collar style:", collar_options, 
+                                       index=collar_options.index(st.session_state.collar_style) 
+                                       if st.session_state.collar_style in collar_options else 0)
+            
+            # 袖子样式选择
+            sleeve_options = ["Short", "Long", "3/4 Length", "Cap", "Raglan", "Sleeveless"]
+            sleeve_style = st.selectbox("Sleeve style:", sleeve_options,
+                                       index=sleeve_options.index(st.session_state.sleeve_style)
+                                       if st.session_state.sleeve_style in sleeve_options else 0)
+            
+            # 面料选择
+            fabric_options = ["Cotton", "Polyester", "Cotton-Polyester Blend", "Jersey", "Linen", "Bamboo"]
+            fabric_type = st.selectbox("Fabric type:", fabric_options,
+                                      index=fabric_options.index(st.session_state.fabric_type)
+                                      if st.session_state.fabric_type in fabric_options else 0)
+            
+            # 添加尺寸选择
+            size_options = ["XS", "S", "M", "L", "XL", "XXL", "3XL"]
+            size = st.selectbox("Size:", size_options, index=2)  # 默认选择M
+            
+            # 添加颜色选择
+            shirt_color = st.color_picker("T-shirt base color:", "#FFFFFF")
+            
+            # 衣服剪裁选择
+            fit_options = ["Regular Fit", "Slim Fit", "Relaxed Fit", "Athletic Fit"]
+            fit_type = st.selectbox("Fit type:", fit_options)
+            
+            # 应用T恤样式按钮
+            if st.button("Apply T-shirt Style", key="apply_style"):
+                # 更新存储的样式值
+                st.session_state.collar_style = collar_style
+                st.session_state.sleeve_style = sleeve_style
+                st.session_state.fabric_type = fabric_type
+                
+                # 显示确认信息
+                st.success(f"T-shirt style updated: {collar_style} collar, {sleeve_style} sleeves, {fabric_type} fabric")
+        
+        with tab2:
+            # User input for personalization parameters
+            theme = st.text_input("Theme or keyword (required)", "Elegant floral pattern")
+            
+            # Add style selection dropdown with more professional style options
+            style_options = [
+                "Watercolor style", "Sketch style", "Geometric shapes", "Minimalist", 
+                "Vintage style", "Pop art", "Japanese style", "Nordic design",
+                "Classical ornament", "Digital illustration", "Abstract art"
+            ]
+            style = st.selectbox("Design style", style_options, index=0)
+            
+            # Improved color selection
+            color_scheme_options = [
+                "Soft warm tones (pink, gold, light orange)",
+                "Fresh cool tones (blue, mint, white)",
+                "Nature colors (green, brown, beige)",
+                "Bright and vibrant (red, yellow, orange)",
+                "Elegant deep tones (navy, purple, dark green)",
+                "Black and white contrast",
+                "Custom colors"
+            ]
+            color_scheme = st.selectbox("Color scheme", color_scheme_options)
+            
+            # If custom colors are selected, show input field
+            if color_scheme == "Custom colors":
+                colors = st.text_input("Enter desired colors (comma separated)", "pink, gold, sky blue")
+            else:
+                # Set corresponding color values based on selected scheme
+                color_mapping = {
+                    "Soft warm tones (pink, gold, light orange)": "pink, gold, light orange, cream",
+                    "Fresh cool tones (blue, mint, white)": "sky blue, mint green, white, light gray",
+                    "Nature colors (green, brown, beige)": "forest green, brown, beige, olive",
+                    "Bright and vibrant (red, yellow, orange)": "bright red, yellow, orange, lemon yellow",
+                    "Elegant deep tones (navy, purple, dark green)": "navy blue, violet, dark green, burgundy",
+                    "Black and white contrast": "black, white, gray"
+                }
+                colors = color_mapping.get(color_scheme, "blue, green, red")
+            
+            # 高级设计选项
+            st.markdown("### Advanced Design Settings")
+            
+            # 添加复杂度和详细程度滑块
+            complexity = st.slider("Design complexity", 1, 10, 5)
+            detail_level = "low" if complexity <= 3 else "medium" if complexity <= 7 else "high"
+            
+            # 添加特殊效果选项
+            effect_options = ["None", "Distressed", "Vintage", "Metallic", "Glitter", "Gradient"]
+            special_effect = st.selectbox("Special effect:", effect_options)
+            
+            # 应用位置和大小设置
+            st.markdown("### Position & Scale")
+            position_x = st.slider("Horizontal position", -100, 100, 0)
+            position_y = st.slider("Vertical position", -100, 100, 0)
+            scale = st.slider("Design size", 25, 150, 100, 5, format="%d%%")
+            
+            # 生成AI设计按钮
+            generate_col1, generate_col2 = st.columns(2)
+            with generate_col1:
+                if st.button("🎨 Generate Design", key="generate_design"):
+                    if not theme.strip():
+                        st.warning("Please enter at least a theme or keyword!")
+                    else:
+                        # 构建高级提示文本
+                        effect_prompt = "" if special_effect == "None" else f"Apply {special_effect} effect to the design. "
+                        
+                        prompt_text = (
+                            f"Design a T-shirt pattern with '{theme}' theme using {style}. "
+                            f"Use the following colors: {colors}. "
+                            f"Design complexity is {complexity}/10 with {detail_level} level of detail. "
+                            f"{effect_prompt}"
+                            f"Create a PNG format image with transparent background, suitable for T-shirt printing."
+                        )
+                        
+                        with st.spinner("🔮 Generating design... please wait"):
+                            custom_design = generate_vector_image(prompt_text)
+                            
+                            if custom_design:
+                                st.session_state.generated_design = custom_design
+                                
+                                # Composite on the original image
+                                composite_image = st.session_state.base_image.copy()
+                                
+                                # Place design at current selection position with size and position modifiers
+                                left, top = st.session_state.current_box_position
+                                box_size = int(1024 * 0.25)
+                                
+                                # 应用缩放
+                                actual_size = int(box_size * scale / 100)
+                                
+                                # 应用位置偏移
+                                max_offset = box_size - actual_size
+                                actual_x = int((position_x / 100) * (max_offset / 2))
+                                actual_y = int((position_y / 100) * (max_offset / 2))
+                                
+                                # 最终位置
+                                final_left = left + (box_size - actual_size) // 2 + actual_x
+                                final_top = top + (box_size - actual_size) // 2 + actual_y
+                                
+                                # Scale generated pattern to selection area size
+                                scaled_design = custom_design.resize((actual_size, actual_size), Image.LANCZOS)
+                                
+                                try:
+                                    # Ensure transparency channel is used for pasting
+                                    composite_image.paste(scaled_design, (final_left, final_top), scaled_design)
+                                except Exception as e:
+                                    st.warning(f"Transparent channel paste failed, direct paste: {e}")
+                                    composite_image.paste(scaled_design, (final_left, final_top))
+                                
+                                st.session_state.final_design = composite_image
+                                st.rerun()
+                            else:
+                                st.error("Failed to generate image, please try again later.")
+        
+        with tab3:
+            # 文字和Logo选项
+            st.markdown("### Add Text or Logo")
+            
+            text_type = st.radio("Select option:", ["Text", "Logo"], horizontal=True)
+            
+            if text_type == "Text":
+                # 文字选项
+                text_content = st.text_input("Enter text:", "My Brand")
+                
+                # 字体选择
+                font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]
+                font_family = st.selectbox("Font family:", font_options)
+                
+                # 文字风格
+                text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
+                
+                # 文字颜色和大小
+                text_color = st.color_picker("Text color:", "#000000")
+                text_size = st.slider("Text size:", 10, 60, 24)
+                
+                # 文字效果
+                text_effect = st.selectbox("Text effect:", ["None", "Curved", "Arched", "Wavy", "3D", "Gradient"])
+                
+                # 对齐方式
+                alignment = st.radio("Alignment:", ["Left", "Center", "Right"], horizontal=True, index=1)
+                
+                # 按钮 - 应用文字
+                if st.button("Add Text to Design", key="add_text"):
+                    if not text_content.strip():
+                        st.warning("Please enter some text!")
+                    else:
+                        # 创建带有文字的设计
+                        if st.session_state.base_image is None:
+                            st.warning("Please wait for the T-shirt image to load")
+                        else:
+                            # 创建新的设计或使用现有最终设计
+                            if st.session_state.final_design is not None:
+                                new_design = st.session_state.final_design.copy()
+                            else:
+                                new_design = st.session_state.base_image.copy()
+                            
+                            # 准备绘图对象
+                            draw = ImageDraw.Draw(new_design)
+                            
+                            # 导入字体
+                            try:
+                                from PIL import ImageFont
+                                font = ImageFont.truetype("arial.ttf", text_size)
+                            except:
+                                font = None
+                            
+                            # 获取选择框位置
+                            left, top = st.session_state.current_box_position
+                            box_size = int(1024 * 0.25)
+                            
+                            # 根据对齐方式计算文字位置
+                            text_bbox = draw.textbbox((0, 0), text_content, font=font)
+                            text_width = text_bbox[2] - text_bbox[0]
+                            text_height = text_bbox[3] - text_bbox[1]
+                            
+                            if alignment == "Left":
+                                text_x = left + 10
+                            elif alignment == "Right":
+                                text_x = left + box_size - text_width - 10
+                            else:  # Center
+                                text_x = left + (box_size - text_width) // 2
+                            
+                            text_y = top + (box_size - text_height) // 2
+                            
+                            # 绘制文字
+                            draw.text((text_x, text_y), text_content, fill=text_color, font=font)
+                            
+                            # 更新设计
+                            st.session_state.final_design = new_design
+                            st.rerun()
+            else:  # Logo options
+                # Logo上传选项
+                uploaded_logo = st.file_uploader("Upload your logo (PNG or JPG file):", type=["png", "jpg", "jpeg"])
+                
+                # Logo大小和位置
+                logo_size = st.slider("Logo size:", 10, 100, 40, format="%d%%")
+                logo_position = st.radio("Position:", ["Top Left", "Top Center", "Top Right", "Center", "Bottom Left", "Bottom Center", "Bottom Right"], index=3)
+                
+                # Logo透明度
+                logo_opacity = st.slider("Logo opacity:", 10, 100, 100, 5, format="%d%%")
+                
+                # 应用Logo按钮
+                if st.button("Apply Logo", key="apply_logo"):
+                    if uploaded_logo is None:
+                        st.warning("Please upload a logo first!")
+                    else:
+                        # 处理上传的Logo
+                        try:
+                            from io import BytesIO
+                            logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
+                            
+                            # 调整Logo大小
+                            box_size = int(1024 * 0.25)
+                            logo_width = int(box_size * logo_size / 100)
+                            logo_height = int(logo_width * logo_image.height / logo_image.width)
+                            logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
+                            
+                            # 创建新的设计或使用现有最终设计
+                            if st.session_state.final_design is not None:
+                                new_design = st.session_state.final_design.copy()
+                            else:
+                                new_design = st.session_state.base_image.copy()
+                            
+                            # 获取选择框位置
+                            left, top = st.session_state.current_box_position
+                            
+                            # 计算Logo位置
+                            if logo_position == "Top Left":
+                                logo_x, logo_y = left + 10, top + 10
+                            elif logo_position == "Top Center":
+                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + 10
+                            elif logo_position == "Top Right":
+                                logo_x, logo_y = left + box_size - logo_width - 10, top + 10
+                            elif logo_position == "Center":
+                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + (box_size - logo_height) // 2
+                            elif logo_position == "Bottom Left":
+                                logo_x, logo_y = left + 10, top + box_size - logo_height - 10
+                            elif logo_position == "Bottom Center":
+                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + box_size - logo_height - 10
+                            else:  # Bottom Right
+                                logo_x, logo_y = left + box_size - logo_width - 10, top + box_size - logo_height - 10
+                            
+                            # 设置透明度
+                            if logo_opacity < 100:
+                                logo_data = logo_resized.getdata()
+                                new_data = []
+                                for item in logo_data:
+                                    r, g, b, a = item
+                                    new_a = int(a * logo_opacity / 100)
+                                    new_data.append((r, g, b, new_a))
+                                logo_resized.putdata(new_data)
+                            
+                            # 粘贴Logo到设计
+                            try:
+                                new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
+                            except Exception as e:
+                                st.warning(f"Logo paste failed: {e}")
+                            
+                            # 更新设计
+                            st.session_state.final_design = new_design
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error processing logo: {e}")
+    
+    # Display final effect - move out of col2, place at bottom of overall page
+    if st.session_state.final_design is not None:
+        st.markdown("### Final Result")
+        
+        # 添加清空设计按钮
+        if st.button("🗑️ Clear All Designs", key="clear_designs"):
+            # 清空所有设计相关的状态变量
+            st.session_state.generated_design = None
+            # 重置最终设计为基础T恤图像
+            st.session_state.final_design = None
+            # 重置当前图像为带选择框的基础图像
+            temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
+            st.session_state.current_image = temp_image
             st.rerun()
         
-        # 根据当前设计模式显示相应的界面
-        if st.session_state.design_mode == "preset":
-            # 预设设计选择界面
-            st.markdown("## Preset Design Selection")
-            
-            # Get all images from predesign folder
-            predesign_folder = "predesign"
-            design_files = []
-            
-            # Ensure folder exists
-            if not os.path.exists(predesign_folder):
-                st.error(f"Preset design folder not found: {predesign_folder}, please make sure it exists.")
-            else:
-                # Get all supported image files
-                for file in os.listdir(predesign_folder):
-                    if file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif')):
-                        design_files.append(file)
-            
-            if not design_files:
-                st.warning(f"No image files found in the {predesign_folder} folder.")
-            else:
-                # Display image selection interface
-                selected_file = st.radio(
-                    "Select a design:",
-                    options=design_files,
-                    horizontal=False
-                )
-                
-                st.session_state.selected_preset = selected_file
-                
-                # Display selected design
-                if st.session_state.selected_preset:
-                    try:
-                        # 加载选定的设计图像
-                        design_path = os.path.join(predesign_folder, selected_file)
-                        selected_design = Image.open(design_path).convert("RGBA")
-                        st.image(selected_design, caption=f"Preset: {selected_file}", use_column_width=True)
-                        
-                        # 加载到临时设计变量，准备实时预览调整
-                        st.session_state.temp_preset_design = selected_design
-                        
-                        # 调整位置和大小控件
-                        st.markdown("### Adjust Position & Size")
-                        
-                        # 添加缩放滑块
-                        scale_percent = st.slider("Size", 10, 100, st.session_state.temp_preset_scale, 5, 
-                                                 help="Size of the design")
-                        
-                        # 设置水平和垂直位置的滑块
-                        x_offset = st.slider("Horizontal", -100, 100, st.session_state.temp_preset_position[0], 5, 
-                                           help="Move left/right")
-                        y_offset = st.slider("Vertical", -100, 100, st.session_state.temp_preset_position[1], 5,
-                                           help="Move up/down")
-                        
-                        # 当控制值改变时更新临时状态
-                        if (x_offset, y_offset) != st.session_state.temp_preset_position or scale_percent != st.session_state.temp_preset_scale:
-                            st.session_state.temp_preset_position = (x_offset, y_offset)
-                            st.session_state.temp_preset_scale = scale_percent
-                            st.rerun()  # 触发重新运行以更新预览
-                        
-                        # 应用设计按钮
-                        if st.button("Apply to T-shirt", key="apply_preset"):
-                            # 将临时设计和位置应用到实际设计
-                            st.session_state.preset_design = st.session_state.temp_preset_design
-                            st.session_state.preset_position = st.session_state.temp_preset_position
-                            st.session_state.preset_scale = st.session_state.temp_preset_scale
-                            
-                            # 清除绘制的设计，确保只显示一种设计
-                            st.session_state.drawn_design = None
-                            
-                            # 生成复合图像
-                            update_composite_image()
-                            st.rerun()
-                    except Exception as e:
-                        st.error(f"Error processing preset design: {e}")
-        else:
-            # 绘图设计界面
-            st.markdown("## Draw Your Own Design")
-            st.markdown("Create your own pattern:")
-            
-            pen_color = st.color_picker("Pen color", "#000000")
-            pen_size = st.slider("Pen thickness", 1, 20, 5)
-            
-            # Drawing canvas
-            canvas_result = st_canvas(
-                fill_color="rgba(255, 255, 255, 0.3)",  # Fill color
-                stroke_width=pen_size,  # Stroke width
-                stroke_color=pen_color,  # Stroke color
-                background_color="#ffffff",  # Background color
-                height=300,
-                width=300,
-                drawing_mode="freedraw",  # Drawing mode
-                key="canvas",
+        st.image(st.session_state.final_design, use_container_width=True)
+        
+        # 添加T恤规格信息
+        specs_col1, specs_col2, specs_col3 = st.columns(3)
+        
+        with specs_col1:
+            st.markdown(f"**Style:** {st.session_state.collar_style} collar")
+            st.markdown(f"**Sleeves:** {st.session_state.sleeve_style}")
+        
+        with specs_col2:
+            st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
+            if 'size' in locals():
+                st.markdown(f"**Size:** {size}")
+        
+        with specs_col3:
+            if 'fit_type' in locals():
+                st.markdown(f"**Fit:** {fit_type}")
+        
+        # Provide download option
+        col1, col2 = st.columns(2)
+        with col1:
+            buf = BytesIO()
+            st.session_state.final_design.save(buf, format="PNG")
+            buf.seek(0)
+            st.download_button(
+                label="💾 Download Custom Design",
+                data=buf,
+                file_name="custom_tshirt.png",
+                mime="image/png"
             )
-
-            # Check if there is a drawing
-            if canvas_result.image_data is not None:
-                # Button to apply to T-shirt
-                if st.button("Apply Drawing to T-shirt", key="apply_drawing"):
-                    # Convert numpy array to PIL image
-                    import numpy as np
-                    drawn_design = Image.fromarray(canvas_result.image_data.astype('uint8'), 'RGBA')
-                    
-                    # Create a new transparent background image
-                    transparent_design = Image.new("RGBA", drawn_design.size, (0, 0, 0, 0))
-                    
-                    # Process image, making white background transparent
-                    width, height = drawn_design.size
-                    for x in range(width):
-                        for y in range(height):
-                            r, g, b, a = drawn_design.getpixel((x, y))
-                            # If pixel is close to white, set it to fully transparent
-                            if r > 240 and g > 240 and b > 240:
-                                transparent_design.putpixel((x, y), (0, 0, 0, 0))
-                            else:
-                                # Otherwise keep original color and opacity
-                                transparent_design.putpixel((x, y), (r, g, b, 255))
-                    
-                    # 存储绘制的设计到专用状态变量
-                    st.session_state.drawn_design = transparent_design
-                    
-                    # 清除预设设计，确保只显示一种设计
-                    st.session_state.preset_design = None
-                    st.session_state.preset_position = (0, 0)
-                    st.session_state.preset_scale = 40
-                    
-                    # 生成复合图像
-                    update_composite_image()
-                    st.rerun()
-                
-                if st.button("Clear Canvas", key="clear_canvas"):
-                    # 不做任何操作，因为canvas会在页面刷新时自动清空
-                    st.rerun()
-
-    # 添加分隔线
-    st.markdown("---")
+        
+        with col2:
+            # Confirm completion button
+            if st.button("Confirm Completion"):
+                st.session_state.page = "survey"
+                st.rerun()
     
-    # Return to main interface button - 现在放在页面底部
-    if st.button("Return to Main Page", key="return_to_main_page"):
+    # Return to main interface button - modified here
+    if st.button("Return to Main Page"):
         # Clear all design-related states
         st.session_state.base_image = None
         st.session_state.current_image = None
         st.session_state.current_box_position = None
         st.session_state.generated_design = None
-        st.session_state.preset_design = None
-        st.session_state.drawn_design = None
         st.session_state.final_design = None
-        st.session_state.selected_preset = None
-        st.session_state.temp_preset_design = None
-        st.session_state.design_mode = "preset"  # 重置设计模式为默认值
         # Only change page state, retain user info and experiment group
         st.session_state.page = "welcome"
         st.rerun()
