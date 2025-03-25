@@ -31,9 +31,60 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
     # 使用调整后的强度
     actual_intensity = fabric_intensity
     
+    # 检测T恤颜色的深浅
+    # 取样20个随机点并计算平均亮度
+    is_dark_shirt = False
+    sample_count = 0
+    brightness_sum = 0
+    
+    for _ in range(100):  # 取100个点的样本
+        x = np.random.randint(0, width)
+        y = np.random.randint(0, height)
+        try:
+            pixel = image.getpixel((x, y))
+            if len(pixel) == 4:  # RGBA
+                r, g, b, a = pixel
+                if a > 0 and (r + g + b) / 3 > 60:  # 非边缘且非透明区域
+                    brightness_sum += (r + g + b) / 3
+                    sample_count += 1
+        except:
+            continue
+    
+    # 如果样本数量足够，计算平均亮度
+    if sample_count > 20:
+        avg_brightness = brightness_sum / sample_count
+        # 根据平均亮度决定是否是深色T恤
+        is_dark_shirt = avg_brightness < 128
+    
     # 创建纹理图像（透明）
     texture = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(texture)
+    
+    # 根据T恤颜色调整纹理颜色
+    # 深色T恤使用浅色纹理，浅色T恤使用深色纹理
+    if is_dark_shirt:
+        # 深色T恤的纹理颜色 - 使用浅色
+        texture_colors = {
+            "Cotton": (220, 220, 220, int(120 * actual_intensity)),  # 浅灰白色
+            "Polyester": (230, 230, 230, int(100 * actual_intensity)),  # 更亮的浅灰色
+            "Linen": (235, 230, 220, int(130 * actual_intensity)),  # 米白色
+            "Jersey": (210, 210, 210, int(140 * actual_intensity)),  # 浅灰色
+            "Bamboo": (225, 225, 215, int(120 * actual_intensity)),  # 浅米色
+            "default": (220, 220, 220, int(110 * actual_intensity))   # 默认浅色
+        }
+    else:
+        # 浅色T恤的纹理颜色 - 使用深色
+        texture_colors = {
+            "Cotton": (150, 150, 150, int(100 * actual_intensity)),  # 灰色
+            "Polyester": (140, 140, 140, int(80 * actual_intensity)),  # 深灰色
+            "Linen": (160, 155, 145, int(110 * actual_intensity)),  # 灰褐色
+            "Jersey": (140, 140, 140, int(120 * actual_intensity)),  # 深灰色
+            "Bamboo": (180, 180, 170, int(100 * actual_intensity)),  # 灰绿色
+            "default": (160, 160, 160, int(90 * actual_intensity))   # 默认灰色
+        }
+    
+    # 获取当前面料的纹理颜色
+    texture_color = texture_colors.get(fabric_type, texture_colors["default"])
     
     # 根据面料类型生成不同的纹理
     if fabric_type == "Cotton":
@@ -42,9 +93,7 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
             x = np.random.randint(0, width)
             y = np.random.randint(0, height)
             size = np.random.randint(1, 4)  # 增加最大点大小
-            # 使用更明显的纹理颜色
-            color = (150, 150, 150, int(100 * actual_intensity))
-            draw.ellipse([x, y, x+size, y+size], fill=color)
+            draw.ellipse([x, y, x+size, y+size], fill=texture_color)
             
     elif fabric_type == "Polyester":
         # 聚酯纤维：更多光滑的纹理线条
@@ -53,15 +102,14 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
             y1 = np.random.randint(0, height)
             x2 = x1 + np.random.randint(-30, 30)
             y2 = y1 + np.random.randint(-30, 30)
-            color = (140, 140, 140, int(80 * actual_intensity))
-            draw.line([x1, y1, x2, y2], fill=color, width=1)
+            draw.line([x1, y1, x2, y2], fill=texture_color, width=1)
     
     elif fabric_type == "Linen":
         # 亚麻布：更明显的交叉纹理线
         for i in range(0, width, 4):  # 减小间距增加密度
-            draw.line([i, 0, i, height], fill=(160, 155, 145, int(110 * actual_intensity)), width=1)
+            draw.line([i, 0, i, height], fill=texture_color, width=1)
         for i in range(0, height, 4):
-            draw.line([0, i, width, i], fill=(160, 155, 145, int(110 * actual_intensity)), width=1)
+            draw.line([0, i, width, i], fill=texture_color, width=1)
     
     elif fabric_type == "Jersey":
         # 针织面料：更密集的网格
@@ -69,16 +117,16 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
             for x in range(0, width, 3):
                 if (x + y) % 6 == 0:  # 增加点的密度
                     size = 2  # 增加点的大小
-                    draw.ellipse([x, y, x+size, y+size], fill=(140, 140, 140, int(120 * actual_intensity)))
+                    draw.ellipse([x, y, x+size, y+size], fill=texture_color)
     
     elif fabric_type == "Bamboo":
         # 竹纤维：更明显的竖条纹
         for i in range(0, width, 6):  # 减小间距
-            draw.line([i, 0, i, height], fill=(180, 180, 170, int(100 * actual_intensity)), width=2)
+            draw.line([i, 0, i, height], fill=texture_color, width=2)
             # 添加一些水平的细线
             if i % 18 == 0:
                 for j in range(0, height, 20):
-                    draw.line([0, j, width, j], fill=(180, 180, 170, int(80 * actual_intensity)), width=1)
+                    draw.line([0, j, width, j], fill=texture_color, width=1)
             
     else:  # Cotton-Polyester Blend 或其他
         # 增强混合纹理
@@ -86,9 +134,9 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
             x = np.random.randint(0, width)
             y = np.random.randint(0, height)
             size = np.random.randint(1, 4)
-            draw.ellipse([x, y, x+size, y+size], fill=(160, 160, 160, int(90 * actual_intensity)))
+            draw.ellipse([x, y, x+size, y+size], fill=texture_color)
         for i in range(0, width, 10):  # 减小线间距
-            draw.line([i, 0, i, height], fill=(160, 160, 160, int(60 * actual_intensity)), width=1)
+            draw.line([i, 0, i, height], fill=texture_color, width=1)
     
     # 减少模糊程度，使纹理更加锐利
     texture = texture.filter(ImageFilter.GaussianBlur(radius=0.5))
@@ -140,7 +188,11 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
                         # 面料区域 - 非边缘
                         if brightness > edge_threshold:
                             # 根据亮度调整纹理强度
-                            intensity_factor = min(1.0, brightness / 255)
+                            # 对于深色T恤，增加纹理强度
+                            if is_dark_shirt:
+                                intensity_factor = min(1.0, 0.7 + brightness / 500)  # 确保深色T恤的纹理较强
+                            else:
+                                intensity_factor = min(1.0, brightness / 255)
                             fabric_draw.point((x, y), fill=int(255 * intensity_factor))
                 else:  # RGB
                     r, g, b = pixel
@@ -153,7 +205,11 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
                         edge_draw.point((x, y), fill=255)
                     
                     if brightness > edge_threshold:
-                        intensity_factor = min(1.0, brightness / 255)
+                        # 对于深色T恤，增加纹理强度
+                        if is_dark_shirt:
+                            intensity_factor = min(1.0, 0.7 + brightness / 500)
+                        else:
+                            intensity_factor = min(1.0, brightness / 255)
                         fabric_draw.point((x, y), fill=int(255 * intensity_factor))
             except:
                 continue
@@ -173,6 +229,29 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
     
     # 将第一层纹理应用到面料区域
     result.paste(texture, (0, 0), fabric_mask)
+    
+    # 为深色T恤创建强调纹理
+    if is_dark_shirt:
+        # 创建增强对比度的纹理副本
+        enhanced_texture = texture.copy()
+        texture_data = enhanced_texture.getdata()
+        enhanced_data = []
+        
+        # 增强深色T恤的纹理亮度和对比度
+        for item in texture_data:
+            r, g, b, a = item
+            # 增加亮度
+            new_r = min(255, int(r * 1.3))
+            new_g = min(255, int(g * 1.3))
+            new_b = min(255, int(b * 1.3))
+            # 增加透明度
+            new_a = int(a * 1.2)
+            enhanced_data.append((new_r, new_g, new_b, new_a))
+        
+        enhanced_texture.putdata(enhanced_data)
+        
+        # 再次应用增强的纹理
+        result.paste(enhanced_texture, (0, 0), fabric_mask)
     
     # 创建纹理的暗部效果，增强立体感
     shadow_texture = Image.new("RGBA", texture.size, (0, 0, 0, 0))
