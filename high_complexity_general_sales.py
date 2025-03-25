@@ -159,11 +159,11 @@ def show_high_complexity_general_sales():
     <div style="background-color:#f0f0f0; padding:10px; border-radius:5px; margin-bottom:15px">
     <b>Advanced Customization Options</b>: In this experience, you can customize your T-shirt with these extensive options:
     <ul>
-        <li>Choose from different collar styles</li>
-        <li>Adjust sleeve length and style</li>
         <li>Select fabric types and materials</li>
+        <li>Choose T-shirt color</li>
         <li>Create detailed design patterns</li>
         <li>Position your design precisely on the T-shirt</li>
+        <li>Add text and logo to your design</li>
     </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -222,10 +222,11 @@ def show_high_complexity_general_sales():
     with col2:
         st.markdown("## Design Parameters")
         
-        # 创建高级选项卡
-        tab1, tab2, tab3 = st.tabs(["T-shirt Style", "Design Pattern", "Text/Logo"])
+        # 修改选项卡布局：从三个改为两个，将T-shirt Style和Text/Logo合并
+        tab1, tab2 = st.tabs(["T-shirt & Text/Logo", "Design Pattern"])
         
         with tab1:
+            # T-shirt Customization部分
             st.markdown("### T-shirt Customization")
             
             # 面料选择
@@ -233,10 +234,6 @@ def show_high_complexity_general_sales():
             fabric_type = st.selectbox("Fabric type:", fabric_options,
                                       index=fabric_options.index(st.session_state.fabric_type)
                                       if st.session_state.fabric_type in fabric_options else 0)
-            
-            # 添加尺寸选择
-            size_options = ["XS", "S", "M", "L", "XL", "XXL", "3XL"]
-            size = st.selectbox("Size:", size_options, index=2)  # 默认选择M
             
             # 修改颜色选择器，实时更改T恤颜色
             shirt_color = st.color_picker("T-shirt base color:", st.session_state.shirt_color_hex)
@@ -301,123 +298,8 @@ def show_high_complexity_general_sales():
                 
                 # 显示确认信息
                 st.success(f"T-shirt fabric updated: {fabric_type}")
-        
-        with tab2:
-            # User input for personalization parameters
-            theme = st.text_input("Theme or keyword (required)", "Elegant floral pattern")
             
-            # Add style selection dropdown with more professional style options
-            style_options = [
-                "Watercolor style", "Sketch style", "Geometric shapes", "Minimalist", 
-                "Vintage style", "Pop art", "Japanese style", "Nordic design",
-                "Classical ornament", "Digital illustration", "Abstract art"
-            ]
-            style = st.selectbox("Design style", style_options, index=0)
-            
-            # Improved color selection
-            color_scheme_options = [
-                "Soft warm tones (pink, gold, light orange)",
-                "Fresh cool tones (blue, mint, white)",
-                "Nature colors (green, brown, beige)",
-                "Bright and vibrant (red, yellow, orange)",
-                "Elegant deep tones (navy, purple, dark green)",
-                "Black and white contrast",
-                "Custom colors"
-            ]
-            color_scheme = st.selectbox("Color scheme", color_scheme_options)
-            
-            # If custom colors are selected, show input field
-            if color_scheme == "Custom colors":
-                colors = st.text_input("Enter desired colors (comma separated)", "pink, gold, sky blue")
-            else:
-                # Set corresponding color values based on selected scheme
-                color_mapping = {
-                    "Soft warm tones (pink, gold, light orange)": "pink, gold, light orange, cream",
-                    "Fresh cool tones (blue, mint, white)": "sky blue, mint green, white, light gray",
-                    "Nature colors (green, brown, beige)": "forest green, brown, beige, olive",
-                    "Bright and vibrant (red, yellow, orange)": "bright red, yellow, orange, lemon yellow",
-                    "Elegant deep tones (navy, purple, dark green)": "navy blue, violet, dark green, burgundy",
-                    "Black and white contrast": "black, white, gray"
-                }
-                colors = color_mapping.get(color_scheme, "blue, green, red")
-            
-            # 高级设计选项
-            st.markdown("### Advanced Design Settings")
-            
-            # 添加复杂度和详细程度滑块
-            complexity = st.slider("Design complexity", 1, 10, 5)
-            detail_level = "low" if complexity <= 3 else "medium" if complexity <= 7 else "high"
-            
-            # 添加特殊效果选项
-            effect_options = ["None", "Distressed", "Vintage", "Metallic", "Glitter", "Gradient"]
-            special_effect = st.selectbox("Special effect:", effect_options)
-            
-            # 应用位置和大小设置
-            st.markdown("### Position & Scale")
-            position_x = st.slider("Horizontal position", -100, 100, 0)
-            position_y = st.slider("Vertical position", -100, 100, 0)
-            scale = st.slider("Design size", 25, 150, 100, 5, format="%d%%")
-            
-            # 生成AI设计按钮
-            generate_col1, generate_col2 = st.columns(2)
-            with generate_col1:
-                if st.button("🎨 Generate Design", key="generate_design"):
-                    if not theme.strip():
-                        st.warning("Please enter at least a theme or keyword!")
-                    else:
-                        # 构建高级提示文本
-                        effect_prompt = "" if special_effect == "None" else f"Apply {special_effect} effect to the design. "
-                        
-                        prompt_text = (
-                            f"Design a T-shirt pattern with '{theme}' theme using {style}. "
-                            f"Use the following colors: {colors}. "
-                            f"Design complexity is {complexity}/10 with {detail_level} level of detail. "
-                            f"{effect_prompt}"
-                            f"Create a PNG format image with transparent background, suitable for T-shirt printing."
-                        )
-                        
-                        with st.spinner("🔮 Generating design... please wait"):
-                            custom_design = generate_vector_image(prompt_text)
-                            
-                            if custom_design:
-                                st.session_state.generated_design = custom_design
-                                
-                                # Composite on the original image
-                                composite_image = st.session_state.base_image.copy()
-                                
-                                # Place design at current selection position with size and position modifiers
-                                left, top = st.session_state.current_box_position
-                                box_size = int(1024 * 0.25)
-                                
-                                # 应用缩放
-                                actual_size = int(box_size * scale / 100)
-                                
-                                # 应用位置偏移
-                                max_offset = box_size - actual_size
-                                actual_x = int((position_x / 100) * (max_offset / 2))
-                                actual_y = int((position_y / 100) * (max_offset / 2))
-                                
-                                # 最终位置
-                                final_left = left + (box_size - actual_size) // 2 + actual_x
-                                final_top = top + (box_size - actual_size) // 2 + actual_y
-                                
-                                # Scale generated pattern to selection area size
-                                scaled_design = custom_design.resize((actual_size, actual_size), Image.LANCZOS)
-                                
-                                try:
-                                    # Ensure transparency channel is used for pasting
-                                    composite_image.paste(scaled_design, (final_left, final_top), scaled_design)
-                                except Exception as e:
-                                    st.warning(f"Transparent channel paste failed, direct paste: {e}")
-                                    composite_image.paste(scaled_design, (final_left, final_top))
-                                
-                                st.session_state.final_design = composite_image
-                                st.rerun()
-                            else:
-                                st.error("Failed to generate image, please try again later.")
-        
-        with tab3:
-            # 文字和Logo选项
+            # 文字和Logo选项部分
             st.markdown("### Add Text or Logo")
             
             text_type = st.radio("Select option:", ["Text", "Logo"], horizontal=True)
@@ -565,6 +447,120 @@ def show_high_complexity_general_sales():
                             st.rerun()
                         except Exception as e:
                             st.error(f"Error processing logo: {e}")
+        
+        with tab2:
+            # User input for personalization parameters
+            theme = st.text_input("Theme or keyword (required)", "Elegant floral pattern")
+            
+            # Add style selection dropdown with more professional style options
+            style_options = [
+                "Watercolor style", "Sketch style", "Geometric shapes", "Minimalist", 
+                "Vintage style", "Pop art", "Japanese style", "Nordic design",
+                "Classical ornament", "Digital illustration", "Abstract art"
+            ]
+            style = st.selectbox("Design style", style_options, index=0)
+            
+            # Improved color selection
+            color_scheme_options = [
+                "Soft warm tones (pink, gold, light orange)",
+                "Fresh cool tones (blue, mint, white)",
+                "Nature colors (green, brown, beige)",
+                "Bright and vibrant (red, yellow, orange)",
+                "Elegant deep tones (navy, purple, dark green)",
+                "Black and white contrast",
+                "Custom colors"
+            ]
+            color_scheme = st.selectbox("Color scheme", color_scheme_options)
+            
+            # If custom colors are selected, show input field
+            if color_scheme == "Custom colors":
+                colors = st.text_input("Enter desired colors (comma separated)", "pink, gold, sky blue")
+            else:
+                # Set corresponding color values based on selected scheme
+                color_mapping = {
+                    "Soft warm tones (pink, gold, light orange)": "pink, gold, light orange, cream",
+                    "Fresh cool tones (blue, mint, white)": "sky blue, mint green, white, light gray",
+                    "Nature colors (green, brown, beige)": "forest green, brown, beige, olive",
+                    "Bright and vibrant (red, yellow, orange)": "bright red, yellow, orange, lemon yellow",
+                    "Elegant deep tones (navy, purple, dark green)": "navy blue, violet, dark green, burgundy",
+                    "Black and white contrast": "black, white, gray"
+                }
+                colors = color_mapping.get(color_scheme, "blue, green, red")
+            
+            # 高级设计选项
+            st.markdown("### Advanced Design Settings")
+            
+            # 添加复杂度和详细程度滑块
+            complexity = st.slider("Design complexity", 1, 10, 5)
+            detail_level = "low" if complexity <= 3 else "medium" if complexity <= 7 else "high"
+            
+            # 添加特殊效果选项
+            effect_options = ["None", "Distressed", "Vintage", "Metallic", "Glitter", "Gradient"]
+            special_effect = st.selectbox("Special effect:", effect_options)
+            
+            # 应用位置和大小设置
+            st.markdown("### Position & Scale")
+            position_x = st.slider("Horizontal position", -100, 100, 0)
+            position_y = st.slider("Vertical position", -100, 100, 0)
+            scale = st.slider("Design size", 25, 150, 100, 5, format="%d%%")
+            
+            # 生成AI设计按钮
+            generate_col1, generate_col2 = st.columns(2)
+            with generate_col1:
+                if st.button("🎨 Generate Design", key="generate_design"):
+                    if not theme.strip():
+                        st.warning("Please enter at least a theme or keyword!")
+                    else:
+                        # 构建高级提示文本
+                        effect_prompt = "" if special_effect == "None" else f"Apply {special_effect} effect to the design. "
+                        
+                        prompt_text = (
+                            f"Design a T-shirt pattern with '{theme}' theme using {style}. "
+                            f"Use the following colors: {colors}. "
+                            f"Design complexity is {complexity}/10 with {detail_level} level of detail. "
+                            f"{effect_prompt}"
+                            f"Create a PNG format image with transparent background, suitable for T-shirt printing."
+                        )
+                        
+                        with st.spinner("🔮 Generating design... please wait"):
+                            custom_design = generate_vector_image(prompt_text)
+                            
+                            if custom_design:
+                                st.session_state.generated_design = custom_design
+                                
+                                # Composite on the original image
+                                composite_image = st.session_state.base_image.copy()
+                                
+                                # Place design at current selection position with size and position modifiers
+                                left, top = st.session_state.current_box_position
+                                box_size = int(1024 * 0.25)
+                                
+                                # 应用缩放
+                                actual_size = int(box_size * scale / 100)
+                                
+                                # 应用位置偏移
+                                max_offset = box_size - actual_size
+                                actual_x = int((position_x / 100) * (max_offset / 2))
+                                actual_y = int((position_y / 100) * (max_offset / 2))
+                                
+                                # 最终位置
+                                final_left = left + (box_size - actual_size) // 2 + actual_x
+                                final_top = top + (box_size - actual_size) // 2 + actual_y
+                                
+                                # Scale generated pattern to selection area size
+                                scaled_design = custom_design.resize((actual_size, actual_size), Image.LANCZOS)
+                                
+                                try:
+                                    # Ensure transparency channel is used for pasting
+                                    composite_image.paste(scaled_design, (final_left, final_top), scaled_design)
+                                except Exception as e:
+                                    st.warning(f"Transparent channel paste failed, direct paste: {e}")
+                                    composite_image.paste(scaled_design, (final_left, final_top))
+                                
+                                st.session_state.final_design = composite_image
+                                st.rerun()
+                            else:
+                                st.error("Failed to generate image, please try again later.")
     
     # Display final effect - move out of col2, place at bottom of overall page
     if st.session_state.final_design is not None:
@@ -584,26 +580,25 @@ def show_high_complexity_general_sales():
         st.image(st.session_state.final_design, use_container_width=True)
         
         # 添加T恤规格信息
-        specs_col1, specs_col2, specs_col3 = st.columns(3)
+        specs_col1, specs_col2 = st.columns(2)
         
         with specs_col1:
-            st.markdown(f"**Style:** {st.session_state.collar_style} collar")
-            st.markdown(f"**Sleeves:** {st.session_state.sleeve_style}")
+            st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
         
         with specs_col2:
-            st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
-            if 'size' in locals():
-                st.markdown(f"**Size:** {size}")
-        
-        with specs_col3:
             # 显示当前颜色
             color_name = {
-                "#FFFFFF": "白色",
-                "#000000": "黑色",
-                "#FF0000": "红色",
-                "#0000FF": "蓝色",
-                "#00FF00": "绿色",
-            }.get(st.session_state.shirt_color_hex.upper(), "自定义颜色")
+                "#FFFFFF": "White",
+                "#000000": "Black",
+                "#FF0000": "Red",
+                "#00FF00": "Green",
+                "#0000FF": "Blue",
+                "#FFFF00": "Yellow",
+                "#FF00FF": "Magenta",
+                "#00FFFF": "Cyan",
+                "#C0C0C0": "Silver",
+                "#808080": "Gray"
+            }.get(st.session_state.shirt_color_hex.upper(), "Custom")
             st.markdown(f"**Color:** {color_name} ({st.session_state.shirt_color_hex})")
         
         # Provide download option
