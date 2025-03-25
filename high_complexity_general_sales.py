@@ -456,7 +456,7 @@ def show_high_complexity_general_sales():
                             
                             # 获取选择框位置
                             left, top = st.session_state.current_box_position
-                box_size = int(1024 * 0.25)
+                            box_size = int(1024 * 0.25)
                             
                             # 根据对齐方式计算文字位置
                             text_bbox = draw.textbbox((0, 0), text_content, font=font)
