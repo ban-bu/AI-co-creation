@@ -88,7 +88,10 @@ def generate_fabric_texture(image, fabric_type, intensity=0.7):
     mask = Image.new("L", (width, height), 0)
     mask_draw = ImageDraw.Draw(mask)
     
-    # 获取所有非透明区域作为掩码，而不仅仅是白色区域
+    # 获取所有非透明区域作为掩码，但排除黑色边框
+    # 黑色边框阈值 - 用于识别边框
+    dark_threshold = 60  # 较低的值表示暗色，如黑色边框
+    
     for y in range(height):
         for x in range(width):
             try:
@@ -96,15 +99,19 @@ def generate_fabric_texture(image, fabric_type, intensity=0.7):
                 if len(pixel) == 4:  # RGBA
                     r, g, b, a = pixel
                     if a > 0:  # 任何非完全透明的区域
-                        # 根据颜色亮度调整纹理强度
                         brightness = (r + g + b) / 3
-                        intensity_factor = 1.0 if brightness > 100 else 0.8
-                        mask_draw.point((x, y), fill=int(255 * intensity_factor))
+                        # 排除黑色边框 - 只在非黑色区域应用纹理
+                        if brightness > dark_threshold:
+                            # 根据颜色亮度调整纹理强度
+                            intensity_factor = 1.0 if brightness > 100 else 0.8
+                            mask_draw.point((x, y), fill=int(255 * intensity_factor))
                 else:  # RGB
                     r, g, b = pixel
                     brightness = (r + g + b) / 3
-                    intensity_factor = 1.0 if brightness > 100 else 0.8
-                    mask_draw.point((x, y), fill=int(255 * intensity_factor))
+                    # 排除黑色边框
+                    if brightness > dark_threshold:
+                        intensity_factor = 1.0 if brightness > 100 else 0.8
+                        mask_draw.point((x, y), fill=int(255 * intensity_factor))
             except:
                 continue
     

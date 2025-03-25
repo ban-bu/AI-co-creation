@@ -68,17 +68,52 @@ def change_shirt_color(image, color_hex, apply_texture=False, fabric_type=None):
     # 创建新数据
     new_data = []
     # 白色阈值 - 调整这个值可以控制哪些像素被视为白色/浅色并被改变
-    threshold = 200
+    white_threshold = 200
+    # 黑色阈值 - 用于识别边框
+    dark_threshold = 60  # 较低的值表示暗色，如黑色边框
     
     for item in data:
-        # 判断是否是白色/浅色区域 (RGB值都很高)
-        if item[0] > threshold and item[1] > threshold and item[2] > threshold and item[3] > 0:
-            # 保持原透明度，改变颜色
-            new_color = (color_rgb[0], color_rgb[1], color_rgb[2], item[3])
-            new_data.append(new_color)
-        else:
-            # 保持其他颜色不变
-            new_data.append(item)
+        # 判断是否是深色区域（如边框）
+        if len(item) == 4:  # RGBA
+            r, g, b, a = item
+            brightness = (r + g + b) / 3
+            
+            if a > 0:  # 非透明像素
+                if brightness <= dark_threshold:
+                    # 保留黑色边框和暗色区域
+                    new_data.append(item)
+                elif brightness > white_threshold:
+                    # 只改变白色/浅色区域的颜色
+                    new_color = (color_rgb[0], color_rgb[1], color_rgb[2], a)
+                    new_data.append(new_color)
+                else:
+                    # 对于介于白色和黑色之间的颜色，根据亮度进行颜色混合
+                    # 亮度越高，越接近新颜色；亮度越低，越接近原始颜色
+                    blend_factor = (brightness - dark_threshold) / (white_threshold - dark_threshold)
+                    new_r = int(r * (1 - blend_factor) + color_rgb[0] * blend_factor)
+                    new_g = int(g * (1 - blend_factor) + color_rgb[1] * blend_factor)
+                    new_b = int(b * (1 - blend_factor) + color_rgb[2] * blend_factor)
+                    new_data.append((new_r, new_g, new_b, a))
+            else:
+                # 完全透明的像素保持不变
+                new_data.append(item)
+        else:  # RGB
+            r, g, b = item
+            brightness = (r + g + b) / 3
+            
+            if brightness <= dark_threshold:
+                # 保留黑色边框和暗色区域
+                new_data.append(item)
+            elif brightness > white_threshold:
+                # 只改变白色/浅色区域的颜色
+                new_data.append(color_rgb)
+            else:
+                # 对于介于白色和黑色之间的颜色，根据亮度进行颜色混合
+                blend_factor = (brightness - dark_threshold) / (white_threshold - dark_threshold)
+                new_r = int(r * (1 - blend_factor) + color_rgb[0] * blend_factor)
+                new_g = int(g * (1 - blend_factor) + color_rgb[1] * blend_factor)
+                new_b = int(b * (1 - blend_factor) + color_rgb[2] * blend_factor)
+                new_data.append((new_r, new_g, new_b))
     
     # 更新图像数据
     colored_image.putdata(new_data)
