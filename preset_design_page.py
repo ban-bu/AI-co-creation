@@ -31,7 +31,7 @@ def show_preset_design_page():
                 st.error(f"Error loading white T-shirt image: {e}")
                 st.stop()
         
-        st.markdown("**👇 Click anywhere on the T-shirt to move the design frame**")
+        st.markdown("**👇 Click anywhere on the T-shirt to position your design**")
         
         # 初始化临时设计变量（如果需要）
         if 'temp_preset_design' not in st.session_state:

@@ -6,10 +6,9 @@ from streamlit_drawable_canvas import st_canvas
 
 # 复用ai_design_group等文件中的draw_selection_box函数
 def draw_selection_box(image, point=None):
-    """Draw a fixed-size selection box on the image"""
+    """Calculate position for design placement without drawing visible selection box"""
     # Create a copy to avoid modifying the original image
     img_copy = image.copy()
-    draw = ImageDraw.Draw(img_copy)
     
     # Fixed box size (1024 * 0.25)
     box_size = int(1024 * 0.25)
@@ -24,35 +23,8 @@ def draw_selection_box(image, point=None):
         x1 = max(0, min(x1 - box_size//2, image.width - box_size))
         y1 = max(0, min(y1 - box_size//2, image.height - box_size))
     
-    x2, y2 = x1 + box_size, y1 + box_size
-    
-    # Draw red outline
-    draw.rectangle(
-        [(x1, y1), (x2, y2)],
-        outline=(255, 0, 0),
-        width=2
-    )
-    
-    # Create separate transparent overlay for fill
-    overlay = Image.new('RGBA', img_copy.size, (0, 0, 0, 0))
-    draw_overlay = ImageDraw.Draw(overlay)
-    
-    # Draw semi-transparent fill
-    draw_overlay.rectangle(
-        [(x1, y1), (x2, y2)],
-        fill=(255, 0, 0, 50)
-    )
-    
-    # Ensure both images are in RGBA mode
-    if img_copy.mode != 'RGBA':
-        img_copy = img_copy.convert('RGBA')
-    
-    # Composite images
-    try:
-        return Image.alpha_composite(img_copy, overlay), (x1, y1)
-    except Exception as e:
-        st.warning(f"Image composition failed: {e}")
-        return img_copy, (x1, y1)
+    # Return the image without drawing any visible box, just the position
+    return img_copy, (x1, y1)
 
 # Preset Design Group design page
 def show_preset_design_group():
@@ -78,7 +50,7 @@ def show_preset_design_group():
                 st.error(f"Error loading white T-shirt image: {e}")
                 st.stop()
         
-        st.markdown("**👇 Click anywhere on the T-shirt to move the design frame**")
+        st.markdown("**👇 Click anywhere on the T-shirt to position your design**")
         
         # 初始化临时设计变量（如果需要）
         if 'temp_preset_design' not in st.session_state:
