@@ -266,7 +266,7 @@ def show_high_complexity_general_sales():
                     st.session_state.current_image = new_current_image
                     
                     # 如果有最终设计，也需要更新
-        if st.session_state.final_design is not None:
+                    if st.session_state.final_design is not None:
                         # 保存当前设计元素
                         # 将来可以添加更复杂的逻辑来保留设计元素
                         # 现在仅重置最终设计，让用户重新应用设计元素
@@ -558,17 +558,17 @@ def show_high_complexity_general_sales():
         
         # 添加清空设计按钮
         if st.button("🗑️ Clear All Designs", key="clear_designs"):
-                # 清空所有设计相关的状态变量
+            # 清空所有设计相关的状态变量
             st.session_state.generated_design = None
-                # 重置最终设计为基础T恤图像
-                st.session_state.final_design = None
+            # 重置最终设计为基础T恤图像
+            st.session_state.final_design = None
             # 重置当前图像为带选择框的基础图像
             temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
-                st.session_state.current_image = temp_image
-                st.rerun()
-            
-            st.image(st.session_state.final_design, use_container_width=True)
-            
+            st.session_state.current_image = temp_image
+            st.rerun()
+        
+        st.image(st.session_state.final_design, use_container_width=True)
+        
         # 添加T恤规格信息
         specs_col1, specs_col2, specs_col3 = st.columns(3)
         
@@ -598,21 +598,21 @@ def show_high_complexity_general_sales():
         col1, col2 = st.columns(2)
         with col1:
             from io import BytesIO  # 确保BytesIO在此处可用
-                buf = BytesIO()
-                st.session_state.final_design.save(buf, format="PNG")
-                buf.seek(0)
-                st.download_button(
-                    label="💾 Download Custom Design",
-                    data=buf,
-                    file_name="custom_tshirt.png",
-                    mime="image/png"
-                )
-            
+            buf = BytesIO()
+            st.session_state.final_design.save(buf, format="PNG")
+            buf.seek(0)
+            st.download_button(
+                label="💾 Download Custom Design",
+                data=buf,
+                file_name="custom_tshirt.png",
+                mime="image/png"
+            )
+        
         with col2:
             # Confirm completion button
-                if st.button("Confirm Completion"):
-                    st.session_state.page = "survey"
-                    st.rerun()
+            if st.button("Confirm Completion"):
+                st.session_state.page = "survey"
+                st.rerun()
 
     # Return to main interface button - modified here
     if st.button("Return to Main Page"):
