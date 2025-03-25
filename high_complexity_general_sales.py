@@ -69,51 +69,90 @@ def change_shirt_color(image, color_hex, apply_texture=False, fabric_type=None):
     new_data = []
     # 白色阈值 - 调整这个值可以控制哪些像素被视为白色/浅色并被改变
     white_threshold = 200
-    # 黑色阈值 - 用于识别边框
-    dark_threshold = 60  # 较低的值表示暗色，如黑色边框
+    # 黑色边缘阈值 - 用于识别边框和阴影
+    dark_threshold = 40  # 更低的值，确保捕捉所有边缘部分
     
-    for item in data:
-        # 判断是否是深色区域（如边框）
-        if len(item) == 4:  # RGBA
-            r, g, b, a = item
-            brightness = (r + g + b) / 3
-            
-            if a > 0:  # 非透明像素
-                if brightness <= dark_threshold:
-                    # 保留黑色边框和暗色区域
-                    new_data.append(item)
-                elif brightness > white_threshold:
-                    # 只改变白色/浅色区域的颜色
-                    new_color = (color_rgb[0], color_rgb[1], color_rgb[2], a)
-                    new_data.append(new_color)
-                else:
-                    # 对于介于白色和黑色之间的颜色，根据亮度进行颜色混合
-                    # 亮度越高，越接近新颜色；亮度越低，越接近原始颜色
-                    blend_factor = (brightness - dark_threshold) / (white_threshold - dark_threshold)
-                    new_r = int(r * (1 - blend_factor) + color_rgb[0] * blend_factor)
-                    new_g = int(g * (1 - blend_factor) + color_rgb[1] * blend_factor)
-                    new_b = int(b * (1 - blend_factor) + color_rgb[2] * blend_factor)
-                    new_data.append((new_r, new_g, new_b, a))
-            else:
-                # 完全透明的像素保持不变
-                new_data.append(item)
-        else:  # RGB
-            r, g, b = item
-            brightness = (r + g + b) / 3
-            
-            if brightness <= dark_threshold:
-                # 保留黑色边框和暗色区域
-                new_data.append(item)
-            elif brightness > white_threshold:
-                # 只改变白色/浅色区域的颜色
-                new_data.append(color_rgb)
-            else:
-                # 对于介于白色和黑色之间的颜色，根据亮度进行颜色混合
-                blend_factor = (brightness - dark_threshold) / (white_threshold - dark_threshold)
-                new_r = int(r * (1 - blend_factor) + color_rgb[0] * blend_factor)
-                new_g = int(g * (1 - blend_factor) + color_rgb[1] * blend_factor)
-                new_b = int(b * (1 - blend_factor) + color_rgb[2] * blend_factor)
-                new_data.append((new_r, new_g, new_b))
+    # 首先进行第一次扫描，收集边缘像素
+    edge_pixels = set()
+    
+    # 先扫描一遍找出所有边缘像素位置
+    width, height = colored_image.size
+    for y in range(height):
+        for x in range(width):
+            try:
+                pixel = colored_image.getpixel((x, y))
+                if len(pixel) == 4:  # RGBA
+                    r, g, b, a = pixel
+                    if a > 0:  # 非透明像素
+                        brightness = (r + g + b) / 3
+                        # 识别边缘区域
+                        if brightness <= dark_threshold:
+                            edge_pixels.add((x, y))
+            except:
+                continue
+    
+    # 稍微扩展边缘区域，确保完整捕捉
+    expanded_edges = set(edge_pixels)
+    for x, y in edge_pixels:
+        for dx in [-1, 0, 1]:
+            for dy in [-1, 0, 1]:
+                expanded_edges.add((x+dx, y+dy))
+    
+    # 第二次扫描，应用颜色变化，但保留边缘
+    idx = 0
+    for y in range(height):
+        for x in range(width):
+            try:
+                pixel = data[idx]
+                idx += 1
+                
+                # 检查是否是边缘像素
+                if (x, y) in expanded_edges:
+                    # 保留边缘像素
+                    new_data.append(pixel)
+                    continue
+                
+                # 非边缘像素的处理
+                if len(pixel) == 4:  # RGBA
+                    r, g, b, a = pixel
+                    if a > 0:  # 非透明像素
+                        brightness = (r + g + b) / 3
+                        if brightness > white_threshold:
+                            # 高亮区域 - 完全替换颜色
+                            new_data.append((color_rgb[0], color_rgb[1], color_rgb[2], a))
+                        elif brightness > dark_threshold:
+                            # 中间色调区域 - 混合新颜色
+                            blend_factor = (brightness - dark_threshold) / (white_threshold - dark_threshold)
+                            new_r = int(r * (1 - blend_factor) + color_rgb[0] * blend_factor)
+                            new_g = int(g * (1 - blend_factor) + color_rgb[1] * blend_factor)
+                            new_b = int(b * (1 - blend_factor) + color_rgb[2] * blend_factor)
+                            new_data.append((new_r, new_g, new_b, a))
+                        else:
+                            # 如果不在扩展边缘中但亮度低，也保留原色
+                            new_data.append(pixel)
+                    else:
+                        # 完全透明的像素保持不变
+                        new_data.append(pixel)
+                else:  # RGB
+                    r, g, b = pixel
+                    brightness = (r + g + b) / 3
+                    if brightness > white_threshold:
+                        # 高亮区域
+                        new_data.append(color_rgb)
+                    elif brightness > dark_threshold:
+                        # 中间色调
+                        blend_factor = (brightness - dark_threshold) / (white_threshold - dark_threshold)
+                        new_r = int(r * (1 - blend_factor) + color_rgb[0] * blend_factor)
+                        new_g = int(g * (1 - blend_factor) + color_rgb[1] * blend_factor)
+                        new_b = int(b * (1 - blend_factor) + color_rgb[2] * blend_factor)
+                        new_data.append((new_r, new_g, new_b))
+                    else:
+                        # 暗区域
+                        new_data.append(pixel)
+            except:
+                # 如果出错，保留原像素
+                if idx < len(data):
+                    new_data.append(data[idx-1])
     
     # 更新图像数据
     colored_image.putdata(new_data)
