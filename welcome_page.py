@@ -30,13 +30,14 @@ def show_welcome_page():
     
     with col1:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### AI Customization Group")
+        st.markdown("#### Low Task Complexity-General Sales")
         st.markdown("""
-        - Use artificial intelligence technology to generate custom patterns
-        - Create unique designs based on your preferences and descriptions
+        - Simple customization tasks 
+        - General sales environment
+        - Create unique designs based on your preferences
         - Freely place design patterns on the T-shirt
         """)
-        if st.button("Choose AI Customization Group"):
+        if st.button("Choose Low Complexity-General"):
             st.session_state.experiment_group = "AI Customization Group"
             st.session_state.user_info = {
                 'age': 25,  # 默认值
@@ -52,13 +53,14 @@ def show_welcome_page():
     
     with col2:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### Preset Design Group")
+        st.markdown("#### High Task Complexity-General Sales")
         st.markdown("""
-        - Choose patterns from a curated design library
-        - High-quality professional designs
-        - Freely place selected patterns on the T-shirt
+        - Advanced customization options
+        - General sales environment
+        - Choose and manipulate professional designs
+        - Multiple customization features available
         """)
-        if st.button("Choose Preset Design Group"):
+        if st.button("Choose High Complexity-General"):
             st.session_state.experiment_group = "Preset Design Group"
             st.session_state.user_info = {
                 'age': 25,  # 默认值
@@ -74,13 +76,14 @@ def show_welcome_page():
     
     with col3:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### AI Design Group")
+        st.markdown("#### Low Task Complexity-Pop up Sales")
         st.markdown("""
-        - Use artificial intelligence technology to generate custom patterns
-        - Create unique designs based on your preferences and descriptions
-        - Freely place design patterns on the T-shirt
+        - Simple customization tasks
+        - Pop-up store experience
+        - Create designs with minimal options
+        - Quick and straightforward process
         """)
-        if st.button("Choose AI Design Group"):
+        if st.button("Choose Low Complexity-Pop-up"):
             st.session_state.experiment_group = "AI Design Group"
             st.session_state.user_info = {
                 'age': 25,  # 默认值
@@ -96,13 +99,14 @@ def show_welcome_page():
         
     with col4:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### AI Creation Group")
+        st.markdown("#### High Task Complexity-Pop up Sales")
         st.markdown("""
-        - Use artificial intelligence technology to generate custom patterns
-        - Create unique designs based on your preferences and descriptions
-        - Freely place design patterns on the T-shirt
+        - Advanced customization options
+        - Pop-up store experience
+        - Create highly detailed designs
+        - Extensive customization features 
         """)
-        if st.button("Choose AI Creation Group"):
+        if st.button("Choose High Complexity-Pop-up"):
             st.session_state.experiment_group = "AI Creation Group"
             st.session_state.user_info = {
                 'age': 25,  # 默认值
@@ -132,10 +136,10 @@ def show_welcome_page():
                     st.markdown("#### Participant Statistics")
                     group_counts = experiment_df['experiment_group'].value_counts()
                     st.write(f"Total participants: {len(experiment_df)}")
-                    st.write(f"AI Customization Group: {group_counts.get('AI Customization Group', 0)} people")
-                    st.write(f"Preset Design Group: {group_counts.get('Preset Design Group', 0)} people")
-                    st.write(f"AI Design Group: {group_counts.get('AI Design Group', 0)} people")
-                    st.write(f"AI Creation Group: {group_counts.get('AI Creation Group', 0)} people")
+                    st.write(f"Low Task Complexity-General Sales: {group_counts.get('AI Customization Group', 0)} people")
+                    st.write(f"High Task Complexity-General Sales: {group_counts.get('Preset Design Group', 0)} people")
+                    st.write(f"Low Task Complexity-Pop up Sales: {group_counts.get('AI Design Group', 0)} people")
+                    st.write(f"High Task Complexity-Pop up Sales: {group_counts.get('AI Creation Group', 0)} people")
                     
                     # Purchase intention comparison
                     st.markdown("#### Purchase Intention Comparison")

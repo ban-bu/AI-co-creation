@@ -21,11 +21,11 @@ from streamlit_drawable_canvas import st_canvas
 
 # 导入分拆出去的各页面模块
 from welcome_page import show_welcome_page
-# 改为导入四个组对应的文件
-from ai_customization_group import show_ai_customization_group, generate_vector_image, draw_selection_box, get_selection_coordinates, match_background_to_shirt
-from ai_design_group import show_ai_design_group
-from ai_creation_group import show_ai_creation_group
-from preset_design_group import show_preset_design_group
+# 导入四个组对应的新文件
+from low_complexity_general_sales import show_low_complexity_general_sales, generate_vector_image, draw_selection_box, get_selection_coordinates, match_background_to_shirt
+from low_complexity_popup_sales import show_low_complexity_popup_sales
+from high_complexity_popup_sales import show_high_complexity_popup_sales
+from high_complexity_general_sales import show_high_complexity_general_sales
 from survey_page import show_survey_page, initialize_experiment_data, save_experiment_data
 
 # ========== Deepbricks Configuration ==========
@@ -180,13 +180,13 @@ def main():
     elif st.session_state.page == "design":
         # 根据不同的实验组调用不同的设计页面函数
         if st.session_state.experiment_group == "AI Customization Group":
-            show_ai_customization_group()
+            show_low_complexity_general_sales()
         elif st.session_state.experiment_group == "AI Design Group":
-            show_ai_design_group()
+            show_low_complexity_popup_sales()
         elif st.session_state.experiment_group == "AI Creation Group":
-            show_ai_creation_group()
+            show_high_complexity_popup_sales()
         elif st.session_state.experiment_group == "Preset Design Group":
-            show_preset_design_group()
+            show_high_complexity_general_sales()
         else:
             st.error("实验组类型错误，请返回首页重新选择")
             if st.button("返回首页"):
