@@ -199,6 +199,14 @@ def show_low_complexity_general_sales():
     
     with col1:
         st.markdown("## Design Area")
+        
+        # 添加AI建议框
+        with st.expander("🤖 AI Design Suggestions", expanded=True):
+            st.markdown("""
+            **Personalization Design Guide:**
+            
+            Consider selecting colors that complement your personal style and wardrobe preferences for maximum versatility. Light-colored T-shirts work best with darker design patterns, while dark T-shirts create striking contrast with lighter patterns or text. Experiment with positioning your design in different locations on the T-shirt to find the optimal visual impact - centered designs offer classic appeal while offset designs can create interesting visual dynamics. Minimalist designs tend to be more versatile and suitable for various occasions, allowing your T-shirt to transition seamlessly between casual and semi-formal settings. When adding text, choose legible fonts at appropriate sizes to ensure your message remains clear and impactful regardless of viewing distance.
+            """)
     
         # Load T-shirt base image
         if st.session_state.base_image is None:

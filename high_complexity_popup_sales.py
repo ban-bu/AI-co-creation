@@ -207,6 +207,19 @@ def show_high_complexity_popup_sales():
     
     with col1:
         st.markdown("## Design Area")
+        
+        # 添加AI建议框
+        with st.expander("🤖 AI设计建议", expanded=True):
+            st.markdown("""
+            **专业设计指南（快速版）:**
+            
+            * **配色建议:** 浅色T恤适合深色或彩色图案，深色T恤搭配亮色或金属效果图案效果更佳
+            * **位置优化:** 胸前居中位置最适合Logo展示，左胸适合小型徽标，背部适合大型图案
+            * **时间管理:** 在15分钟内完成设计，建议使用预设图案或简单设计元素
+            * **视觉平衡:** 确保图案与T恤颜色和风格协调，避免过于复杂的设计元素
+            * **快速决策:** 如果时间有限，选择一种设计风格和两到三种互补色彩即可
+            * **专业建议:** 对于正式场合，选择简约设计和中性色调；休闲场合可选择更鲜艳的颜色和创意设计
+            """)
     
         # Load T-shirt base image
         if st.session_state.base_image is None:

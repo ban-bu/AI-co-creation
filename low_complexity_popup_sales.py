@@ -206,6 +206,14 @@ def show_low_complexity_popup_sales():
     
     with col1:
         st.markdown("## Design Area")
+        
+        # 添加AI建议框
+        with st.expander("🤖 AI Design Suggestions", expanded=True):
+            st.markdown("""
+            **Quick Design Guide:**
+            
+            Choose a T-shirt color that matches your event theme for best results - casual events work well with blues or greens. Position your design centrally on the T-shirt for optimal visibility and professional appearance. Simple geometric shapes or patterns tend to look better and have broader appeal than complex designs. If you're short on time, selecting a preset logo or simple text is the quickest way to create an effective design. Always prioritize clarity and readability in your design choices, avoiding overly complex elements that might not translate well onto fabric. Remember that simplicity often creates the most elegant and versatile designs that work across various contexts.
+            """)
     
         # Load T-shirt base image
         if st.session_state.base_image is None:

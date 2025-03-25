@@ -152,7 +152,7 @@ def change_shirt_color(image, color_hex, apply_texture=False, fabric_type=None):
                         new_g = int(g * (1 - blend_factor) + color_rgb[1] * blend_factor)
                         new_b = int(b * (1 - blend_factor) + color_rgb[2] * blend_factor)
                         new_data.append((new_r, new_g, new_b))
-                    else:
+        else:
                         # 暗区域
                         new_data.append(pixel)
             except:
@@ -189,7 +189,7 @@ def draw_selection_box(image, point=None):
         y1 = max(0, min(y1 - box_size//2, image.height - box_size))
     
     # Return the image without drawing any visible box, just the position
-    return img_copy, (x1, y1)
+        return img_copy, (x1, y1)
 
 # Preset Design Group design page
 def show_high_complexity_general_sales():
@@ -218,6 +218,14 @@ def show_high_complexity_general_sales():
     </ul>
     </div>
     """, unsafe_allow_html=True)
+    
+    # 添加AI建议框
+    with st.expander("🤖 AI Design Suggestions", expanded=True):
+        st.markdown("""
+        **Advanced Personalization Design Guide:**
+        
+        Consider color psychology when designing your T-shirt - blue conveys professionalism and trust, red expresses passion, while green represents nature and harmony. Choose fabric types based on comfort and durability - cotton fabrics offer softness ideal for everyday wear, while polyester maintains vibrant colors longer. Create visual focus through the rule of thirds and balance your design across the entire T-shirt. Typography serves as a powerful design element, so experiment with various font combinations and text effects for unique visual impact. Ensure your design maintains consistency with your personal or brand identity to enhance recognition. Pay attention to details like text spacing, pattern intricacies, and color transitions to significantly improve design quality. Finally, visualize your design from different angles and distances to ensure clarity and impact in various viewing scenarios.
+        """)
     
     # 初始化T恤颜色状态变量 - 固定为白色
     if 'shirt_color_hex' not in st.session_state:
@@ -347,23 +355,23 @@ def show_high_complexity_general_sales():
                             apply_texture=True, 
                             fabric_type=fabric_type
                         )
-                        st.session_state.base_image = new_colored_image
-                        
+                    st.session_state.base_image = new_colored_image
+                    
                         # 根据当前活动标签页更新图像
                         if st.session_state.active_tab == "Design Pattern":
                             # 在Design Pattern标签页中显示红框
-                            new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                    new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
                         else:
                             # 在T-shirt标签页中不显示红框
                             new_current_image = new_colored_image.copy()
                             
-                        st.session_state.current_image = new_current_image
-                        
-                        # 如果有最终设计，也需要更新
-                        if st.session_state.final_design is not None:
-                            st.session_state.final_design = None
-                        
-                        st.rerun()
+                    st.session_state.current_image = new_current_image
+                    
+                    # 如果有最终设计，也需要更新
+                    if st.session_state.final_design is not None:
+                        st.session_state.final_design = None
+                    
+                    st.rerun()
                     except Exception as e:
                         st.warning(f"应用面料纹理时出错: {e}")
                 
@@ -749,7 +757,7 @@ def show_high_complexity_general_sales():
         st.image(st.session_state.final_design, use_container_width=True)
         
         # 添加T恤规格信息
-        st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
+            st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
         
         # Provide download option
         col1, col2 = st.columns(2)
