@@ -152,7 +152,7 @@ def change_shirt_color(image, color_hex, apply_texture=False, fabric_type=None):
                         new_g = int(g * (1 - blend_factor) + color_rgb[1] * blend_factor)
                         new_b = int(b * (1 - blend_factor) + color_rgb[2] * blend_factor)
                         new_data.append((new_r, new_g, new_b))
-        else:
+                    else:
                         # 暗区域
                         new_data.append(pixel)
             except:
@@ -189,7 +189,7 @@ def draw_selection_box(image, point=None):
         y1 = max(0, min(y1 - box_size//2, image.height - box_size))
     
     # Return the image without drawing any visible box, just the position
-        return img_copy, (x1, y1)
+    return img_copy, (x1, y1)
 
 # Preset Design Group design page
 def show_high_complexity_general_sales():
@@ -355,23 +355,23 @@ def show_high_complexity_general_sales():
                             apply_texture=True, 
                             fabric_type=fabric_type
                         )
-                    st.session_state.base_image = new_colored_image
-                    
+                        st.session_state.base_image = new_colored_image
+                        
                         # 根据当前活动标签页更新图像
                         if st.session_state.active_tab == "Design Pattern":
                             # 在Design Pattern标签页中显示红框
-                    new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                            new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
                         else:
                             # 在T-shirt标签页中不显示红框
                             new_current_image = new_colored_image.copy()
                             
-                    st.session_state.current_image = new_current_image
-                    
-                    # 如果有最终设计，也需要更新
-                    if st.session_state.final_design is not None:
-                        st.session_state.final_design = None
-                    
-                    st.rerun()
+                        st.session_state.current_image = new_current_image
+                        
+                        # 如果有最终设计，也需要更新
+                        if st.session_state.final_design is not None:
+                            st.session_state.final_design = None
+                        
+                        st.rerun()
                     except Exception as e:
                         st.warning(f"应用面料纹理时出错: {e}")
                 
