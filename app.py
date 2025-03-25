@@ -337,7 +337,7 @@ def show_welcome_page():
     
     st.markdown("### Please select the experiment group you want to participate in")
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
@@ -381,6 +381,51 @@ def show_welcome_page():
             }
             st.session_state.page = "design"
             st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown('<div class="group-card">', unsafe_allow_html=True)
+        st.markdown("#### AI Design Group")
+        st.markdown("""
+        - Use artificial intelligence technology to generate custom patterns
+        - Create unique designs based on your preferences and descriptions
+        - Freely place design patterns on the T-shirt
+        """)
+        if st.button("Choose AI Design Group"):
+            st.session_state.experiment_group = "AI Design Group"
+            st.session_state.user_info = {
+                'age': 25,  # 默认值
+                'gender': "Male",  # 默认值
+                'shopping_frequency': "Weekly",  # 默认值
+                'customize_experience': "Some experience",  # 默认值
+                'ai_attitude': 5,  # 默认值
+                'uniqueness_importance': 5  # 默认值
+            }
+            st.session_state.page = "design"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with col4:
+        st.markdown('<div class="group-card">', unsafe_allow_html=True)
+        st.markdown("#### AI Creation Group")
+        st.markdown("""
+        - Use artificial intelligence technology to generate custom patterns
+        - Create unique designs based on your preferences and descriptions
+        - Freely place design patterns on the T-shirt
+        """)
+        if st.button("Choose AI Creation Group"):
+            st.session_state.experiment_group = "AI Creation Group"
+            st.session_state.user_info = {
+                'age': 25,  # 默认值
+                'gender': "Male",  # 默认值
+                'shopping_frequency': "Weekly",  # 默认值
+                'customize_experience': "Some experience",  # 默认值
+                'ai_attitude': 5,  # 默认值
+                'uniqueness_importance': 5  # 默认值
+            }
+            st.session_state.page = "design"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # Admin area - Experiment data analysis (password protected)
     st.markdown("---")
@@ -400,6 +445,8 @@ def show_welcome_page():
                     st.write(f"Total participants: {len(experiment_df)}")
                     st.write(f"AI Customization Group: {group_counts.get('AI Customization Group', 0)} people")
                     st.write(f"Preset Design Group: {group_counts.get('Preset Design Group', 0)} people")
+                    st.write(f"AI Design Group: {group_counts.get('AI Design Group', 0)} people")
+                    st.write(f"AI Creation Group: {group_counts.get('AI Creation Group', 0)} people")
                     
                     # Purchase intention comparison
                     st.markdown("#### Purchase Intention Comparison")
@@ -433,7 +480,16 @@ def show_welcome_page():
 # AI Customization Group design page
 def show_ai_design_page():
     st.title("👕 AI Co-Creation Experiment Platform")
-    st.markdown("### AI Co-Creation Group - Create Your Unique T-shirt Design")
+    
+    # 根据不同组显示不同的副标题
+    if st.session_state.experiment_group == "AI Customization Group":
+        st.markdown("### AI Customization Group - Create Your Unique T-shirt Design")
+    elif st.session_state.experiment_group == "AI Design Group":
+        st.markdown("### AI Design Group - Create Your Unique T-shirt Design")
+    elif st.session_state.experiment_group == "AI Creation Group":
+        st.markdown("### AI Creation Group - Create Your Unique T-shirt Design")
+    else:
+        st.markdown("### AI Co-Creation Group - Create Your Unique T-shirt Design")
     
     # Create two-column layout
     col1, col2 = st.columns([3, 2])
@@ -1075,7 +1131,7 @@ def show_survey_page():
         )
         
         # Different questions for different groups
-        if st.session_state.experiment_group == "AI Customization Group":
+        if st.session_state.experiment_group == "AI Customization Group" or st.session_state.experiment_group == "AI Design Group" or st.session_state.experiment_group == "AI Creation Group":
             # AI customization group specific questions
             ai_effectiveness = st.slider(
                 "How well does the AI-generated design meet your expectations?",
@@ -1164,7 +1220,7 @@ def show_survey_page():
             }
             
             # Add group-specific data
-            if st.session_state.experiment_group == "AI Customization Group":
+            if st.session_state.experiment_group == "AI Customization Group" or st.session_state.experiment_group == "AI Design Group" or st.session_state.experiment_group == "AI Creation Group":
                 experiment_data.update({
                     'ai_effectiveness': ai_effectiveness,
                     'ai_uniqueness': ai_uniqueness,
@@ -1217,7 +1273,7 @@ def main():
     if st.session_state.page == "welcome":
         show_welcome_page()
     elif st.session_state.page == "design":
-        if st.session_state.experiment_group == "AI Customization Group":
+        if st.session_state.experiment_group == "AI Customization Group" or st.session_state.experiment_group == "AI Design Group" or st.session_state.experiment_group == "AI Creation Group":
             show_ai_design_page()
         elif st.session_state.experiment_group == "Preset Design Group":
             show_preset_design_page()
