@@ -173,6 +173,8 @@ def show_high_complexity_general_sales():
         st.session_state.shirt_color_hex = "#FFFFFF"  # 默认白色
     if 'original_base_image' not in st.session_state:
         st.session_state.original_base_image = None  # 保存原始白色T恤图像
+    if 'fabric_type' not in st.session_state:
+        st.session_state.fabric_type = "Cotton"  # 默认面料类型
     
     # Create two-column layout
     col1, col2 = st.columns([3, 2])
@@ -201,14 +203,6 @@ def show_high_complexity_general_sales():
         
         st.markdown("**👇 Click anywhere on the T-shirt to move the design frame**")
         
-        # 初始化T恤样式状态变量
-        if 'collar_style' not in st.session_state:
-            st.session_state.collar_style = "Round"
-        if 'sleeve_style' not in st.session_state:
-            st.session_state.sleeve_style = "Short"
-        if 'fabric_type' not in st.session_state:
-            st.session_state.fabric_type = "Cotton"
-        
         # Display current image and get click coordinates
         current_image = st.session_state.current_image
         coordinates = streamlit_image_coordinates(
@@ -233,18 +227,6 @@ def show_high_complexity_general_sales():
         
         with tab1:
             st.markdown("### T-shirt Customization")
-            
-            # 领口样式选择
-            collar_options = ["Round", "V-neck", "Henley", "Polo", "Crew", "Scoop"]
-            collar_style = st.selectbox("Collar style:", collar_options, 
-                                       index=collar_options.index(st.session_state.collar_style) 
-                                       if st.session_state.collar_style in collar_options else 0)
-            
-            # 袖子样式选择
-            sleeve_options = ["Short", "Long", "3/4 Length", "Cap", "Raglan", "Sleeveless"]
-            sleeve_style = st.selectbox("Sleeve style:", sleeve_options,
-                                       index=sleeve_options.index(st.session_state.sleeve_style)
-                                       if st.session_state.sleeve_style in sleeve_options else 0)
             
             # 面料选择
             fabric_options = ["Cotton", "Polyester", "Cotton-Polyester Blend", "Jersey", "Linen", "Bamboo"]
@@ -287,20 +269,14 @@ def show_high_complexity_general_sales():
                     
                     st.rerun()
             
-            # 衣服剪裁选择
-            fit_options = ["Regular Fit", "Slim Fit", "Relaxed Fit", "Athletic Fit"]
-            fit_type = st.selectbox("Fit type:", fit_options)
-            
             # 应用T恤样式按钮
-            if st.button("Apply T-shirt Style", key="apply_style"):
+            if st.button("Apply Fabric", key="apply_style"):
                 # 更新存储的样式值
-                st.session_state.collar_style = collar_style
-                st.session_state.sleeve_style = sleeve_style
                 old_fabric = st.session_state.fabric_type
                 st.session_state.fabric_type = fabric_type
                 
-                # 如果面料类型改变，重新应用颜色和纹理
-                if old_fabric != fabric_type and st.session_state.original_base_image is not None:
+                # 无论面料类型是否改变，都应用纹理
+                if st.session_state.original_base_image is not None:
                     try:
                         # 应用颜色和纹理
                         new_colored_image = change_shirt_color(
@@ -324,7 +300,7 @@ def show_high_complexity_general_sales():
                         st.warning(f"应用面料纹理时出错: {e}")
                 
                 # 显示确认信息
-                st.success(f"T-shirt style updated: {collar_style} collar, {sleeve_style} sleeves, {fabric_type} fabric")
+                st.success(f"T-shirt fabric updated: {fabric_type}")
         
         with tab2:
             # User input for personalization parameters
@@ -620,8 +596,6 @@ def show_high_complexity_general_sales():
                 st.markdown(f"**Size:** {size}")
         
         with specs_col3:
-            if 'fit_type' in locals():
-                st.markdown(f"**Fit:** {fit_type}")
             # 显示当前颜色
             color_name = {
                 "#FFFFFF": "白色",
