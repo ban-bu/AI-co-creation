@@ -5,6 +5,7 @@ from io import BytesIO
 import cairosvg
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
+import os
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
@@ -148,6 +149,23 @@ def apply_color_to_shirt(image, color_hex):
     # 更新图像数据
     colored_image.putdata(new_data)
     return colored_image
+
+def get_preset_logos():
+    """获取预设logo文件夹中的所有图片"""
+    logos_dir = "logos"
+    preset_logos = []
+    
+    # 检查logos文件夹是否存在
+    if not os.path.exists(logos_dir):
+        os.makedirs(logos_dir)
+        return preset_logos
+    
+    # 获取所有支持的图片文件
+    for file in os.listdir(logos_dir):
+        if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+            preset_logos.append(os.path.join(logos_dir, file))
+    
+    return preset_logos
 
 # AI Creation Group design page
 def show_high_complexity_popup_sales():
@@ -545,8 +563,55 @@ def show_high_complexity_popup_sales():
                             st.session_state.final_design = new_design
                             st.rerun()
             else:  # Logo options
-                # Logo上传选项
-                uploaded_logo = st.file_uploader("Upload your logo (PNG or JPG file):", type=["png", "jpg", "jpeg"])
+                # Logo来源选择
+                logo_source = st.radio("Logo source:", ["Upload your logo", "Choose from presets"], horizontal=True)
+                
+                if logo_source == "Upload your logo":
+                    # Logo上传选项
+                    uploaded_logo = st.file_uploader("Upload your logo (PNG or JPG file):", type=["png", "jpg", "jpeg"])
+                    logo_image = None
+                    
+                    if uploaded_logo is not None:
+                        try:
+                            logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
+                        except Exception as e:
+                            st.error(f"Error loading uploaded logo: {e}")
+                else:  # Choose from presets
+                    # 获取预设logo
+                    preset_logos = get_preset_logos()
+                    
+                    if not preset_logos:
+                        st.warning("No preset logos found. Please add some images to the 'logos' folder.")
+                        logo_image = None
+                    else:
+                        # 显示预设logo选择
+                        logo_cols = st.columns(min(3, len(preset_logos)))
+                        selected_preset_logo = None
+                        
+                        for i, logo_path in enumerate(preset_logos):
+                            with logo_cols[i % 3]:
+                                logo_name = os.path.basename(logo_path)
+                                try:
+                                    logo_preview = Image.open(logo_path).convert("RGBA")
+                                    # 调整预览大小
+                                    preview_width = 100
+                                    preview_height = int(preview_width * logo_preview.height / logo_preview.width)
+                                    preview = logo_preview.resize((preview_width, preview_height))
+                                    
+                                    st.image(preview, caption=logo_name)
+                                    if st.button(f"Select {logo_name}", key=f"logo_{i}"):
+                                        selected_preset_logo = logo_path
+                                except Exception as e:
+                                    st.error(f"Error loading logo {logo_name}: {e}")
+                        
+                        # 如果选择了预设logo
+                        logo_image = None
+                        if selected_preset_logo:
+                            try:
+                                logo_image = Image.open(selected_preset_logo).convert("RGBA")
+                                st.success(f"Selected logo: {os.path.basename(selected_preset_logo)}")
+                            except Exception as e:
+                                st.error(f"Error loading selected logo: {e}")
                 
                 # Logo大小和位置
                 logo_size = st.slider("Logo size:", 10, 100, 40, format="%d%%")
@@ -557,14 +622,14 @@ def show_high_complexity_popup_sales():
                 
                 # 应用Logo按钮
                 if st.button("Apply Logo", key="apply_logo"):
-                    if uploaded_logo is None:
-                        st.warning("Please upload a logo first!")
+                    if logo_image is None:
+                        if logo_source == "Upload your logo":
+                            st.warning("Please upload a logo first!")
+                        else:
+                            st.warning("Please select a preset logo first!")
                     else:
-                        # 处理上传的Logo
+                        # 处理Logo
                         try:
-                            from io import BytesIO
-                            logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
-                            
                             # 调整Logo大小
                             box_size = int(1024 * 0.25)
                             logo_width = int(box_size * logo_size / 100)

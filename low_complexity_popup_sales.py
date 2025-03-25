@@ -5,6 +5,7 @@ from io import BytesIO
 import cairosvg
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
+import os
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
@@ -148,6 +149,23 @@ def apply_color_to_shirt(image, color_hex):
     # 更新图像数据
     colored_image.putdata(new_data)
     return colored_image
+
+def get_preset_logos():
+    """获取预设logo文件夹中的所有图片"""
+    logos_dir = "logos"
+    preset_logos = []
+    
+    # 检查logos文件夹是否存在
+    if not os.path.exists(logos_dir):
+        os.makedirs(logos_dir)
+        return preset_logos
+    
+    # 获取所有支持的图片文件
+    for file in os.listdir(logos_dir):
+        if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+            preset_logos.append(os.path.join(logos_dir, file))
+    
+    return preset_logos
 
 # AI Design Group design page
 def show_low_complexity_popup_sales():
@@ -363,124 +381,248 @@ def show_low_complexity_popup_sales():
             # 添加文字/Logo选项
             st.write("Add text or logo to your design:")
             
-            # 文字选项
-            text_content = st.text_input("Enter text to add:", "My Brand")
+            # 选择文字或Logo
+            text_or_logo = st.radio("Select option:", ["Text", "Logo"], horizontal=True)
             
-            # 添加字体选择
-            font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
-            font_family = st.selectbox("Font family:", font_options)
-            
-            # 文字样式
-            text_style = st.multiselect("Text style:", ["Bold", "Italic"], default=[])
-            
-            # 文字颜色
-            text_color = st.color_picker("Text color:", "#000000")
-            
-            # 增大默认文字大小范围
-            text_size = st.slider("Text size:", 20, 120, 48)
-            
-            # 添加文字按钮
-            if st.button("Add Text to Design"):
-                if not text_content.strip():
-                    st.warning("Please enter some text!")
-                else:
-                    # 创建带有文字的设计
-                    if st.session_state.base_image is None:
-                        st.warning("Please wait for the T-shirt image to load")
+            if text_or_logo == "Text":
+                # 文字选项
+                text_content = st.text_input("Enter text to add:", "My Brand")
+                
+                # 添加字体选择
+                font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
+                font_family = st.selectbox("Font family:", font_options)
+                
+                # 文字样式
+                text_style = st.multiselect("Text style:", ["Bold", "Italic"], default=[])
+                
+                # 文字颜色
+                text_color = st.color_picker("Text color:", "#000000")
+                
+                # 增大默认文字大小范围
+                text_size = st.slider("Text size:", 20, 120, 48)
+                
+                # 添加文字按钮
+                if st.button("Add Text to Design"):
+                    if not text_content.strip():
+                        st.warning("Please enter some text!")
                     else:
-                        # 创建一个新的设计或使用现有最终设计
-                        if st.session_state.final_design is not None:
-                            new_design = st.session_state.final_design.copy()
+                        # 创建带有文字的设计
+                        if st.session_state.base_image is None:
+                            st.warning("Please wait for the T-shirt image to load")
                         else:
-                            new_design = st.session_state.base_image.copy()
-                        
-                        # 准备绘图对象
-                        draw = ImageDraw.Draw(new_design)
-                        
-                        # 字体映射
-                        font_mapping = {
-                            "Arial": "arial.ttf",
-                            "Times New Roman": "times.ttf",
-                            "Courier": "cour.ttf",
-                            "Verdana": "verdana.ttf",
-                            "Georgia": "georgia.ttf",
-                            "Impact": "impact.ttf"
-                        }
-                        
-                        # 通用字体备选方案
-                        fallback_fonts = ["DejaVuSans.ttf", "FreeSans.ttf", "LiberationSans-Regular.ttf"]
-                        
-                        # 导入字体，尝试获取选择的字体
-                        font = None
-                        try:
-                            from PIL import ImageFont
-                            # 尝试获取选择的字体
-                            font_file = font_mapping.get(font_family, "arial.ttf")
+                            # 创建一个新的设计或使用现有最终设计
+                            if st.session_state.final_design is not None:
+                                new_design = st.session_state.final_design.copy()
+                            else:
+                                new_design = st.session_state.base_image.copy()
                             
-                            # 尝试加载字体，如果失败则尝试备选字体
+                            # 准备绘图对象
+                            draw = ImageDraw.Draw(new_design)
+                            
+                            # 字体映射
+                            font_mapping = {
+                                "Arial": "arial.ttf",
+                                "Times New Roman": "times.ttf",
+                                "Courier": "cour.ttf",
+                                "Verdana": "verdana.ttf",
+                                "Georgia": "georgia.ttf",
+                                "Impact": "impact.ttf"
+                            }
+                            
+                            # 通用字体备选方案
+                            fallback_fonts = ["DejaVuSans.ttf", "FreeSans.ttf", "LiberationSans-Regular.ttf"]
+                            
+                            # 导入字体，尝试获取选择的字体
+                            font = None
                             try:
-                                font = ImageFont.truetype(font_file, text_size)
-                            except:
-                                # 尝试系统字体路径
-                                system_font_paths = [
-                                    "/Library/Fonts/",  # macOS
-                                    "/System/Library/Fonts/",  # macOS系统
-                                    "C:/Windows/Fonts/",  # Windows
-                                    "/usr/share/fonts/truetype/",  # Linux
-                                ]
+                                from PIL import ImageFont
+                                # 尝试获取选择的字体
+                                font_file = font_mapping.get(font_family, "arial.ttf")
                                 
-                                # 尝试所有可能的字体位置
-                                for path in system_font_paths:
-                                    try:
-                                        font = ImageFont.truetype(path + font_file, text_size)
-                                        break
-                                    except:
-                                        continue
-                                
-                                # 如果仍然失败，尝试备选字体
-                                if font is None:
-                                    for fallback in fallback_fonts:
+                                # 尝试加载字体，如果失败则尝试备选字体
+                                try:
+                                    font = ImageFont.truetype(font_file, text_size)
+                                except:
+                                    # 尝试系统字体路径
+                                    system_font_paths = [
+                                        "/Library/Fonts/",  # macOS
+                                        "/System/Library/Fonts/",  # macOS系统
+                                        "C:/Windows/Fonts/",  # Windows
+                                        "/usr/share/fonts/truetype/",  # Linux
+                                    ]
+                                    
+                                    # 尝试所有可能的字体位置
+                                    for path in system_font_paths:
                                         try:
-                                            for path in system_font_paths:
-                                                try:
-                                                    font = ImageFont.truetype(path + fallback, text_size)
-                                                    break
-                                                except:
-                                                    continue
-                                            if font:
-                                                break
+                                            font = ImageFont.truetype(path + font_file, text_size)
+                                            break
                                         except:
                                             continue
+                                    
+                                    # 如果仍然失败，尝试备选字体
+                                    if font is None:
+                                        for fallback in fallback_fonts:
+                                            try:
+                                                for path in system_font_paths:
+                                                    try:
+                                                        font = ImageFont.truetype(path + fallback, text_size)
+                                                        break
+                                                    except:
+                                                        continue
+                                                if font:
+                                                    break
+                                            except:
+                                                continue
+                                
+                                # 如果所有尝试都失败，使用默认字体
+                                if font is None:
+                                    font = ImageFont.load_default()
+                                    # 尝试将默认字体放大到指定大小
+                                    default_size = 10  # 假设默认字体大小
+                                    scale_factor = text_size / default_size
+                                    # 注意：这种方法可能不是最佳方案，但可以在没有字体的情况下提供备选
+                            except Exception as e:
+                                st.warning(f"Font loading error: {e}")
+                                font = None
                             
-                            # 如果所有尝试都失败，使用默认字体
-                            if font is None:
-                                font = ImageFont.load_default()
-                                # 尝试将默认字体放大到指定大小
-                                default_size = 10  # 假设默认字体大小
-                                scale_factor = text_size / default_size
-                                # 注意：这种方法可能不是最佳方案，但可以在没有字体的情况下提供备选
+                            # 获取当前选择框位置
+                            left, top = st.session_state.current_box_position
+                            box_size = int(1024 * 0.25)
+                            
+                            # 在选择框中居中绘制文字
+                            text_bbox = draw.textbbox((0, 0), text_content, font=font)
+                            text_width = text_bbox[2] - text_bbox[0]
+                            text_height = text_bbox[3] - text_bbox[1]
+                            
+                            text_x = left + (box_size - text_width) // 2
+                            text_y = top + (box_size - text_height) // 2
+                            
+                            # 绘制文字，使用抗锯齿渲染
+                            draw.text((text_x, text_y), text_content, fill=text_color, font=font)
+                            
+                            # 更新设计
+                            st.session_state.final_design = new_design
+                            st.rerun()
+            else:  # Logo选项
+                # Logo来源选择
+                logo_source = st.radio("Logo source:", ["Upload your logo", "Choose from presets"], horizontal=True)
+                
+                if logo_source == "Upload your logo":
+                    # Logo上传选项
+                    uploaded_logo = st.file_uploader("Upload your logo (PNG or JPG file):", type=["png", "jpg", "jpeg"])
+                    logo_image = None
+                    
+                    if uploaded_logo is not None:
+                        try:
+                            logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
                         except Exception as e:
-                            st.warning(f"Font loading error: {e}")
-                            font = None
+                            st.error(f"Error loading uploaded logo: {e}")
+                else:  # Choose from presets
+                    # 获取预设logo
+                    preset_logos = get_preset_logos()
+                    
+                    if not preset_logos:
+                        st.warning("No preset logos found. Please add some images to the 'logos' folder.")
+                        logo_image = None
+                    else:
+                        # 显示预设logo选择
+                        logo_cols = st.columns(min(3, len(preset_logos)))
+                        selected_preset_logo = None
                         
-                        # 获取当前选择框位置
-                        left, top = st.session_state.current_box_position
-                        box_size = int(1024 * 0.25)
+                        for i, logo_path in enumerate(preset_logos):
+                            with logo_cols[i % 3]:
+                                logo_name = os.path.basename(logo_path)
+                                try:
+                                    logo_preview = Image.open(logo_path).convert("RGBA")
+                                    # 调整预览大小
+                                    preview_width = 100
+                                    preview_height = int(preview_width * logo_preview.height / logo_preview.width)
+                                    preview = logo_preview.resize((preview_width, preview_height))
+                                    
+                                    st.image(preview, caption=logo_name)
+                                    if st.button(f"Select {logo_name}", key=f"logo_{i}"):
+                                        selected_preset_logo = logo_path
+                                except Exception as e:
+                                    st.error(f"Error loading logo {logo_name}: {e}")
                         
-                        # 在选择框中居中绘制文字
-                        text_bbox = draw.textbbox((0, 0), text_content, font=font)
-                        text_width = text_bbox[2] - text_bbox[0]
-                        text_height = text_bbox[3] - text_bbox[1]
-                        
-                        text_x = left + (box_size - text_width) // 2
-                        text_y = top + (box_size - text_height) // 2
-                        
-                        # 绘制文字，使用抗锯齿渲染
-                        draw.text((text_x, text_y), text_content, fill=text_color, font=font)
-                        
-                        # 更新设计
-                        st.session_state.final_design = new_design
-                        st.rerun()
+                        # 如果选择了预设logo
+                        logo_image = None
+                        if selected_preset_logo:
+                            try:
+                                logo_image = Image.open(selected_preset_logo).convert("RGBA")
+                                st.success(f"Selected logo: {os.path.basename(selected_preset_logo)}")
+                            except Exception as e:
+                                st.error(f"Error loading selected logo: {e}")
+                
+                # Logo大小和位置
+                logo_size = st.slider("Logo size:", 10, 100, 40, format="%d%%")
+                logo_position = st.radio("Position:", ["Top Left", "Top Center", "Top Right", "Center", "Bottom Left", "Bottom Center", "Bottom Right"], index=3)
+                
+                # Logo透明度
+                logo_opacity = st.slider("Logo opacity:", 10, 100, 100, 5, format="%d%%")
+                
+                # 应用Logo按钮
+                if st.button("Apply Logo", key="apply_logo"):
+                    if logo_image is None:
+                        if logo_source == "Upload your logo":
+                            st.warning("Please upload a logo first!")
+                        else:
+                            st.warning("Please select a preset logo first!")
+                    else:
+                        # 处理Logo
+                        try:
+                            # 调整Logo大小
+                            box_size = int(1024 * 0.25)
+                            logo_width = int(box_size * logo_size / 100)
+                            logo_height = int(logo_width * logo_image.height / logo_image.width)
+                            logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
+                            
+                            # 创建新的设计或使用现有最终设计
+                            if st.session_state.final_design is not None:
+                                new_design = st.session_state.final_design.copy()
+                            else:
+                                new_design = st.session_state.base_image.copy()
+                            
+                            # 获取选择框位置
+                            left, top = st.session_state.current_box_position
+                            
+                            # 计算Logo位置
+                            if logo_position == "Top Left":
+                                logo_x, logo_y = left + 10, top + 10
+                            elif logo_position == "Top Center":
+                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + 10
+                            elif logo_position == "Top Right":
+                                logo_x, logo_y = left + box_size - logo_width - 10, top + 10
+                            elif logo_position == "Center":
+                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + (box_size - logo_height) // 2
+                            elif logo_position == "Bottom Left":
+                                logo_x, logo_y = left + 10, top + box_size - logo_height - 10
+                            elif logo_position == "Bottom Center":
+                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + box_size - logo_height - 10
+                            else:  # Bottom Right
+                                logo_x, logo_y = left + box_size - logo_width - 10, top + box_size - logo_height - 10
+                            
+                            # 设置透明度
+                            if logo_opacity < 100:
+                                logo_data = logo_resized.getdata()
+                                new_data = []
+                                for item in logo_data:
+                                    r, g, b, a = item
+                                    new_a = int(a * logo_opacity / 100)
+                                    new_data.append((r, g, b, new_a))
+                                logo_resized.putdata(new_data)
+                            
+                            # 粘贴Logo到设计
+                            try:
+                                new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
+                            except Exception as e:
+                                st.warning(f"Logo paste failed: {e}")
+                            
+                            # 更新设计
+                            st.session_state.final_design = new_design
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error processing logo: {e}")
     
     # Display final effect - move out of col2, place at bottom of overall page
     if st.session_state.final_design is not None:
