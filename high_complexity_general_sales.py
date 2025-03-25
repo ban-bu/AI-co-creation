@@ -388,7 +388,7 @@ def show_high_complexity_general_sales():
                 
                 # 文字颜色和大小
                 text_color = st.color_picker("Text color:", "#000000")
-                text_size = st.slider("Text size:", 10, 60, 24)
+                text_size = st.slider("Text size:", 20, 120, 48)
                 
                 # 文字效果
                 text_effect = st.selectbox("Text effect:", ["None", "Curved", "Arched", "Wavy", "3D", "Gradient"])
@@ -414,11 +414,62 @@ def show_high_complexity_general_sales():
                             # 准备绘图对象
                             draw = ImageDraw.Draw(new_design)
                             
-                            # 导入字体
+                            # 字体映射
+                            font_mapping = {
+                                "Arial": "arial.ttf",
+                                "Times New Roman": "times.ttf",
+                                "Courier": "cour.ttf",
+                                "Verdana": "verdana.ttf",
+                                "Georgia": "georgia.ttf",
+                                "Script": "SCRIPTBL.TTF",
+                                "Impact": "impact.ttf"
+                            }
+                            
+                            # 尝试加载选择的字体
                             try:
                                 from PIL import ImageFont
-                                font = ImageFont.truetype("arial.ttf", text_size)
-                            except:
+                                # 尝试获取选择的字体
+                                font_file = font_mapping.get(font_family, "arial.ttf")
+                                
+                                # 尝试加载字体，如果失败则尝试系统字体路径
+                                try:
+                                    font = ImageFont.truetype(font_file, text_size)
+                                except:
+                                    # 尝试系统字体路径
+                                    system_font_paths = [
+                                        "/Library/Fonts/",  # macOS
+                                        "/System/Library/Fonts/",  # macOS系统
+                                        "C:/Windows/Fonts/",  # Windows
+                                        "/usr/share/fonts/truetype/",  # Linux
+                                    ]
+                                    
+                                    for path in system_font_paths:
+                                        try:
+                                            font = ImageFont.truetype(path + font_file, text_size)
+                                            break
+                                        except:
+                                            continue
+                                
+                                # 如果没有找到指定字体，尝试使用系统默认字体
+                                if font is None:
+                                    fallback_fonts = ["DejaVuSans.ttf", "FreeSans.ttf", "LiberationSans-Regular.ttf", "Arial.ttf"]
+                                    for fallback in fallback_fonts:
+                                        for path in system_font_paths:
+                                            try:
+                                                font = ImageFont.truetype(path + fallback, text_size)
+                                                if font:
+                                                    break
+                                            except:
+                                                continue
+                                        if font:
+                                            break
+                                
+                                # 如果所有尝试都失败，使用默认字体
+                                if font is None:
+                                    font = ImageFont.load_default()
+                                    st.warning("Could not load selected font. Using default font instead.")
+                            except Exception as e:
+                                st.warning(f"Font loading error: {e}")
                                 font = None
                             
                             # 获取选择框位置

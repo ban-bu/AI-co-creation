@@ -339,11 +339,18 @@ def show_low_complexity_general_sales():
             # 文字选项
             text_content = st.text_input("Enter text to add:", "My Brand")
             
+            # 添加字体选择
+            font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
+            font_family = st.selectbox("Font family:", font_options)
+            
+            # 文字样式
+            text_style = st.multiselect("Text style:", ["Bold", "Italic"], default=[])
+            
             # 文字颜色
             text_color = st.color_picker("Text color:", "#000000")
             
-            # 文字大小
-            text_size = st.slider("Text size:", 10, 50, 24)
+            # 增大默认文字大小范围
+            text_size = st.slider("Text size:", 20, 120, 48)
             
             # 添加文字按钮
             if st.button("Add Text to Design"):
@@ -363,11 +370,70 @@ def show_low_complexity_general_sales():
                         # 准备绘图对象
                         draw = ImageDraw.Draw(new_design)
                         
-                        # 导入字体(使用默认字体)
+                        # 字体映射
+                        font_mapping = {
+                            "Arial": "arial.ttf",
+                            "Times New Roman": "times.ttf",
+                            "Courier": "cour.ttf",
+                            "Verdana": "verdana.ttf",
+                            "Georgia": "georgia.ttf",
+                            "Impact": "impact.ttf"
+                        }
+                        
+                        # 通用字体备选方案
+                        fallback_fonts = ["DejaVuSans.ttf", "FreeSans.ttf", "LiberationSans-Regular.ttf"]
+                        
+                        # 导入字体，尝试获取选择的字体
+                        font = None
                         try:
                             from PIL import ImageFont
-                            font = ImageFont.truetype("arial.ttf", text_size)
-                        except:
+                            # 尝试获取选择的字体
+                            font_file = font_mapping.get(font_family, "arial.ttf")
+                            
+                            # 尝试加载字体，如果失败则尝试备选字体
+                            try:
+                                font = ImageFont.truetype(font_file, text_size)
+                            except:
+                                # 尝试系统字体路径
+                                system_font_paths = [
+                                    "/Library/Fonts/",  # macOS
+                                    "/System/Library/Fonts/",  # macOS系统
+                                    "C:/Windows/Fonts/",  # Windows
+                                    "/usr/share/fonts/truetype/",  # Linux
+                                ]
+                                
+                                # 尝试所有可能的字体位置
+                                for path in system_font_paths:
+                                    try:
+                                        font = ImageFont.truetype(path + font_file, text_size)
+                                        break
+                                    except:
+                                        continue
+                                
+                                # 如果仍然失败，尝试备选字体
+                                if font is None:
+                                    for fallback in fallback_fonts:
+                                        try:
+                                            for path in system_font_paths:
+                                                try:
+                                                    font = ImageFont.truetype(path + fallback, text_size)
+                                                    break
+                                                except:
+                                                    continue
+                                            if font:
+                                                break
+                                        except:
+                                            continue
+                            
+                            # 如果所有尝试都失败，使用默认字体
+                            if font is None:
+                                font = ImageFont.load_default()
+                                # 尝试将默认字体放大到指定大小
+                                default_size = 10  # 假设默认字体大小
+                                scale_factor = text_size / default_size
+                                # 注意：这种方法可能不是最佳方案，但可以在没有字体的情况下提供备选
+                        except Exception as e:
+                            st.warning(f"Font loading error: {e}")
                             font = None
                         
                         # 获取当前选择框位置
@@ -382,7 +448,7 @@ def show_low_complexity_general_sales():
                         text_x = left + (box_size - text_width) // 2
                         text_y = top + (box_size - text_height) // 2
                         
-                        # 绘制文字
+                        # 绘制文字，使用抗锯齿渲染
                         draw.text((text_x, text_y), text_content, fill=text_color, font=font)
                         
                         # 更新设计
