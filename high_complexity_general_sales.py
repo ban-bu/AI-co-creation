@@ -175,6 +175,8 @@ def show_high_complexity_general_sales():
         st.session_state.original_base_image = None  # 保存原始白色T恤图像
     if 'fabric_type' not in st.session_state:
         st.session_state.fabric_type = "Cotton"  # 默认面料类型
+    if 'active_tab' not in st.session_state:
+        st.session_state.active_tab = "T-shirt & Text/Logo"  # 默认活动标签页
     
     # Create two-column layout
     col1, col2 = st.columns([3, 2])
@@ -193,15 +195,25 @@ def show_high_complexity_general_sales():
                 colored_image = change_shirt_color(original_image, st.session_state.shirt_color_hex)
                 st.session_state.base_image = colored_image
                 
-                # Initialize by drawing selection box in the center
-                initial_image, initial_pos = draw_selection_box(colored_image)
-                st.session_state.current_image = initial_image
+                # 设置选择框位置（中心点）
+                box_size = int(1024 * 0.25)
+                initial_pos = ((colored_image.width - box_size) // 2, (colored_image.height - box_size) // 2)
                 st.session_state.current_box_position = initial_pos
+                
+                # 根据当前活动标签页决定是否显示红框
+                if st.session_state.active_tab == "Design Pattern":
+                    initial_image, _ = draw_selection_box(colored_image, initial_pos)
+                else:
+                    initial_image = colored_image.copy()
+                
+                st.session_state.current_image = initial_image
             except Exception as e:
                 st.error(f"Error loading T-shirt image: {e}")
                 st.stop()
         
-        st.markdown("**👇 Click anywhere on the T-shirt to move the design frame**")
+        # 只在Design Pattern标签页激活时显示点击提示
+        if st.session_state.get('active_tab') == "Design Pattern":
+            st.markdown("**👇 Click anywhere on the T-shirt to move the design frame**")
         
         # Display current image and get click coordinates
         current_image = st.session_state.current_image
@@ -210,8 +222,8 @@ def show_high_complexity_general_sales():
             key="shirt_image"
         )
         
-        # Handle selection area logic - simplify to directly move red box
-        if coordinates:
+        # 只在Design Pattern标签页激活时处理点击事件
+        if coordinates and st.session_state.get('active_tab') == "Design Pattern":
             # Update selection box at current mouse position
             current_point = (coordinates["x"], coordinates["y"])
             temp_image, new_pos = draw_selection_box(st.session_state.base_image, current_point)
@@ -224,6 +236,22 @@ def show_high_complexity_general_sales():
         
         # 修改选项卡布局：从三个改为两个，将T-shirt Style和Text/Logo合并
         tab1, tab2 = st.tabs(["T-shirt & Text/Logo", "Design Pattern"])
+        
+        # 检测标签页变化
+        current_tab = st.session_state.get('active_tab')
+        if tab1._is_active():
+            st.session_state.active_tab = "T-shirt & Text/Logo"
+            # 在T-shirt标签页激活时，更新当前图像为没有红框的版本
+            if current_tab != "T-shirt & Text/Logo" and st.session_state.base_image is not None:
+                st.session_state.current_image = st.session_state.base_image.copy()
+                st.rerun()
+        elif tab2._is_active():
+            st.session_state.active_tab = "Design Pattern"
+            # 在Design标签页激活时，重新显示红框
+            if current_tab != "Design Pattern" and st.session_state.base_image is not None:
+                new_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
+                st.session_state.current_image = new_image
+                st.rerun()
         
         with tab1:
             # T-shirt Customization部分
