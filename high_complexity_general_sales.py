@@ -56,6 +56,12 @@ def generate_vector_image(prompt):
 # 修改改变T恤颜色的函数，添加纹理支持
 def change_shirt_color(image, color_hex, apply_texture=False, fabric_type=None):
     """改变T恤的颜色，可选择应用面料纹理"""
+    # 判断是否是应用了纹理的图像，如果是，则重新从原始图像开始处理
+    # 这可以确保每次更改颜色时都从原始状态开始，而不是在已应用纹理的图像上再次修改
+    if hasattr(st.session_state, 'original_base_image') and st.session_state.original_base_image is not None:
+        # 使用原始白色T恤图像作为基础
+        image = st.session_state.original_base_image.copy()
+    
     # 转换十六进制颜色为RGB
     color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
     
@@ -263,10 +269,16 @@ def show_high_complexity_general_sales():
             try:
                 # 加载原始白色T恤图像
                 original_image = Image.open("white_shirt.png").convert("RGBA")
-                st.session_state.original_base_image = original_image
+                # 保存原始白色T恤图像 - 这是非常重要的！
+                st.session_state.original_base_image = original_image.copy()
                 
                 # 使用当前选择的颜色
-                colored_image = change_shirt_color(original_image, st.session_state.shirt_color_hex)
+                colored_image = change_shirt_color(
+                    original_image, 
+                    st.session_state.shirt_color_hex, 
+                    apply_texture=True,  # 默认应用纹理
+                    fabric_type=st.session_state.fabric_type  # 使用当前选择的面料
+                )
                 st.session_state.base_image = colored_image
                 
                 # 设置选择框位置（中心点）
@@ -348,8 +360,8 @@ def show_high_complexity_general_sales():
                                       index=fabric_options.index(st.session_state.fabric_type)
                                       if st.session_state.fabric_type in fabric_options else 0)
             
-            # 修改颜色选择器，实时更改T恤颜色
-            shirt_color = st.color_picker("T-shirt base color:", st.session_state.shirt_color_hex)
+            # 添加颜色选择器
+            shirt_color = st.color_picker("T-shirt color", st.session_state.shirt_color_hex)
             
             # 如果颜色发生变化，更新T恤颜色
             if shirt_color != st.session_state.shirt_color_hex:
