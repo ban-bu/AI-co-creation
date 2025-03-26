@@ -406,10 +406,13 @@ def show_low_complexity_general_sales():
                             # 保存最终设计但不立即刷新页面
                             st.session_state.final_design = composite_image
                             
-                            # 显示生成成功的消息
-                            st.success("Design successfully generated! Check the left side for the result.")
+                            # 同时更新current_image以便在T恤图像上直接显示设计
+                            st.session_state.current_image = composite_image.copy()
                             
-                            # 强制页面刷新以显示左侧结果
+                            # 显示生成成功的消息
+                            st.success("Design successfully generated! Check the design area for the result.")
+                            
+                            # 强制页面刷新以显示结果
                             st.rerun()
                         else:
                             st.error("Failed to generate image, please try again later.")

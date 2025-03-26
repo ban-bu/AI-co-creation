@@ -364,14 +364,24 @@ def show_low_complexity_popup_sales():
                             scaled_design = custom_design.resize((box_size, box_size), Image.LANCZOS)
                             
                             try:
-                                # 确保使用透明通道进行粘贴
+                                # 使用透明通道粘贴
                                 composite_image.paste(scaled_design, (left, top), scaled_design)
                             except Exception as e:
+                                # 如果透明通道粘贴失败，使用直接粘贴
+                                st.warning(f"Transparent paste failed: {e}")
                                 composite_image.paste(scaled_design, (left, top))
                             
+                            # 保存最终设计但不立即刷新页面
                             st.session_state.final_design = composite_image
-                    
-                    st.rerun()
+                            
+                            # 同时更新current_image以便在T恤图像上直接显示设计
+                            st.session_state.current_image = composite_image.copy()
+                            
+                            # 显示生成成功的消息
+                            st.success("Design successfully generated! Check the design area for the result.")
+                            
+                            # 强制页面刷新以显示结果
+                            st.rerun()
             
             # 简化颜色选择
             st.markdown("### Design Colors")
@@ -451,10 +461,13 @@ def show_low_complexity_popup_sales():
                             # 保存最终设计但不立即刷新页面
                             st.session_state.final_design = composite_image
                             
-                            # 显示生成成功的消息
-                            st.success("Design successfully generated! Check the left side for the result.")
+                            # 同时更新current_image以便在T恤图像上直接显示设计
+                            st.session_state.current_image = composite_image.copy()
                             
-                            # 强制页面刷新以显示左侧结果
+                            # 显示生成成功的消息
+                            st.success("Design successfully generated! Check the design area for the result.")
+                            
+                            # 强制页面刷新以显示结果
                             st.rerun()
                         else:
                             st.error("Failed to generate image. Please try again.")
