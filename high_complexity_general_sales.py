@@ -278,7 +278,7 @@ def show_high_complexity_general_sales():
         
         # 只在Design Pattern标签页激活时显示点击提示
         if st.session_state.get('active_tab') == "Design Pattern":
-            st.markdown("**👇 Click anywhere on the T-shirt to position your design**")
+            pass
         
         # Display current image and get click coordinates
         current_image = st.session_state.current_image

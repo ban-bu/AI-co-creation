@@ -209,18 +209,26 @@ def show_high_complexity_popup_sales():
         st.markdown("## Design Area")
         
         # 添加AI建议框
-        with st.expander("🤖 AI设计建议", expanded=True):
+        with st.expander("🤖 AI Design Suggestions", expanded=True):
             st.markdown("""
-            **专业设计指南（快速版）:**
+            **Professional Design Guide (Quick Version):**
             
-            * **配色建议:** 浅色T恤适合深色或彩色图案，深色T恤搭配亮色或金属效果图案效果更佳
-            * **位置优化:** 胸前居中位置最适合Logo展示，左胸适合小型徽标，背部适合大型图案
-            * **时间管理:** 在15分钟内完成设计，建议使用预设图案或简单设计元素
-            * **视觉平衡:** 确保图案与T恤颜色和风格协调，避免过于复杂的设计元素
-            * **快速决策:** 如果时间有限，选择一种设计风格和两到三种互补色彩即可
-            * **专业建议:** 对于正式场合，选择简约设计和中性色调；休闲场合可选择更鲜艳的颜色和创意设计
+            Light-colored T-shirts work best with dark or colorful patterns, while dark T-shirts pair effectively with bright or metallic effect designs. Center chest position is ideal for logo display, left chest works for small emblems, and the back is suitable for larger patterns. To complete your design within 15 minutes, consider using preset patterns or simple design elements. Ensure visual balance between your pattern and the T-shirt color and style, avoiding overly complex design elements. For time-limited decisions, select one design style and two to three complementary colors. For formal occasions, choose minimalist designs and neutral tones; for casual settings, opt for brighter colors and creative designs.
             """)
-    
+        
+        # 只在Design Pattern标签页激活时显示点击提示
+        if st.session_state.get('active_tab') == "Design Pattern":
+            # 删除提示文本
+            pass
+        
+        # 初始化T恤样式状态变量
+        if 'collar_style' not in st.session_state:
+            st.session_state.collar_style = "Round"
+        if 'sleeve_style' not in st.session_state:
+            st.session_state.sleeve_style = "Short"
+        if 'fabric_type' not in st.session_state:
+            st.session_state.fabric_type = "Cotton"
+        
         # Load T-shirt base image
         if st.session_state.base_image is None:
             try:
@@ -240,16 +248,6 @@ def show_high_complexity_popup_sales():
                 st.error(f"Error loading T-shirt image: {e}")
                 st.stop()
         
-        st.markdown("**👇 Click anywhere on the T-shirt to position your design**")
-        
-        # 初始化T恤样式状态变量
-        if 'collar_style' not in st.session_state:
-            st.session_state.collar_style = "Round"
-        if 'sleeve_style' not in st.session_state:
-            st.session_state.sleeve_style = "Short"
-        if 'fabric_type' not in st.session_state:
-            st.session_state.fabric_type = "Cotton"
-        
         # Display current image and get click coordinates
         current_image = st.session_state.current_image
         coordinates = streamlit_image_coordinates(
@@ -265,6 +263,46 @@ def show_high_complexity_popup_sales():
             st.session_state.current_image = temp_image
             st.session_state.current_box_position = new_pos
             st.rerun()
+
+        # 将Final Result部分移到左侧栏中
+        if st.session_state.final_design is not None:
+            st.markdown("### Final Result")
+            
+            # 添加清空设计按钮
+            if st.button("🗑️ Clear All Designs", key="clear_designs"):
+                # 重置状态变量
+                st.session_state.generated_design = None
+                st.session_state.preset_design = None
+                st.session_state.drawn_design = None
+                st.session_state.final_design = None
+                # 重置当前图像为带选择框的基础图像
+                if st.session_state.get('active_tab') == "Design Pattern":
+                    temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
+                else:
+                    temp_image = st.session_state.base_image.copy()
+                st.session_state.current_image = temp_image
+                st.rerun()
+            
+            st.image(st.session_state.final_design, use_container_width=True)
+            
+            # Provide download option
+            col1a, col1b = st.columns(2)
+            with col1a:
+                buf = BytesIO()
+                st.session_state.final_design.save(buf, format="PNG")
+                buf.seek(0)
+                st.download_button(
+                    label="💾 Download Custom Design",
+                    data=buf,
+                    file_name="custom_tshirt.png",
+                    mime="image/png"
+                )
+            
+            with col1b:
+                # Confirm completion button
+                if st.button("Confirm Completion"):
+                    st.session_state.page = "survey"
+                    st.rerun()
 
     with col2:
         st.markdown("## Design Parameters")
@@ -696,88 +734,18 @@ def show_high_complexity_popup_sales():
                         except Exception as e:
                             st.error(f"Error processing logo: {e}")
     
-    # Display final effect - move out of col2, place at bottom of overall page
-    if st.session_state.final_design is not None:
-        st.markdown("### Final Result")
-        
-        # 添加清空设计按钮
-        if st.button("🗑️ Clear All Designs", key="clear_designs"):
-            # 清空所有设计相关的状态变量
-            st.session_state.generated_design = None
-            # 重置最终设计为基础T恤图像
-            st.session_state.final_design = None
-            # 重置当前图像为带选择框的基础图像
-            temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
-            st.session_state.current_image = temp_image
-            st.rerun()
-        
-        st.image(st.session_state.final_design, use_container_width=True)
-        
-        # 显示当前的T恤规格
-        # 创建颜色名称映射词典
-        color_names = {
-            "#FFFFFF": "White",
-            "#000000": "Black",
-            "#FF0000": "Red",
-            "#00FF00": "Green",
-            "#0000FF": "Blue",
-            "#FFFF00": "Yellow",
-            "#FF00FF": "Magenta",
-            "#00FFFF": "Cyan",
-            "#FFA500": "Orange",
-            "#800080": "Purple",
-            "#008000": "Dark Green",
-            "#800000": "Maroon",
-            "#008080": "Teal",
-            "#000080": "Navy",
-            "#808080": "Gray"
-        }
-        
-        # 尝试匹配确切颜色，如果不存在则显示十六进制代码
-        color_hex = st.session_state.shirt_color_hex
-        color_name = color_names.get(color_hex.upper(), f"Custom ({color_hex})")
-        
-        st.markdown(f"""
-        #### Current T-shirt Specifications:
-        
-        - **Collar**: {st.session_state.collar_style}
-        - **Sleeves**: {st.session_state.sleeve_style}
-        - **Fabric**: {st.session_state.fabric_type}
-        - **Color**: {color_name}
-        """)
-        
-        # 提示剩余时间（仅针对popup环境）
-        st.warning("⏱️ Please finish your design soon - other customers are waiting!")
-        
-        # Provide download option
-        col1, col2 = st.columns(2)
-        with col1:
-            from io import BytesIO  # 确保BytesIO在此处可用
-            buf = BytesIO()
-            st.session_state.final_design.save(buf, format="PNG")
-            buf.seek(0)
-            st.download_button(
-                label="💾 Download Custom Design",
-                data=buf,
-                file_name="custom_tshirt.png",
-                mime="image/png"
-            )
-        
-        with col2:
-            # Confirm completion button
-            if st.button("Confirm Completion"):
-                st.session_state.page = "survey"
-                st.rerun()
-    
     # Return to main interface button - modified here
     if st.button("Return to Main Page"):
         # Clear all design-related states
-        st.session_state.base_image = None
-        st.session_state.current_image = None
-        st.session_state.current_box_position = None
-        st.session_state.generated_design = None
-        st.session_state.final_design = None
-        st.session_state.original_base_image = None
+        for key in ['base_image', 'current_image', 'current_box_position', 
+                   'generated_design', 'final_design', 'preset_design', 
+                   'drawn_design', 'design_mode', 'active_tab']:
+            if key in st.session_state:
+                st.session_state[key] = None
+        # 设置默认活动标签页
+        st.session_state.active_tab = "T-shirt Style"
+        # 设置默认设计模式
+        st.session_state.design_mode = "preset"
         # Only change page state, retain user info and experiment group
         st.session_state.page = "welcome"
         st.rerun() 
