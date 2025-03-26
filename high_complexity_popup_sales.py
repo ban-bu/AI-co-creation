@@ -437,10 +437,10 @@ def show_high_complexity_popup_sales():
                     # 构建提示文本
                     effect_text = f" Apply {special_effect} effect." if special_effect != "None" else ""
                     prompt_text = (
-                        f"Design a T-shirt pattern with '{theme}' theme in {style} style. "
+                        f"Design a pattern with '{theme}' theme in {style} style. "
                         f"Use the following colors: {colors}. "
                         f"Design should be {detail_level} detail level.{effect_text} "
-                        f"Create a PNG format image with transparent background, suitable for T-shirt printing."
+                        f"Create a PNG format image with transparent background, suitable for printing."
                     )
                     
                     with st.spinner("🔮 Generating design... please wait"):
