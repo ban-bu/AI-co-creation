@@ -749,11 +749,11 @@ def show_high_complexity_general_sales():
                         effect_prompt = "" if special_effect == "None" else f"Apply {special_effect} effect to the design. "
                         
                         prompt_text = (
-                            f"Design a T-shirt pattern with '{theme}' theme using {style}. "
+                            f"Design a pattern with '{theme}' theme using {style}. "
                             f"Use the following colors: {colors}. "
                             f"Design complexity is {complexity}/10 with {detail_level} level of detail. "
                             f"{effect_prompt}"
-                            f"Create a PNG format image with transparent background, suitable for T-shirt printing."
+                            f"Create a PNG format image with transparent background, suitable for printing."
                         )
                         
                         with st.spinner("🔮 Generating design... please wait"):
