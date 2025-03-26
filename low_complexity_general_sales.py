@@ -330,53 +330,16 @@ def show_low_complexity_general_sales():
                     st.rerun()
             
             # 设计生成主题
-            theme = st.text_input("Theme or keyword (required)", "Elegant pattern")
-            
-            # 简化颜色选择
-            color_scheme_options = [
-                "Soft warm tones (pink, gold, light orange)",
-                "Fresh cool tones (blue, mint, white)",
-                "Nature colors (green, brown, beige)",
-                "Bright and vibrant (red, yellow, orange)",
-                "Black and white contrast",
-                "Custom colors"
-            ]
-            color_scheme = st.selectbox("Color scheme", color_scheme_options)
-            
-            # If custom colors are selected, show input field
-            if color_scheme == "Custom colors":
-                colors = st.text_input("Enter desired colors (comma separated)", "pink, gold, sky blue")
-            else:
-                # Set corresponding color values based on selected scheme
-                color_mapping = {
-                    "Soft warm tones (pink, gold, light orange)": "pink, gold, light orange, cream",
-                    "Fresh cool tones (blue, mint, white)": "sky blue, mint green, white, light gray",
-                    "Nature colors (green, brown, beige)": "forest green, brown, beige, olive",
-                    "Bright and vibrant (red, yellow, orange)": "bright red, yellow, orange, lemon yellow",
-                    "Black and white contrast": "black, white, gray",
-                }
-                colors = color_mapping.get(color_scheme, "blue, green, red")
-            
-            # 设计风格 - 简化选项
-            style_options = ["Minimalist", "Artistic", "Geometric", "Abstract"]
-            style = st.selectbox("Design style", style_options)
-            
-            # 简化复杂度选项
-            complexity = st.slider("Design complexity", 1, 10, 5)
-            
-            # 自动设置详细程度
-            detail_level = "low" if complexity <= 3 else "medium" if complexity <= 7 else "high"
+            theme = st.text_input("Design prompt (describe your design idea)", "Elegant minimalist pattern in blue and white colors")
             
             # 生成AI设计按钮
             if st.button("🎨 Generate Design"):
                 if not theme.strip():
-                    st.warning("Please enter at least a theme or keyword!")
+                    st.warning("Please enter a design prompt!")
                 else:
                     # 简化提示文本
                     prompt_text = (
-                        f"Design a T-shirt pattern with '{theme}' theme in {style} style. "
-                        f"Use the following colors: {colors}. "
-                        f"Design complexity is {complexity}/10. "
+                        f"Design a T-shirt pattern with the following description: {theme}. "
                         f"Create a PNG format image with transparent background, suitable for T-shirt printing."
                     )
                     
@@ -542,6 +505,11 @@ def show_low_complexity_general_sales():
                             
                             # 更新设计
                             st.session_state.final_design = new_design
+                            
+                            # 同时更新current_image以保持两个显示区域的一致性
+                            st.session_state.current_image = new_design.copy()
+                            
+                            # 强制页面刷新以显示最新结果
                             st.rerun()
             else:  # Logo选项
                 # Logo来源选择
@@ -660,6 +628,11 @@ def show_low_complexity_general_sales():
                             
                             # 更新设计
                             st.session_state.final_design = new_design
+                            
+                            # 同时更新current_image以保持两个显示区域的一致性
+                            st.session_state.current_image = new_design.copy()
+                            
+                            # 强制页面刷新以显示最新结果
                             st.rerun()
                         except Exception as e:
                             st.error(f"Error processing logo: {e}")

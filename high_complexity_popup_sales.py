@@ -270,16 +270,20 @@ def show_high_complexity_popup_sales():
             
             # 添加清空设计按钮
             if st.button("🗑️ Clear All Designs", key="clear_designs"):
-                # 重置状态变量
+                # 清空所有设计相关的状态变量
                 st.session_state.generated_design = None
-                st.session_state.preset_design = None
-                st.session_state.drawn_design = None
+                # 重置最终设计为基础T恤图像
                 st.session_state.final_design = None
-                # 重置当前图像为带选择框的基础图像
-                if st.session_state.get('active_tab') == "Design Pattern":
+                
+                # 根据当前活动标签页决定是否显示红框
+                if st.session_state.active_tab == "Design Pattern":
+                    # 设计Pattern标签下应显示红框
                     temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
                 else:
+                    # T-shirt标签下不显示红框
                     temp_image = st.session_state.base_image.copy()
+                    
+                # 重置当前图像
                 st.session_state.current_image = temp_image
                 st.rerun()
             
@@ -623,6 +627,11 @@ def show_high_complexity_popup_sales():
                             
                             # 更新设计
                             st.session_state.final_design = new_design
+                            
+                            # 同时更新current_image以保持两个显示区域的一致性
+                            st.session_state.current_image = new_design.copy()
+                            
+                            # 强制页面刷新以显示最新结果
                             st.rerun()
             else:  # Logo options
                 # Logo来源选择
@@ -741,6 +750,11 @@ def show_high_complexity_popup_sales():
                             
                             # 更新设计
                             st.session_state.final_design = new_design
+                            
+                            # 同时更新current_image以保持两个显示区域的一致性
+                            st.session_state.current_image = new_design.copy()
+                            
+                            # 强制页面刷新以显示最新结果
                             st.rerun()
                         except Exception as e:
                             st.error(f"Error processing logo: {e}")
