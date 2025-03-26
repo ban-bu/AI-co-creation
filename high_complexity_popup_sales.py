@@ -425,66 +425,71 @@ def show_high_complexity_popup_sales():
             position_y = st.slider("Vertical position", -100, 100, 0)
             scale = st.slider("Design size", 25, 150, 100, 5, format="%d%%")
             
-            # 生成AI设计按钮
-            generate_col1, generate_col2 = st.columns(2)
-            with generate_col1:
-                if st.button("🎨 Generate Design", key="generate_design"):
-                    if not theme.strip():
-                        st.warning("Please enter at least a theme or keyword!")
-                    else:
-                        # 构建高级提示文本
-                        effect_prompt = "" if special_effect == "None" else f"Apply {special_effect} effect to the design. "
+            # 生成设计按钮
+            if st.button("Generate Design", key="generate_design"):
+                if theme.strip() == "":
+                    st.warning("Please enter a theme first!")
+                else:
+                    # 构建提示文本
+                    effect_text = f" Apply {special_effect} effect." if special_effect != "None" else ""
+                    prompt_text = (
+                        f"Design a T-shirt pattern with '{theme}' theme in {style} style. "
+                        f"Use the following colors: {colors}. "
+                        f"Design should be {detail_level} detail level.{effect_text} "
+                        f"Create a PNG format image with transparent background, suitable for T-shirt printing."
+                    )
+                    
+                    with st.spinner("🔮 Generating design... please wait"):
+                        # 调用生成函数
+                        custom_design = generate_vector_image(prompt_text)
                         
-                        prompt_text = (
-                            f"Design a T-shirt pattern with '{theme}' theme using {style}. "
-                            f"Use the following colors: {colors}. "
-                            f"Design complexity is {complexity}/10 with {detail_level} level of detail. "
-                            f"{effect_prompt}"
-                            f"Create a PNG format image with transparent background, suitable for T-shirt printing."
-                        )
-                        
-                        with st.spinner("🔮 Generating design... please wait"):
-                            # 显示倒计时提醒（针对popup环境）
-                            st.info("⏱️ Design generation will take about 15-20 seconds")
+                        if custom_design:
+                            # 保存生成的设计
+                            st.session_state.generated_design = custom_design
                             
-                            custom_design = generate_vector_image(prompt_text)
+                            # 创建合成图像
+                            composite_image = st.session_state.base_image.copy()
                             
-                            if custom_design:
-                                st.session_state.generated_design = custom_design
-                                
-                                # Composite on the original image
-                                composite_image = st.session_state.base_image.copy()
-                                
-                                # Place design at current selection position with size and position modifiers
-                                left, top = st.session_state.current_box_position
-                                box_size = int(1024 * 0.25)
-                                
-                                # 应用缩放
-                                actual_size = int(box_size * scale / 100)
-                                
-                                # 应用位置偏移
-                                max_offset = box_size - actual_size
-                                actual_x = int((position_x / 100) * (max_offset / 2))
-                                actual_y = int((position_y / 100) * (max_offset / 2))
-                                
-                                # 最终位置
-                                final_left = left + (box_size - actual_size) // 2 + actual_x
-                                final_top = top + (box_size - actual_size) // 2 + actual_y
-                                
-                                # Scale generated pattern to selection area size
-                                scaled_design = custom_design.resize((actual_size, actual_size), Image.LANCZOS)
-                                
-                                try:
-                                    # Ensure transparency channel is used for pasting
-                                    composite_image.paste(scaled_design, (final_left, final_top), scaled_design)
-                                except Exception as e:
-                                    st.warning(f"Transparent channel paste failed, direct paste: {e}")
-                                    composite_image.paste(scaled_design, (final_left, final_top))
-                                
-                                st.session_state.final_design = composite_image
-                                st.rerun()
-                            else:
-                                st.error("Failed to generate image, please try again later.")
+                            # 获取当前选择框位置
+                            x1, y1, box_width, box_height = get_selection_coordinates(
+                                st.session_state.current_box_position, 
+                                (composite_image.width, composite_image.height)
+                            )
+                            
+                            # 应用缩放
+                            scaled_width = int(box_width * scale / 100)
+                            scaled_height = int(scaled_width * custom_design.height / custom_design.width)
+                            
+                            # 计算位置偏移
+                            x_offset = int(position_x * box_width / 200)
+                            y_offset = int(position_y * box_height / 200)
+                            
+                            # 最终位置
+                            final_x = x1 + (box_width - scaled_width) // 2 + x_offset
+                            final_y = y1 + (box_height - scaled_height) // 2 + y_offset
+                            
+                            # 确保位置在框内
+                            final_x = max(x1, min(final_x, x1 + box_width - scaled_width))
+                            final_y = max(y1, min(final_y, y1 + box_height - scaled_height))
+                            
+                            # 调整设计大小
+                            scaled_design = custom_design.resize((scaled_width, scaled_height), Image.LANCZOS)
+                            
+                            try:
+                                # 使用透明通道粘贴
+                                composite_image.paste(scaled_design, (final_x, final_y), scaled_design)
+                            except Exception as e:
+                                # 如果透明通道粘贴失败，使用直接粘贴
+                                st.warning(f"Transparent paste failed: {e}")
+                                composite_image.paste(scaled_design, (final_x, final_y))
+                            
+                            # 保存最终设计但不立即刷新页面
+                            st.session_state.final_design = composite_image
+                            
+                            # 显示生成成功的消息
+                            st.success("Design successfully generated! Check the left side for the result.")
+                        else:
+                            st.error("Failed to generate image. Please try again.")
         
         with tab3:
             # 文字和Logo选项

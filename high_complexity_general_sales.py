@@ -773,8 +773,11 @@ def show_high_complexity_general_sales():
                                     st.warning(f"Transparent channel paste failed, direct paste: {e}")
                                     composite_image.paste(scaled_design, (final_left, final_top))
                                 
+                                # 保存最终设计但不立即刷新页面
                                 st.session_state.final_design = composite_image
-                                st.rerun()
+                                
+                                # 显示生成成功的消息
+                                st.success("Design successfully generated! Check the left side for the result.")
                             else:
                                 st.error("Failed to generate image, please try again later.")
     

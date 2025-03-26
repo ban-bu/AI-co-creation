@@ -409,12 +409,12 @@ def show_low_complexity_popup_sales():
             # 自动设置详细程度
             detail_level = "low" if complexity <= 3 else "medium" if complexity <= 7 else "high"
             
-            # 生成AI设计按钮
-            if st.button("🎨 Generate Design"):
-                if not theme.strip():
-                    st.warning("Please enter at least a theme or keyword!")
+            # 生成设计按钮
+            if st.button("Generate Design", key="generate_design"):
+                if theme.strip() == "":
+                    st.warning("Please enter a design theme!")
                 else:
-                    # 简化提示文本
+                    # 构建提示文本
                     prompt_text = (
                         f"Design a T-shirt pattern with '{theme}' theme in {style} style. "
                         f"Use the following colors: {colors}. "
@@ -423,32 +423,38 @@ def show_low_complexity_popup_sales():
                     )
                     
                     with st.spinner("🔮 Generating design... please wait"):
+                        # 调用生成函数
                         custom_design = generate_vector_image(prompt_text)
                         
                         if custom_design:
+                            # 保存生成的设计
                             st.session_state.generated_design = custom_design
                             
-                            # Composite on the original image
+                            # 创建合成图像
                             composite_image = st.session_state.base_image.copy()
                             
-                            # Place design at current selection position
+                            # 获取当前选择框位置
                             left, top = st.session_state.current_box_position
                             box_size = int(1024 * 0.25)
                             
-                            # Scale generated pattern to selection area size
+                            # 调整设计大小以适应选择框
                             scaled_design = custom_design.resize((box_size, box_size), Image.LANCZOS)
                             
                             try:
-                                # Ensure transparency channel is used for pasting
+                                # 使用透明通道粘贴
                                 composite_image.paste(scaled_design, (left, top), scaled_design)
                             except Exception as e:
-                                st.warning(f"Transparent channel paste failed, direct paste: {e}")
+                                # 如果透明通道粘贴失败，使用直接粘贴
+                                st.warning(f"Transparent paste failed: {e}")
                                 composite_image.paste(scaled_design, (left, top))
                             
+                            # 保存最终设计但不立即刷新页面
                             st.session_state.final_design = composite_image
-                            st.rerun()
+                            
+                            # 显示生成成功的消息
+                            st.success("Design successfully generated! Check the left side for the result.")
                         else:
-                            st.error("Failed to generate image, please try again later.")
+                            st.error("Failed to generate image. Please try again.")
         
         with tab2:
             # 添加文字/Logo选项
