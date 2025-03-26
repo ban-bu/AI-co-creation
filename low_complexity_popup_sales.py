@@ -453,6 +453,9 @@ def show_low_complexity_popup_sales():
                             
                             # 显示生成成功的消息
                             st.success("Design successfully generated! Check the left side for the result.")
+                            
+                            # 强制页面刷新以显示左侧结果
+                            st.rerun()
                         else:
                             st.error("Failed to generate image. Please try again.")
         
