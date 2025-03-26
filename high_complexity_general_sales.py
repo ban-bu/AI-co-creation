@@ -295,6 +295,45 @@ def show_high_complexity_general_sales():
             st.session_state.current_image = temp_image
             st.session_state.current_box_position = new_pos
             st.rerun()
+            
+        # 将Final Result部分移到左侧栏中
+        if st.session_state.final_design is not None:
+            st.markdown("### Final Result")
+            
+            # 添加清空设计按钮
+            if st.button("🗑️ Clear All Designs", key="clear_designs"):
+                # 清空所有设计相关的状态变量
+                st.session_state.generated_design = None
+                # 重置最终设计为基础T恤图像
+                st.session_state.final_design = None
+                # 重置当前图像为带选择框的基础图像
+                temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
+                st.session_state.current_image = temp_image
+                st.rerun()
+            
+            st.image(st.session_state.final_design, use_container_width=True)
+            # 添加T恤规格信息
+            st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
+            
+            # Provide download option
+            col1a, col1b = st.columns(2)
+            with col1a:
+                from io import BytesIO  # 确保BytesIO在此处可用
+                buf = BytesIO()
+                st.session_state.final_design.save(buf, format="PNG")
+                buf.seek(0)
+                st.download_button(
+                    label="💾 Download Custom Design",
+                    data=buf,
+                    file_name="custom_tshirt.png",
+                    mime="image/png"
+                )
+            
+            with col1b:
+                # Confirm completion button
+                if st.button("Confirm Completion"):
+                    st.session_state.page = "survey"
+                    st.rerun()
 
     with col2:
         st.markdown("## Design Parameters")
@@ -739,46 +778,7 @@ def show_high_complexity_general_sales():
                             else:
                                 st.error("Failed to generate image, please try again later.")
     
-    # Display final effect - move out of col2, place at bottom of overall page
-    if st.session_state.final_design is not None:
-        st.markdown("### Final Result")
-        
-        # 添加清空设计按钮
-        if st.button("🗑️ Clear All Designs", key="clear_designs"):
-            # 清空所有设计相关的状态变量
-            st.session_state.generated_design = None
-            # 重置最终设计为基础T恤图像
-            st.session_state.final_design = None
-            # 重置当前图像为带选择框的基础图像
-            temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
-            st.session_state.current_image = temp_image
-            st.rerun()
-        
-            st.image(st.session_state.final_design, use_container_width=True)
-        # 添加T恤规格信息
-            st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
-        
-        # Provide download option
-        col1, col2 = st.columns(2)
-        with col1:
-            from io import BytesIO  # 确保BytesIO在此处可用
-            buf = BytesIO()
-            st.session_state.final_design.save(buf, format="PNG")
-            buf.seek(0)
-            st.download_button(
-                label="💾 Download Custom Design",
-                data=buf,
-                file_name="custom_tshirt.png",
-                mime="image/png"
-            )
-        
-        with col2:
-            # Confirm completion button
-            if st.button("Confirm Completion"):
-                st.session_state.page = "survey"
-                st.rerun()
-
-    # Return to main interface button - modified here
+    # 删除原来页面底部的Final Result部分
     if st.button("Return to Main Page"):
         # Clear all design-related states
         st.session_state.base_image = None
