@@ -157,98 +157,17 @@ def show_ai_customization_group():
         st.markdown("## Design Parameters")
         
         # User input for personalization parameters - improved prompts and defaults
-        theme = st.text_input("Theme or keyword (required)", "Elegant floral pattern")
+        theme = st.text_input("Design prompt (describe your design idea)", "Elegant minimalist pattern in blue and white colors")
         
-        # Add style selection dropdown with more professional style options
-        style_options = [
-            "Watercolor style", "Sketch style", "Geometric shapes", "Minimalist", 
-            "Vintage style", "Pop art", "Japanese style", "Nordic design",
-            "Classical ornament", "Digital illustration", "Abstract art", "Ethnic motifs"
-        ]
-        style = st.selectbox("Design style", style_options, index=0)
-        
-        # Improved color selection
-        color_scheme_options = [
-            "Soft warm tones (pink, gold, light orange)",
-            "Fresh cool tones (blue, mint, white)",
-            "Nature colors (green, brown, beige)",
-            "Bright and vibrant (red, yellow, orange)",
-            "Elegant deep tones (navy, purple, dark green)",
-            "Black and white contrast",
-            "Colorful mix",
-            "Custom colors"
-        ]
-        color_scheme = st.selectbox("Color scheme", color_scheme_options)
-        
-        # If custom colors are selected, show input field
-        if color_scheme == "Custom colors":
-            colors = st.text_input("Enter desired colors (comma separated)", "pink, gold, sky blue")
-        else:
-            # Set corresponding color values based on selected scheme
-            color_mapping = {
-                "Soft warm tones (pink, gold, light orange)": "pink, gold, light orange, cream",
-                "Fresh cool tones (blue, mint, white)": "sky blue, mint green, white, light gray",
-                "Nature colors (green, brown, beige)": "forest green, brown, beige, olive",
-                "Bright and vibrant (red, yellow, orange)": "bright red, yellow, orange, lemon yellow",
-                "Elegant deep tones (navy, purple, dark green)": "navy blue, violet, dark green, burgundy",
-                "Black and white contrast": "black, white, gray",
-                "Colorful mix": "red, blue, yellow, green, purple, orange"
-            }
-            colors = color_mapping[color_scheme]
-        
-        # Improved design details options
-        details_options = [
-            "Fine outlines and lines",
-            "Smooth gradient effects",
-            "Floral and plant elements",
-            "Geometric shapes and patterns",
-            "Waves and curves",
-            "Dotted textures",
-            "Repeating patterns",
-            "Randomly distributed elements",
-            "Custom details"
-        ]
-        details_type = st.selectbox("Detail type", details_options)
-        
-        if details_type == "Custom details":
-            details = st.text_area("Describe desired design details", "Elegant curves and swirling shapes")
-        else:
-            # Preset detail descriptions
-            details_mapping = {
-                "Fine outlines and lines": "Design includes fine outlines and smooth lines, highlighting the shape and contours of the pattern.",
-                "Smooth gradient effects": "Design uses smooth color gradients, elegantly transitioning from one color to another.",
-                "Floral and plant elements": "Design incorporates delicate flowers, leaves and other plant elements with a natural organic feel.",
-                "Geometric shapes and patterns": "Design uses clean geometric shapes like triangles, circles, squares arranged in attractive patterns.",
-                "Waves and curves": "Design incorporates flowing waves and elegant curves creating a sense of movement and rhythm.",
-                "Dotted textures": "Design uses dot patterns to create texture and depth, similar to pointillism technique.",
-                "Repeating patterns": "Design contains regularly repeating elements forming a unified, harmonious pattern.",
-                "Randomly distributed elements": "Elements in the design are randomly distributed, creating a natural, irregular appearance."
-            }
-            details = details_mapping[details_type]
-        
-        # Add design complexity option
-        complexity = st.slider("Design complexity", 1, 10, 5, 
-                              help="1 means very simple, 10 means very complex")
-        
-        # Automatically set detail level based on complexity
-        detail_level = "low" if complexity <= 3 else "medium" if complexity <= 7 else "high"
-        
-        # Improved design generation button
-        if st.button("🎨 Generate AI Design"):
+        # 生成AI设计按钮
+        if st.button("🎨 Generate Design"):
             if not theme.strip():
-                st.warning("Please enter at least a theme or keyword!")
+                st.warning("Please enter a design prompt!")
             else:
-                # Generate more professional and detailed prompt text
+                # 简化提示文本
                 prompt_text = (
-                    f"Design a T-shirt pattern with '{theme}' theme using {style}. "
-                    f"Use the following colors: {colors}. "
-                    f"Design details: {details}. "
-                    f"Design complexity is {complexity}/10 with {detail_level} level of detail. "
-                    f"The pattern should have an attractive, balanced composition suitable for a T-shirt print. "
-                    f"Create a PNG format image with transparent background, ensuring only the design elements are visible with no background. "
-                    f"The design style should be professional and modern, appropriate for clothing prints. "
-                    f"Ensure the pattern has crisp edges and a high-quality appearance. "
-                    f"The output must be PNG with alpha channel transparency."
+                    f"Design a T-shirt pattern with the following description: {theme}. "
+                    f"Create a PNG format image with transparent background, suitable for T-shirt printing."
                 )
                 
                 with st.spinner("🔮 Generating design... please wait"):
@@ -274,6 +193,7 @@ def show_ai_customization_group():
                             st.warning(f"Transparent channel paste failed, direct paste: {e}")
                             composite_image.paste(scaled_design, (left, top))
                         
+                        # 更新设计
                         st.session_state.final_design = composite_image
                         st.rerun()
                     else:
