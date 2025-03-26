@@ -390,8 +390,8 @@ def show_low_complexity_popup_sales():
                 else:
                     # 构建提示文本
                     prompt_text = (
-                        f"Design a T-shirt pattern with the following description: {theme}. "
-                        f"Create a PNG format image with transparent background, suitable for T-shirt printing."
+                        f"Design a pattern with the following description: {theme}. "
+                        f"Create a PNG format image with transparent background, suitable for printing."
                     )
                     
                     with st.spinner("🔮 Generating design... please wait"):
