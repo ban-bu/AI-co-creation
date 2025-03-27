@@ -1120,6 +1120,10 @@ def show_high_complexity_general_sales():
                 st.session_state.generated_design = None
                 st.session_state.applied_text = None
                 st.session_state.applied_logo = None
+                # 重置颜色和纹理相关状态
+                st.session_state.fabric_type = None
+                st.session_state.apply_texture = False
+                st.session_state.shirt_color_hex = "#ffffff"  # 重置为白色
                 # 重置最终设计为基础T恤图像
                 st.session_state.final_design = st.session_state.base_image.copy()
                 # 重置当前图像为带选择框的基础图像
