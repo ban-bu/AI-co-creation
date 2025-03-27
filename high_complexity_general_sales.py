@@ -469,18 +469,17 @@ def show_high_complexity_general_sales():
                             # 准备绘图对象
                             draw = ImageDraw.Draw(new_design)
                             
-                            # 如果使用了绘图方法，同样以绘图方法重新应用
-                            if text_info.get("use_drawing_method", False):
-                                font_mapping = {
-                                    "Arial": "arial.ttf",
-                                    "Times New Roman": "times.ttf",
-                                    "Courier": "cour.ttf",
-                                    "Verdana": "verdana.ttf", 
-                                    "Georgia": "georgia.ttf",
-                                    "Script": "SCRIPTBL.TTF",
-                                    "Impact": "impact.ttf"
-                                }
-                                
+                            # 字体映射
+                            font_mapping = {
+                                "Arial": "arial.ttf",
+                                "Times New Roman": "times.ttf",
+                                "Courier": "cour.ttf",
+                                "Verdana": "verdana.ttf",
+                                "Georgia": "georgia.ttf",
+                                "Script": "SCRIPTBL.TTF",
+                                "Impact": "impact.ttf"
+                            }
+                            
                             # 尝试加载选择的字体
                             try:
                                 from PIL import ImageFont
