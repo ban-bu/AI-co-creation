@@ -461,6 +461,32 @@ def show_low_complexity_general_sales():
                             st.session_state.shirt_color_hex = color_hex
                             st.rerun()
                 
+                # 添加自定义颜色调整功能
+                st.markdown("##### 自定义颜色")
+                custom_color = st.color_picker("选择自定义颜色:", st.session_state.shirt_color_hex, key="custom_color_picker")
+                custom_col1, custom_col2 = st.columns([3, 1])
+                
+                with custom_col1:
+                    # 显示自定义颜色预览
+                    st.markdown(
+                        f"""
+                        <div style="
+                            background-color: {custom_color}; 
+                            width: 100%; 
+                            height: 40px; 
+                            border-radius: 5px;
+                            border: 1px solid #ddd;
+                            margin-bottom: 5px;">
+                        </div>
+                        """, 
+                        unsafe_allow_html=True
+                    )
+                
+                with custom_col2:
+                    if st.button("应用自定义颜色"):
+                        st.session_state.shirt_color_hex = custom_color
+                        st.rerun()
+                
                 # 文字建议应用
                 st.markdown("##### 应用推荐文字")
                 
@@ -499,6 +525,9 @@ def show_low_complexity_general_sales():
                 font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
                 ai_font = st.selectbox("选择字体风格:", font_options, key="ai_font_selection")
                 
+                # 增加文字大小选项
+                text_size = st.slider("文字大小:", 20, 120, 48, key="ai_text_size")
+                
                 # 预览效果
                 if text_suggestion:
                     st.markdown(
@@ -521,14 +550,235 @@ def show_low_complexity_general_sales():
                 
                 # 应用按钮
                 if st.button("应用文字到设计", key="apply_ai_text"):
-                    # 不直接设置会话状态，而是使用中间变量来传递
-                    # 将字体和颜色设置存储在新的状态变量中
-                    st.session_state.text_design_settings = {
-                        "text": text_suggestion,
-                        "font": ai_font,
-                        "color": text_color
-                    }
-                    st.success(f"已选择文字设置，请在\"Add Text/Logo\"选项卡中点击\"Add Text to Design\"应用")
+                    # 修改直接应用文字到预览图上
+                    if not text_suggestion.strip():
+                        st.warning("请输入文字内容!")
+                    else:
+                        # 获取当前图像
+                        if st.session_state.final_design is not None:
+                            new_design = st.session_state.final_design.copy()
+                        else:
+                            new_design = st.session_state.base_image.copy()
+                        
+                        # 创建绘图对象
+                        draw = ImageDraw.Draw(new_design)
+                        
+                        # 尝试获取字体
+                        try:
+                            from PIL import ImageFont
+                            font = None
+                            
+                            # 尝试常见的系统字体路径
+                            system_font_paths = [
+                                "/Library/Fonts/",  # macOS
+                                "/System/Library/Fonts/",  # macOS系统
+                                "C:/Windows/Fonts/",  # Windows
+                                "/usr/share/fonts/truetype/",  # Linux
+                            ]
+                            
+                            # 字体映射
+                            font_mapping = {
+                                "Arial": "arial.ttf",
+                                "Times New Roman": "times.ttf",
+                                "Courier": "cour.ttf",
+                                "Verdana": "verdana.ttf",
+                                "Georgia": "georgia.ttf",
+                                "Impact": "impact.ttf"
+                            }
+                            
+                            # 尝试加载字体
+                            font_file = font_mapping.get(ai_font, "arial.ttf")
+                            for path in system_font_paths:
+                                try:
+                                    font = ImageFont.truetype(path + font_file, text_size)
+                                    break
+                                except:
+                                    continue
+                            
+                            # 如果无法加载字体，使用默认字体
+                            if font is None:
+                                font = ImageFont.load_default()
+                        except Exception as e:
+                            st.warning(f"加载字体时出错: {e}")
+                            font = None
+                        
+                        # 在选择框中居中绘制文字
+                        left, top = st.session_state.current_box_position
+                        box_size = int(1024 * 0.25)
+                        
+                        # 计算文字位置
+                        try:
+                            if font:
+                                text_bbox = draw.textbbox((0, 0), text_suggestion, font=font)
+                                text_width = text_bbox[2] - text_bbox[0]
+                                text_height = text_bbox[3] - text_bbox[1]
+                            else:
+                                # 估计文字大小
+                                text_width = len(text_suggestion) * text_size * 0.5
+                                text_height = text_size
+                                
+                            text_x = left + (box_size - text_width) // 2
+                            text_y = top + (box_size - text_height) // 2
+                            
+                            # 绘制文字
+                            draw.text((text_x, text_y), text_suggestion, fill=text_color, font=font)
+                            
+                            # 更新设计
+                            st.session_state.final_design = new_design
+                            st.session_state.current_image = new_design.copy()
+                            
+                            # 保存设计设置以便右侧选项卡可以使用
+                            st.session_state.text_design_settings = {
+                                "text": text_suggestion,
+                                "font": ai_font,
+                                "color": text_color,
+                                "size": text_size
+                            }
+                            
+                            st.success("文字已应用到设计中！")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"应用文字时出错: {e}")
+                
+                # 添加Logo选择功能
+                st.markdown("##### 应用Logo")
+                
+                # Logo来源选择
+                logo_source = st.radio("Logo来源:", ["上传Logo", "选择预设Logo"], horizontal=True, key="ai_logo_source")
+                
+                if logo_source == "上传Logo":
+                    # Logo上传选项
+                    uploaded_logo = st.file_uploader("上传Logo图片 (PNG或JPG文件):", type=["png", "jpg", "jpeg"], key="ai_logo_upload")
+                    logo_image = None
+                    
+                    if uploaded_logo is not None:
+                        try:
+                            logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
+                            st.image(logo_image, caption="上传的Logo", width=150)
+                        except Exception as e:
+                            st.error(f"加载上传的Logo时出错: {e}")
+                else:  # 选择预设Logo
+                    # 获取预设logo
+                    preset_logos = get_preset_logos()
+                    
+                    if not preset_logos:
+                        st.warning("未找到预设Logo。请在'logos'文件夹中添加一些图片。")
+                        logo_image = None
+                    else:
+                        # 显示预设logo选择
+                        logo_cols = st.columns(min(3, len(preset_logos)))
+                        selected_preset_logo = None
+                        
+                        for i, logo_path in enumerate(preset_logos):
+                            with logo_cols[i % 3]:
+                                logo_name = os.path.basename(logo_path)
+                                try:
+                                    logo_preview = Image.open(logo_path).convert("RGBA")
+                                    # 调整预览大小
+                                    preview_width = 80
+                                    preview_height = int(preview_width * logo_preview.height / logo_preview.width)
+                                    preview = logo_preview.resize((preview_width, preview_height))
+                                    
+                                    st.image(preview, caption=logo_name)
+                                    if st.button(f"选择", key=f"ai_logo_{i}"):
+                                        st.session_state.selected_preset_logo = logo_path
+                                        st.rerun()
+                                except Exception as e:
+                                    st.error(f"加载Logo {logo_name}时出错: {e}")
+                        
+                        # 如果已选择Logo
+                        if 'selected_preset_logo' in st.session_state:
+                            try:
+                                logo_image = Image.open(st.session_state.selected_preset_logo).convert("RGBA")
+                            except Exception as e:
+                                st.error(f"加载选择的Logo时出错: {e}")
+                                logo_image = None
+                        else:
+                            logo_image = None
+                
+                # Logo大小和位置设置(只在有logo_image时显示)
+                if logo_source == "上传Logo" and uploaded_logo is not None or \
+                   logo_source == "选择预设Logo" and 'selected_preset_logo' in st.session_state:
+                    
+                    # Logo大小
+                    logo_size = st.slider("Logo大小:", 10, 100, 40, format="%d%%", key="ai_logo_size")
+                    
+                    # Logo位置
+                    logo_position = st.radio("位置:", 
+                        ["左上", "上中", "右上", "居中", "左下", "下中", "右下"], 
+                        index=3, horizontal=True, key="ai_logo_position")
+                    
+                    # Logo透明度
+                    logo_opacity = st.slider("Logo透明度:", 10, 100, 100, 5, format="%d%%", key="ai_logo_opacity")
+                    
+                    # 应用Logo按钮
+                    if st.button("应用Logo到设计", key="apply_ai_logo"):
+                        # 获取当前图像
+                        if st.session_state.final_design is not None:
+                            new_design = st.session_state.final_design.copy()
+                        else:
+                            new_design = st.session_state.base_image.copy()
+                        
+                        try:
+                            # 对应的logo_image应该已经在上面的逻辑中被设置
+                            if logo_image:
+                                # 调整Logo大小
+                                box_size = int(1024 * 0.25)
+                                logo_width = int(box_size * logo_size / 100)
+                                logo_height = int(logo_width * logo_image.height / logo_image.width)
+                                logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
+                                
+                                # 获取选择框位置
+                                left, top = st.session_state.current_box_position
+                                
+                                # 位置映射
+                                position_mapping = {
+                                    "左上": (left + 10, top + 10),
+                                    "上中": (left + (box_size - logo_width) // 2, top + 10),
+                                    "右上": (left + box_size - logo_width - 10, top + 10),
+                                    "居中": (left + (box_size - logo_width) // 2, top + (box_size - logo_height) // 2),
+                                    "左下": (left + 10, top + box_size - logo_height - 10),
+                                    "下中": (left + (box_size - logo_width) // 2, top + box_size - logo_height - 10),
+                                    "右下": (left + box_size - logo_width - 10, top + box_size - logo_height - 10)
+                                }
+                                
+                                logo_x, logo_y = position_mapping.get(logo_position, (left + 10, top + 10))
+                                
+                                # 设置透明度
+                                if logo_opacity < 100:
+                                    logo_data = logo_resized.getdata()
+                                    new_data = []
+                                    for item in logo_data:
+                                        r, g, b, a = item
+                                        new_a = int(a * logo_opacity / 100)
+                                        new_data.append((r, g, b, new_a))
+                                    logo_resized.putdata(new_data)
+                                
+                                # 粘贴Logo到设计
+                                try:
+                                    new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
+                                except Exception as e:
+                                    st.warning(f"Logo粘贴失败: {e}")
+                                
+                                # 更新设计
+                                st.session_state.final_design = new_design
+                                st.session_state.current_image = new_design.copy()
+                                
+                                # 保存设置供右侧选项卡使用
+                                st.session_state.logo_design_settings = {
+                                    "source": logo_source,
+                                    "path": st.session_state.get('selected_preset_logo', None),
+                                    "size": logo_size,
+                                    "position": logo_position,
+                                    "opacity": logo_opacity
+                                }
+                                
+                                st.success("Logo已应用到设计中！")
+                                st.rerun()
+                            else:
+                                st.error("请先选择或上传Logo")
+                        except Exception as e:
+                            st.error(f"应用Logo时出错: {e}")
             else:
                 # 显示欢迎信息
                 st.markdown("""
