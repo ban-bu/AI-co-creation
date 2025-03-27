@@ -351,7 +351,7 @@ def show_low_complexity_general_sales():
     st.markdown("## Design Area")
     
     # 创建左右两列布局
-    preview_col, controls_col = st.columns([1, 1])
+    preview_col, controls_col = st.columns([3, 2])
     
     with preview_col:
         # T恤预览区
@@ -507,10 +507,24 @@ def show_low_complexity_general_sales():
         # Display current image and get click coordinates
         st.markdown("### 设计预览")
         current_image = st.session_state.current_image
+        
+        # 确保T恤图像能完整显示
         coordinates = streamlit_image_coordinates(
             current_image,
-            key="shirt_image"
+            key="shirt_image",
+            width="100%"
         )
+        
+        # 添加CSS修复图像显示问题
+        st.markdown("""
+        <style>
+        .stImage img {
+            max-width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+        </style>
+        """, unsafe_allow_html=True)
         
         # Handle selection area logic - simplify to directly move red box
         if coordinates:
