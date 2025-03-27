@@ -793,7 +793,7 @@ def show_low_complexity_general_sales():
                                     st.session_state.temp_text_selection = text
                                     st.rerun()
                 
-                # 改进文字应用部分的布局
+                # 文字选项 - 使用高复杂度方案的全部功能
                 text_col1, text_col2 = st.columns([2, 1])
                 
                 with text_col1:
@@ -806,46 +806,93 @@ def show_low_complexity_general_sales():
                     elif 'ai_text_suggestion' in st.session_state:
                         default_input = st.session_state.ai_text_suggestion
                     
-                    text_suggestion = st.text_input("输入或复制AI推荐的文字", default_input, key="ai_text_suggestion")
+                    text_content = st.text_input("输入或复制AI推荐的文字", default_input, key="ai_text_suggestion")
                 
                 with text_col2:
                     text_color = st.color_picker("文字颜色:", "#000000", key="ai_text_color")
                 
-                # 字体选择部分
-                font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
-                ai_font = st.selectbox("选择字体风格:", font_options, key="ai_font_selection")
+                # 字体选择 - 扩展为高复杂度方案的选项
+                font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]
+                font_family = st.selectbox("字体系列:", font_options, key="ai_font_selection")
                 
-                # 修改文字大小滑块
-                text_size = st.slider("文字大小:", 8, 25, 15, key="ai_text_size")
+                # 添加文字样式选项
+                text_style = st.multiselect("文字样式:", ["粗体", "斜体", "下划线", "阴影", "轮廓"], default=["粗体"])
                 
-                # 修改预览部分
-                if text_suggestion:
-                    preview_size = 36  # 固定预览大小
+                # 添加动态文字大小滑块
+                text_size = st.slider("文字大小:", 20, 120, 48, key="ai_text_size")
+                
+                # 添加文字效果选项
+                text_effect = st.selectbox("文字效果:", ["无", "弯曲", "拱形", "波浪", "3D", "渐变"])
+                
+                # 添加对齐方式选项
+                alignment = st.radio("对齐方式:", ["左对齐", "居中", "右对齐"], horizontal=True, index=1)
+                
+                # 修改预览部分，添加样式效果
+                if text_content:
+                    # 构建样式字符串
+                    style_str = ""
+                    if "粗体" in text_style:
+                        style_str += "font-weight: bold; "
+                    if "斜体" in text_style:
+                        style_str += "font-style: italic; "
+                    if "下划线" in text_style:
+                        style_str += "text-decoration: underline; "
+                    if "阴影" in text_style:
+                        style_str += "text-shadow: 2px 2px 4px rgba(0,0,0,0.5); "
+                    if "轮廓" in text_style:
+                        style_str += "-webkit-text-stroke: 1px #000; "
+                    
+                    # 处理对齐
+                    align_str = "center"
+                    if alignment == "左对齐":
+                        align_str = "left"
+                    elif alignment == "右对齐":
+                        align_str = "right"
+                    
+                    # 处理效果
+                    effect_str = ""
+                    if text_effect == "弯曲":
+                        effect_str = "transform: rotateX(10deg); transform-origin: center; "
+                    elif text_effect == "拱形":
+                        effect_str = "transform: perspective(100px) rotateX(10deg); "
+                    elif text_effect == "波浪":
+                        effect_str = "display: inline-block; transform: translateY(5px); animation: wave 2s ease-in-out infinite; "
+                    elif text_effect == "3D":
+                        effect_str = "text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb; "
+                    elif text_effect == "渐变":
+                        effect_str = "background: linear-gradient(45deg, #f3ec78, #af4261); -webkit-background-clip: text; -webkit-text-fill-color: transparent; "
+                    
+                    preview_size = text_size * 1.5  # 预览大小略大
                     st.markdown(
                         f"""
+                        <style>
+                        @keyframes wave {{
+                            0%, 100% {{ transform: translateY(0px); }}
+                            50% {{ transform: translateY(-10px); }}
+                        }}
+                        </style>
                         <div style="
                             padding: 10px;
                             margin: 10px 0;
                             border: 1px solid #ddd;
                             border-radius: 5px;
-                            font-family: {ai_font}, sans-serif;
+                            font-family: {font_family}, sans-serif;
                             color: {text_color};
-                            text-align: center;
+                            text-align: {align_str};
                             font-size: {preview_size}px;
                             line-height: 1.2;
+                            {style_str}
+                            {effect_str}
                         ">
-                        <strong>{text_suggestion}</strong>
+                        {text_content}
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
-                    
-                    # 修改预览信息，说明使用固定大小
-                    st.info("预览文字大小仅供参考。应用到T恤上的文字将使用固定的250像素大小，确保清晰可见。")
                 
-                # 修改应用文字到设计部分的代码，使用固定像素大小
+                # 修改应用文字到设计部分的代码，使用所有高级选项
                 if st.button("应用文字到设计", key="apply_ai_text"):
-                    if not text_suggestion.strip():
+                    if not text_content.strip():
                         st.warning("请输入文字内容!")
                     else:
                         try:
@@ -858,64 +905,82 @@ def show_low_complexity_general_sales():
                             # 创建绘图对象
                             draw = ImageDraw.Draw(new_design)
                             
-                            # 新的字体加载方案
-                            def load_custom_font(font_name, img_width):
-                                font_mapping = {
-                                    "Arial": "arial.ttf",
-                                    "Times New Roman": "times.ttf",
-                                    "Courier": "cour.ttf",
-                                    "Verdana": "verdana.ttf",
-                                    "Georgia": "georgia.ttf",
-                                    "Impact": "impact.ttf"
-                                }
-                                
-                                # 动态计算基础字号（图像宽度的20%）
-                                base_size = int(img_width * 0.2)
-                                min_size = 120  # 最小字号
-                                
-                                # 系统字体路径优先级
-                                font_paths = [
-                                    "/usr/share/fonts/truetype/",  # Linux
-                                    "C:/Windows/Fonts/",           # Windows
-                                    "/Library/Fonts/",             # macOS
-                                    "/System/Library/Fonts/"       # macOS系统
-                                ]
-                                
-                                # 尝试加载字体
-                                for font_path in font_paths:
-                                    try:
-                                        font_file = font_mapping.get(font_name, "arial.ttf")
-                                        return ImageFont.truetype(font_path + font_file, base_size)
-                                    except (IOError, OSError):
-                                        # 逐步减小字号尝试
-                                        for scaled_size in [base_size, int(base_size*0.9), int(base_size*0.8)]:
-                                            if scaled_size < min_size:
-                                                break
-                                            try:
-                                                return ImageFont.truetype(font_path + font_file, scaled_size)
-                                            except:
-                                                continue
-                                
-                                # 全部失败时使用默认字体（强制放大）
-                                default_font = ImageFont.load_default()
-                                default_font.size = max(base_size, min_size)  # 强制设置字号
-                                return default_font
-
-                            # 使用新的字体加载方法
-                            font = load_custom_font(ai_font, img_width)
+                            # 导入字体
+                            from PIL import ImageFont
+                            font = None
                             
-                            # 获取实际字体大小
-                            actual_size = font.size if hasattr(font, 'size') else img_width//8
+                            # 字体映射
+                            font_mapping = {
+                                "Arial": "arial.ttf",
+                                "Times New Roman": "times.ttf",
+                                "Courier": "cour.ttf",
+                                "Verdana": "verdana.ttf",
+                                "Georgia": "georgia.ttf",
+                                "Script": "SCRIPTBL.TTF",
+                                "Impact": "impact.ttf"
+                            }
                             
-                            # 文字位置计算（上1/3处）
-                            text_bbox = draw.textbbox((0, 0), text_suggestion, font=font)
+                            # 尝试常见的系统字体路径
+                            system_font_paths = [
+                                "/Library/Fonts/",  # macOS
+                                "/System/Library/Fonts/",  # macOS系统
+                                "C:/Windows/Fonts/",  # Windows
+                                "/usr/share/fonts/truetype/",  # Linux
+                            ]
+                            
+                            # 加载字体
+                            font_file = font_mapping.get(font_family, "arial.ttf")
+                            for path in system_font_paths:
+                                try:
+                                    font = ImageFont.truetype(path + font_file, text_size)
+                                    break
+                                except:
+                                    continue
+                            
+                            # 如果无法加载字体，使用默认字体
+                            if font is None:
+                                try:
+                                    # 尝试使用PIL的默认字体
+                                    font = ImageFont.load_default()
+                                except:
+                                    st.error("无法加载字体，请尝试其他字体。")
+                                    return
+                            
+                            # 获取图像尺寸和选择框位置
+                            img_width, img_height = new_design.size
+                            left, top = st.session_state.current_box_position
+                            box_size = int(1024 * 0.25)
+                            
+                            # 获取文字边界框
+                            text_bbox = draw.textbbox((0, 0), text_content, font=font)
                             text_width = text_bbox[2] - text_bbox[0]
                             text_height = text_bbox[3] - text_bbox[1]
-                            text_x = (img_width - text_width) // 2
-                            text_y = int(img_height * 0.3) - (text_height // 2)
+                            
+                            # 根据对齐方式计算文字位置
+                            if alignment == "左对齐":
+                                text_x = left + 10
+                            elif alignment == "右对齐":
+                                text_x = left + box_size - text_width - 10
+                            else:  # 居中
+                                text_x = left + (box_size - text_width) // 2
+                            
+                            text_y = top + (box_size - text_height) // 2
                             
                             # 绘制文字
-                            draw.text((text_x, text_y), text_suggestion, fill=text_color, font=font)
+                            draw.text((text_x, text_y), text_content, fill=text_color, font=font)
+                            
+                            # 实现特殊效果 (简化版，真实实现需要更复杂的图像处理)
+                            if "轮廓" in text_style:
+                                # 绘制简单的轮廓效果
+                                for offset_x, offset_y in [(1,1), (-1,-1), (1,-1), (-1,1)]:
+                                    draw.text((text_x + offset_x, text_y + offset_y), text_content, fill="black", font=font)
+                                draw.text((text_x, text_y), text_content, fill=text_color, font=font)
+                            
+                            if "阴影" in text_style:
+                                # 绘制简单的阴影效果
+                                shadow_offset = 3
+                                draw.text((text_x + shadow_offset, text_y + shadow_offset), text_content, fill="rgba(0,0,0,128)", font=font)
+                                draw.text((text_x, text_y), text_content, fill=text_color, font=font)
                             
                             # 更新设计
                             st.session_state.final_design = new_design
@@ -923,17 +988,20 @@ def show_low_complexity_general_sales():
                             
                             # 保存文字信息
                             st.session_state.applied_text = {
-                                "text": text_suggestion,
-                                "font": ai_font,
+                                "text": text_content,
+                                "font": font_family,
                                 "color": text_color,
-                                "size": actual_size,
+                                "size": text_size,
+                                "style": text_style,
+                                "effect": text_effect,
+                                "alignment": alignment,
                                 "position": (text_x, text_y)
                             }
                             
-                            st.success(f"文字已成功应用到设计中！字体大小: {actual_size}px")
+                            st.success(f"文字已成功应用到设计中！")
                             st.rerun()
                         except Exception as e:
-                            st.error(f"创建设计时出错: {e}")
+                            st.error(f"应用文字时出错: {e}")
                 
                 # 添加Logo选择功能
                 st.markdown("##### 应用Logo")
