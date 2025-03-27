@@ -355,9 +355,9 @@ def get_preset_logos():
     return preset_logos
 
 # AI Customization Group design page
-def show_high_complexity_general_sales():
+def show_low_complexity_general_sales():
     st.title("👕 AI Co-Creation Experiment Platform")
-    st.markdown("### High Task Complexity-General Sales - Create Your Unique T-shirt Design")
+    st.markdown("### Low Task Complexity-General Sales - Create Your Unique T-shirt Design")
     
     # 添加General Sales情境描述
     st.info("""
@@ -487,45 +487,21 @@ def show_high_complexity_general_sales():
             # 检查颜色是否发生变化
             if st.session_state.current_applied_color != st.session_state.shirt_color_hex:
                 # 颜色已变化，需要重新应用
-                # 确保使用原始白色T恤图像作为基础，避免颜色叠加问题
-                if st.session_state.original_base_image is not None:
-                    original_image = st.session_state.original_base_image.copy()
-                else:
-                    st.warning("无法找到原始T恤图像，颜色变更可能不正确")
-                    original_image = Image.open("white_shirt.png").convert("RGBA")
-                    st.session_state.original_base_image = original_image.copy()
-                
-                # 保存fabric_type的信息，以便恢复或变更
-                current_fabric_type = st.session_state.get('fabric_type')
-                
-                # 从原始图像应用新颜色和纹理
+                original_image = st.session_state.original_base_image.copy()
                 colored_image = change_shirt_color(
                     original_image, 
                     st.session_state.shirt_color_hex,
                     apply_texture=True,  # 应用纹理
-                    fabric_type=current_fabric_type  # 使用当前选择的面料
+                    fabric_type=st.session_state.fabric_type  # 使用当前选择的面料
                 )
-                
-                # 更新会话状态
                 st.session_state.base_image = colored_image
-                st.session_state.current_applied_color = st.session_state.shirt_color_hex
                 
                 # 更新当前图像和位置
                 new_image, _ = draw_selection_box(colored_image, st.session_state.current_box_position)
                 st.session_state.current_image = new_image
                 
                 # 如果有最终设计，也需要重新应用颜色
-                # 先保存之前的设计元素（如文字和logo），然后重新应用到新的颜色上
-                saved_design_elements = {}
-                if hasattr(st.session_state, 'applied_text') and st.session_state.applied_text:
-                    saved_design_elements['text'] = st.session_state.applied_text.copy()
-                if hasattr(st.session_state, 'applied_logo') and st.session_state.applied_logo:
-                    saved_design_elements['logo'] = st.session_state.applied_logo.copy()
-                
-                # 设置新的基础设计为彩色T恤
                 st.session_state.final_design = colored_image.copy()
-                
-                # 后续代码会重新应用文字和logo设计
                 
                 # 修改颜色变更时重新应用文字的代码
                 if 'applied_text' in st.session_state:
@@ -567,9 +543,7 @@ def show_high_complexity_general_sales():
                                     import os
                                     # 尝试直接加载系统字体
                                     if os.path.exists("C:/Windows/Fonts/arial.ttf"):
-                                        # 使用原始文字大小来设置字体大小，而不是固定的40
-                                        font_size = text_info["size"]
-                                        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
+                                        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 40)
                                 except Exception:
                                     pass
                                 
@@ -583,13 +557,13 @@ def show_high_complexity_general_sales():
                                 
                                 # 应用效果
                                 if "style" in text_info:
-                                    if "轮廓" in text_info["style"] or "Outline" in text_info["style"]:
+                                    if "轮廓" in text_info["style"]:
                                         offset = 2
                                         for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
                                             text_draw.text((small_text_x + offset_x, small_text_y + offset_y), 
                                                           text_info["text"], fill="black", font=font, anchor="mm")
                                     
-                                    if "阴影" in text_info["style"] or "Shadow" in text_info["style"]:
+                                    if "阴影" in text_info["style"]:
                                         shadow_offset = 4
                                         text_draw.text((small_text_x + shadow_offset, small_text_y + shadow_offset), 
                                                       text_info["text"], fill=(0, 0, 0, 180), font=font, anchor="mm")
@@ -603,36 +577,24 @@ def show_high_complexity_general_sales():
                                 if bbox:
                                     text_img = text_img.crop(bbox)
                                 
-                                # 如果存在原始位置和大小信息，直接使用，避免大小变化
-                                if "position" in text_info and "original_size" in text_info:
-                                    # 直接使用原始尺寸和位置
-                                    text_img_resized = text_img.resize(text_info["original_size"], Image.LANCZOS)
-                                    paste_x, paste_y = text_info["position"]
-                                else:
-                                    # 计算放大比例 - 如果使用了字体大小，不需要额外缩放
-                                    if font_size == text_info["size"]:
-                                        # 不需要额外缩放，已经使用了正确的字体大小
-                                        text_img_resized = text_img
-                                    else:
-                                        # 计算比例并缩放
-                                        scale_factor = text_info["size"] / 40
-                                        new_width = max(int(text_img.width * scale_factor), 10)
-                                        new_height = max(int(text_img.height * scale_factor), 10)
-                                        text_img_resized = text_img.resize((new_width, new_height), Image.LANCZOS)
-                                    
-                                    # 计算位置
-                                    if text_info["alignment"] == "left" or text_info["alignment"] == "Left":
-                                        paste_x = int(img_width * 0.2)
-                                    elif text_info["alignment"] == "right" or text_info["alignment"] == "Right":
-                                        paste_x = int(img_width * 0.8 - text_img_resized.width)
-                                    else:  # 居中
-                                        paste_x = (img_width - text_img_resized.width) // 2
-                                    
-                                    # 垂直位置
-                                    paste_y = int(img_height * 0.4 - text_img_resized.height // 2)
+                                # 计算放大比例
+                                scale_factor = text_info["size"] / 40
+                                new_width = max(int(text_img.width * scale_factor), 10)
+                                new_height = max(int(text_img.height * scale_factor), 10)
                                 
-                                # 保存原始尺寸信息以供后续使用
-                                text_info["original_size"] = (text_img_resized.width, text_img_resized.height)
+                                # 放大文字图像
+                                text_img_resized = text_img.resize((new_width, new_height), Image.LANCZOS)
+                                
+                                # 计算位置
+                                if text_info["alignment"] == "left":
+                                    paste_x = int(img_width * 0.2)
+                                elif text_info["alignment"] == "right":
+                                    paste_x = int(img_width * 0.8 - text_img_resized.width)
+                                else:  # 居中
+                                    paste_x = (img_width - text_img_resized.width) // 2
+                                
+                                # 垂直位置
+                                paste_y = int(img_height * 0.4 - text_img_resized.height // 2)
                                 
                                 # 粘贴到T恤上
                                 st.session_state.final_design.paste(text_img_resized, (paste_x, paste_y), text_img_resized)
@@ -640,7 +602,6 @@ def show_high_complexity_general_sales():
                                 
                                 # 更新位置信息
                                 st.session_state.applied_text["position"] = (paste_x, paste_y)
-                                st.session_state.applied_text["original_size"] = text_info["original_size"]
                                 
                             except Exception as e:
                                 st.warning(f"Error reapplying text using drawing method: {e}")
@@ -1159,10 +1120,6 @@ def show_high_complexity_general_sales():
                 st.session_state.generated_design = None
                 st.session_state.applied_text = None
                 st.session_state.applied_logo = None
-                # 重置颜色和纹理相关状态
-                st.session_state.fabric_type = None
-                st.session_state.apply_texture = False
-                st.session_state.shirt_color_hex = "#ffffff"  # 重置为白色
                 # 重置最终设计为基础T恤图像
                 st.session_state.final_design = st.session_state.base_image.copy()
                 # 重置当前图像为带选择框的基础图像
@@ -1349,41 +1306,30 @@ def show_high_complexity_general_sales():
                                 # 更新面料类型
                                 st.session_state.fabric_type = fabric_name
                                 
-                                # 检查是否需要更新纹理
-                                if st.session_state.current_applied_fabric != fabric_name:
-                                    # 设置需要更新纹理标记
-                                    st.session_state.needs_texture_update = True
-                                    # 记录当前选择的面料类型，稍后会更新current_applied_fabric
-                                    st.session_state.selected_fabric_type = fabric_name
-                                    st.rerun()
-                                else:
-                                    # 应用面料纹理
-                                    if st.session_state.original_base_image is not None:
-                                        try:
-                                            # 应用纹理
-                                            new_colored_image = change_shirt_color(
-                                                st.session_state.original_base_image,
-                                                st.session_state.shirt_color_hex,
-                                                apply_texture=True,
-                                                fabric_type=fabric_name
-                                            )
-                                            st.session_state.base_image = new_colored_image
-                                            
-                                            # 更新当前图像
-                                            new_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
-                                            st.session_state.current_image = new_image
-                                            
-                                            # 如果有最终设计，也需要更新
-                                            if st.session_state.final_design is not None:
-                                                st.session_state.final_design = new_colored_image.copy()
-                                            
-                                            # 更新当前应用的面料类型
-                                            st.session_state.current_applied_fabric = fabric_name
-                                            
-                                            st.success(f"Applied {fabric_name} texture")
-                                            st.rerun()
-                                        except Exception as e:
-                                            st.warning(f"Error applying fabric texture: {e}")
+                                # 应用面料纹理
+                                if st.session_state.original_base_image is not None:
+                                    try:
+                                        # 应用纹理
+                                        new_colored_image = change_shirt_color(
+                                            st.session_state.original_base_image,
+                                            st.session_state.shirt_color_hex,
+                                            apply_texture=True,
+                                            fabric_type=fabric_name
+                                        )
+                                        st.session_state.base_image = new_colored_image
+                                        
+                                        # 更新当前图像
+                                        new_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                                        st.session_state.current_image = new_image
+                                        
+                                        # 如果有最终设计，也需要更新
+                                        if st.session_state.final_design is not None:
+                                            st.session_state.final_design = new_colored_image.copy()
+                                        
+                                        st.success(f"Applied {fabric_name} texture")
+                                        st.rerun()
+                                    except Exception as e:
+                                        st.warning(f"Error applying fabric texture: {e}")
                 
                 st.markdown("---")
                 st.markdown("**All Available Fabrics:**")
@@ -1413,43 +1359,32 @@ def show_high_complexity_general_sales():
                         old_fabric = st.session_state.fabric_type
                         st.session_state.fabric_type = fabric_type
                         
-                        # 检查面料类型是否已经改变
-                        if old_fabric != fabric_type:
-                            # 如果改变了，设置需要更新纹理标记
-                            st.session_state.needs_texture_update = True
-                            # 记录当前选择的面料类型，稍后会更新current_applied_fabric
-                            st.session_state.selected_fabric_type = fabric_type
-                            st.rerun()
-                        else:
-                            # 无论面料类型是否改变，都应用纹理
-                            if st.session_state.original_base_image is not None:
-                                try:
-                                    # 应用纹理
-                                    new_colored_image = change_shirt_color(
-                                        st.session_state.original_base_image, 
-                                        st.session_state.shirt_color_hex,
-                                        apply_texture=True, 
-                                        fabric_type=fabric_type
-                                    )
-                                    st.session_state.base_image = new_colored_image
-                                    
-                                    # 更新当前图像
-                                    new_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
-                                    st.session_state.current_image = new_image
-                                    
-                                    # 如果有最终设计，也需要更新
-                                    if st.session_state.final_design is not None:
-                                        st.session_state.final_design = new_colored_image.copy()
-                                    
-                                    # 更新当前应用的面料类型
-                                    st.session_state.current_applied_fabric = fabric_type
-                                    
-                                    st.rerun()
-                                except Exception as e:
-                                    st.warning(f"应用面料纹理时出错: {e}")
-                            
-                            # 显示确认信息
-                            st.success(f"Fabric texture updated: {fabric_type}")
+                        # 无论面料类型是否改变，都应用纹理
+                        if st.session_state.original_base_image is not None:
+                            try:
+                                # 应用纹理
+                                new_colored_image = change_shirt_color(
+                                    st.session_state.original_base_image, 
+                                    st.session_state.shirt_color_hex,
+                                    apply_texture=True, 
+                                    fabric_type=fabric_type
+                                )
+                                st.session_state.base_image = new_colored_image
+                                
+                                # 更新当前图像
+                                new_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                                st.session_state.current_image = new_image
+                                
+                                # 如果有最终设计，也需要更新
+                                if st.session_state.final_design is not None:
+                                    st.session_state.final_design = new_colored_image.copy()
+                                
+                                st.rerun()
+                            except Exception as e:
+                                st.warning(f"应用面料纹理时出错: {e}")
+                        
+                        # 显示确认信息
+                        st.success(f"Fabric texture updated: {fabric_type}")
                 
                 # 文字建议应用
                 st.markdown("##### Apply recommended text")
@@ -1773,9 +1708,9 @@ def show_high_complexity_general_sales():
                                             # 计算每行的Y位置
                                             line_y = text_y + i * line_height
                                             # 根据对齐方式重新计算每行X位置
-                                            if text_info["alignment"] == "left":
+                                            if text_info["alignment"] == "Left":
                                                 line_x = text_x
-                                            elif text_info["alignment"] == "right":
+                                            elif text_info["alignment"] == "Right":
                                                 line_bbox = text_draw.textbbox((0, 0), line, font=font)
                                                 line_width = line_bbox[2] - line_bbox[0]
                                                 line_x = text_x + (text_width - line_width)
@@ -1792,27 +1727,27 @@ def show_high_complexity_general_sales():
                                         
                                         # 特殊效果处理
                                         if text_info["effect"] != "none" and text_info["effect"] != "None":
-                                                font_debug_info.append(f"Applying special effect: {text_info['effect']}")
-                                                if text_info["effect"] == "Gradient":
-                                                    # 简单实现渐变效果
-                                                    gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
-                                                    gradient_draw = ImageDraw.Draw(gradient_layer)
-                                                    
-                                                    # 先绘制文字蒙版
-                                                    gradient_draw.text((text_x, text_y), text_info["text"], 
-                                                                     fill=(255, 255, 255, 255), font=font)
-                                                    
-                                                    # 创建渐变色彩
-                                                    from_color = text_rgb
-                                                    to_color = (255 - text_rgb[0], 255 - text_rgb[1], 255 - text_rgb[2])
-                                                    
-                                                    # 将渐变应用到文字
-                                                    gradient_data = gradient_layer.getdata()
-                                                    new_data = []
-                                                    for i, item in enumerate(gradient_data):
-                                                        y_pos = i // img_width  # 计算像素的y位置
-                                                        if item[3] > 0:  # 如果是文字部分
-                                                            # 根据y位置计算颜色混合比例
+                                            font_debug_info.append(f"Applying special effect: {text_info['effect']}")
+                                            if text_info["effect"] == "Gradient":
+                                                # 简单实现渐变效果
+                                                gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
+                                                gradient_draw = ImageDraw.Draw(gradient_layer)
+                                                
+                                                # 先绘制文字蒙版
+                                                gradient_draw.text((text_x, text_y), text_info["text"], 
+                                                                 fill=(255, 255, 255, 255), font=font)
+                                                
+                                                # 创建渐变色彩
+                                                from_color = text_rgb
+                                                to_color = (255 - text_rgb[0], 255 - text_rgb[1], 255 - text_rgb[2])
+                                                
+                                                # 将渐变应用到文字
+                                                gradient_data = gradient_layer.getdata()
+                                                new_data = []
+                                                for i, item in enumerate(gradient_data):
+                                                    y_pos = i // img_width  # 计算像素的y位置
+                                                    if item[3] > 0:  # 如果是文字部分
+                                                        # 根据y位置计算颜色混合比例
                                                         ratio = y_pos / text_height
                                                         if ratio > 1: ratio = 1
                                                         
@@ -1826,20 +1761,20 @@ def show_high_complexity_general_sales():
                                                 
                                                 gradient_layer.putdata(new_data)
                                                 text_layer = gradient_layer
-                                        
-                                        # 应用文字到设计
-                                        new_design.paste(text_layer, (0, 0), text_layer)
-                                        
-                                        # 保存相关信息
-                                        st.session_state.text_position = (text_x, text_y)
-                                        st.session_state.text_size_info = {
-                                            "font_size": render_size,
-                                            "text_width": text_width,
-                                            "text_height": text_height
-                                        }
-                                        
-                                        # 应用成功
-                                        font_debug_info.append("High-definition text rendering applied successfully")
+                                    
+                                    # 应用文字到设计
+                                    new_design.paste(text_layer, (0, 0), text_layer)
+                                    
+                                    # 保存相关信息
+                                    st.session_state.text_position = (text_x, text_y)
+                                    st.session_state.text_size_info = {
+                                        "font_size": render_size,
+                                        "text_width": text_width,
+                                        "text_height": text_height
+                                    }
+                                    
+                                    # 应用成功
+                                    font_debug_info.append("High-definition text rendering applied successfully")
                                 
                                 except Exception as render_err:
                                     font_debug_info.append(f"High-definition rendering failed: {str(render_err)}")
@@ -1865,47 +1800,44 @@ def show_high_complexity_general_sales():
                                     except Exception as emergency_err:
                                         font_debug_info.append(f"Emergency rendering also failed: {str(emergency_err)}")
                                 
-                                try:
-                                    # 保存字体加载和渲染信息
-                                    st.session_state.font_debug_info = font_debug_info
-                                    
-                                    # 更新设计和预览
-                                    st.session_state.final_design = new_design
-                                    st.session_state.current_image = new_design.copy()
-                                    
-                                    # 保存完整的文字信息
-                                    st.session_state.applied_text = {
-                                        "text": text_info["text"],
-                                        "font": text_info["font"],
-                                        "color": text_info["color"],
-                                        "size": text_info["size"],
-                                        "style": text_info["style"],
-                                        "effect": text_info["effect"],
-                                        "alignment": text_info["alignment"],
-                                        "position": (text_x, text_y),
-                                        "use_drawing_method": True  # 标记使用了绘图方法
-                                    }
-                                    
-                                    # 添加详细调试信息
-                                    success_msg = f"""
-                                    Text applied to design successfully!
-                                    Font: {text_info["font"]}
-                                    Size: {text_info["size"]}px
-                                    Actual width: {text_width}px
-                                    Actual height: {text_height}px
-                                    Position: ({text_x}, {text_y})
-                                    T-shirt size: {img_width} x {img_height}
-                                    Rendering method: High-definition rendering
-                                    """
-                                    
-                                    st.success(success_msg)
-                                    st.rerun()
-                                except Exception as update_err:
-                                    st.error(f"Error updating session state: {str(update_err)}")
-                                    import traceback
-                                    st.error(traceback.format_exc())
-                            
-
+                                # 保存字体加载和渲染信息
+                                st.session_state.font_debug_info = font_debug_info
+                                
+                                # 更新设计和预览
+                                st.session_state.final_design = new_design
+                                st.session_state.current_image = new_design.copy()
+                                
+                                # 保存完整的文字信息
+                                st.session_state.applied_text = {
+                                    "text": text_info["text"],
+                                    "font": text_info["font"],
+                                    "color": text_info["color"],
+                                    "size": text_info["size"],
+                                    "style": text_info["style"],
+                                    "effect": text_info["effect"],
+                                    "alignment": text_info["alignment"],
+                                    "position": (text_x, text_y),
+                                    "use_drawing_method": True  # 标记使用了绘图方法
+                                }
+                                
+                                # 添加详细调试信息
+                                success_msg = f"""
+                                Text applied to design successfully!
+                                Font: {text_info["font"]}
+                                Size: {text_info["size"]}px
+                                Actual width: {text_width}px
+                                Actual height: {text_height}px
+                                Position: ({text_x}, {text_y})
+                                T-shirt size: {img_width} x {img_height}
+                                Rendering method: High-definition rendering
+                                """
+                                
+                                st.success(success_msg)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error applying text: {str(e)}")
+                                import traceback
+                                st.error(traceback.format_exc())
                 
                 # 添加Logo选择功能
                 st.markdown("##### Apply Logo")
