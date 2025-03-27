@@ -380,10 +380,10 @@ def show_low_complexity_general_sales():
     <div style="background-color:#f0f0f0; padding:10px; border-radius:5px; margin-bottom:15px">
     <b>Basic Customization Options</b>: In this experience, you can customize your T-shirt with simple options:
     <ul>
-        <li>Choose T-shirt color</li>
-        <li>Add text or logo elements</li>
-        <li>Position your design on the T-shirt</li>
-        <li>Describe what you want and let the system create it</li>
+        <li>描述您想要的T恤设计</li>
+        <li>选择推荐设计或自定义设计</li>
+        <li>添加文字和选择位置</li>
+        <li>添加logo（可选）</li>
     </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -398,23 +398,445 @@ def show_low_complexity_general_sales():
         st.session_state.design_suggestions = []  # 存储AI生成的设计建议
     if 'selected_prompt' not in st.session_state:
         st.session_state.selected_prompt = ""  # 存储用户选择的设计提示词
+    if 'design_step' not in st.session_state:
+        st.session_state.design_step = "input_prompt"  # 设计步骤: input_prompt, customize, apply_design
     
     # Create two-column layout
-    col1, col2 = st.columns([3, 2])
+    col1, col2 = st.columns([2, 3])
     
     with col1:
-        st.markdown("## Design Area")
+        st.markdown("## AI设计助手")
         
-        # 添加AI建议框
-        with st.expander("🤖 AI Design Suggestions", expanded=True):
-            st.markdown("""
-            **Personalization Design Guide:**
+        # 显示新的设计流程说明
+        st.markdown("""
+        <div style="background-color:#e8f4f8; padding:15px; border-radius:10px; margin-bottom:20px; border-left:5px solid #2e86c1;">
+        <h4 style="color:#2e86c1; margin-top:0;">🆕 全新设计流程</h4>
+        <ol>
+            <li>输入您想要的T恤设计描述</li>
+            <li>获取AI设计建议</li>
+            <li>选择或自定义颜色、文字和logo</li>
+            <li>应用设计查看效果</li>
+        </ol>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # 用户输入设计描述
+        st.markdown("### 1. 描述您想要的T恤设计")
+        design_idea = st.text_area(
+            "输入设计描述:",
+            value=st.session_state.get("selected_prompt", ""),
+            placeholder="例如：蓝色T恤，前胸居中添加'CODER'文字",
+            help="描述您想要的T恤设计，包括颜色、文字内容和位置等",
+            height=100
+        )
+        
+        # 添加设计描述示例
+        st.markdown("""
+        <div style="background-color:#f0f0f0; padding:8px; border-radius:5px; margin:5px 0 15px 0; font-size:0.9em;">
+        <strong>设计描述示例:</strong>
+        <ul style="margin-top:5px; margin-bottom:5px;">
+          <li>黑色T恤，中心位置添加"CODER"文字</li>
+          <li>蓝色T恤，左上角添加logo，底部添加"Ocean"文字</li>
+          <li>红色T恤，右上位置添加"2024"文字</li>
+          <li>夏日海滩主题的T恤设计</li>
+          <li>网络朋克风格的T恤</li>
+        </ul>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # AI设计建议按钮
+        if st.button("🎨 获取AI设计建议", key="get_ai_suggestions", use_container_width=True):
+            if not design_idea.strip():
+                st.warning("请输入设计描述或主题!")
+            else:
+                with st.spinner("AI正在生成设计方案..."):
+                    # 保存用户输入的提示词
+                    st.session_state.selected_prompt = design_idea
+                    
+                    # 首先尝试直接解析用户输入
+                    design_info = parse_design_prompt(design_idea)
+                    
+                    # 如果输入更像主题而非具体设计描述，则调用AI生成设计建议
+                    if not design_info["text"] and design_info["color"] == "#FFFFFF":
+                        # 调用AI生成设计建议
+                        suggestions = get_ai_design_suggestions(design_idea)
+                        
+                        if suggestions and "designs" in suggestions:
+                            # 保存建议到session state
+                            st.session_state.design_suggestions = suggestions["designs"]
+                        else:
+                            st.error("无法生成设计建议。请稍后再试。")
+                    else:
+                        # 用户输入了具体设计描述，创建一个设计建议
+                        st.session_state.design_suggestions = [{
+                            "theme": "您的设计",
+                            "color": design_info["color"].replace("#", ""),
+                            "text": design_info["text"],
+                            "position": design_info["position"],
+                            "needs_logo": design_info.get("needs_logo", False),
+                            "description": f"根据您的描述'{design_idea}'解析的设计方案"
+                        }]
+                    
+                    # 更新设计步骤为自定义
+                    st.session_state.design_step = "customize"
+                    st.rerun()
+        
+        # 如果已有设计建议，显示它们
+        if st.session_state.design_suggestions:
+            st.markdown("### 2. AI设计建议")
             
-            Consider selecting colors that complement your personal style and wardrobe preferences for maximum versatility. Light-colored T-shirts work best with darker design patterns, while dark T-shirts create striking contrast with lighter patterns or text. Experiment with positioning your design in different locations on the T-shirt to find the optimal visual impact - centered designs offer classic appeal while offset designs can create interesting visual dynamics. Minimalist designs tend to be more versatile and suitable for various occasions, allowing your T-shirt to transition seamlessly between casual and semi-formal settings. When adding text, choose legible fonts at appropriate sizes to ensure your message remains clear and impactful regardless of viewing distance.
-            """)
+            for i, design in enumerate(st.session_state.design_suggestions):
+                with st.container():
+                    # 为每个设计建议创建彩色卡片效果
+                    # 获取颜色对应的十六进制值用于显示
+                    color_name = design.get('color', 'white').lower()
+                    color_hex = {
+                        "white": "#FFFFFF", "black": "#000000", "red": "#FF0000",
+                        "blue": "#0000FF", "green": "#00FF00", "yellow": "#FFFF00",
+                        "purple": "#800080", "pink": "#FFC0CB", "gray": "#808080",
+                        "cyan": "#00FFFF", "orange": "#FFA500", "brown": "#A52A2A"
+                    }.get(color_name, "#FFFFFF")
+                    
+                    # 文本颜色应该与T恤颜色形成对比
+                    text_preview_color = "#000000" if color_name in ["white", "yellow", "cyan", "pink"] else "#FFFFFF"
+                    
+                    st.markdown(f"""
+                    <div style="border:1px solid #ddd; padding:15px; margin:8px 0; border-radius:10px; 
+                         background-color:rgba(240,248,255,0.6); box-shadow: 2px 2px 5px rgba(0,0,0,0.1);">
+                    <h4 style="color:#1E90FF; margin-top:0;">设计 {i+1}: {design.get('theme', '自定义设计')}</h4>
+                    <div style="display:flex; margin-bottom:10px;">
+                      <div style="width:40px; height:40px; background-color:{color_hex}; border:1px solid #ddd; border-radius:5px;"></div>
+                      <div style="margin-left:10px;">
+                        <strong>颜色:</strong> {design.get('color', 'white')}
+                      </div>
+                    </div>
+                    <div style="background-color:{color_hex}; padding:10px; border-radius:5px; text-align:center; margin-bottom:10px;">
+                      <span style="color:{text_preview_color}; font-weight:bold;">{design.get('text', '')}</span>
+                    </div>
+                    <p><strong>位置:</strong> {design.get('position', 'Center')}</p>
+                    <p><strong>Logo:</strong> {"需要" if design.get('needs_logo', False) else "不需要"}</p>
+                    <p style="font-style:italic;">{design.get('description', '')}</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # 将此设计用作基础的按钮
+                    if st.button(f"✨ 选择设计 {i+1}", key=f"use_design_{i}"):
+                        # 设置颜色
+                        color_hex_value = color_hex
+                        st.session_state.shirt_color_hex = color_hex_value
+                        
+                        # 设置文字
+                        st.session_state.selected_text = design.get('text', '')
+                        
+                        # 设置位置
+                        st.session_state.selected_position = design.get('position', 'Center')
+                        
+                        # 设置是否需要logo
+                        st.session_state.needs_logo = design.get('needs_logo', False)
+                        
+                        # 重新着色T恤图像
+                        if st.session_state.original_base_image is not None:
+                            new_colored_image = change_shirt_color(st.session_state.original_base_image, color_hex_value)
+                            st.session_state.base_image = new_colored_image
+                            
+                            # 更新当前图像
+                            new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                            st.session_state.current_image = new_current_image
+                        
+                        # 更新设计步骤
+                        st.session_state.design_step = "customize"
+                        st.rerun()
+                        
+            # 自定义设计部分
+            if st.session_state.design_step == "customize":
+                st.markdown("### 3. 自定义设计")
+                
+                # T恤颜色选择
+                st.subheader("T恤颜色")
+                color_col1, color_col2 = st.columns([1, 3])
+                with color_col1:
+                    # 显示当前颜色预览
+                    st.markdown(
+                        f"""
+                        <div style="background-color:{st.session_state.shirt_color_hex};
+                        width:50px; height:50px; border-radius:5px; border:1px solid #ddd;"></div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                with color_col2:
+                    shirt_color = st.color_picker("选择颜色:", st.session_state.shirt_color_hex)
+                
+                # 处理颜色变化
+                if shirt_color != st.session_state.shirt_color_hex:
+                    st.session_state.shirt_color_hex = shirt_color
+                    
+                    # 重新着色T恤图像
+                    if st.session_state.original_base_image is not None:
+                        # 对原始白色T恤应用新颜色
+                        new_colored_image = change_shirt_color(st.session_state.original_base_image, shirt_color)
+                        st.session_state.base_image = new_colored_image
+                        
+                        # 更新当前图像（带红框的）
+                        new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                        st.session_state.current_image = new_current_image
+                        
+                        # 如果有最终设计，也需要更新
+                        if st.session_state.final_design is not None:
+                            # 重置最终设计，让用户重新应用设计元素
+                            st.session_state.final_design = None
+                
+                # 文字内容设置
+                st.subheader("文字设置")
+                text_content = st.text_input(
+                    "文字内容:", 
+                    value=st.session_state.get("selected_text", ""),
+                    placeholder="输入要显示在T恤上的文字"
+                )
+                
+                # 文字位置
+                text_position_options = {
+                    "Center": "居中",
+                    "Top Left": "左上角",
+                    "Top Right": "右上角",
+                    "Bottom Left": "左下角",
+                    "Bottom Right": "右下角",
+                    "Top Center": "顶部居中",
+                    "Bottom Center": "底部居中"
+                }
+                position_values = list(text_position_options.keys())
+                position_labels = list(text_position_options.values())
+                
+                default_index = position_values.index(st.session_state.get("selected_position", "Center"))
+                text_position = st.selectbox(
+                    "文字位置:", 
+                    options=range(len(position_values)),
+                    format_func=lambda i: position_labels[i],
+                    index=default_index
+                )
+                selected_position = position_values[text_position]
+                
+                # 文字颜色
+                # 根据T恤颜色自动选择对比色
+                dark_colors = ["#000000", "#0000FF", "#800080", "#A52A2A", "#808080", "#FF0000"]
+                if st.session_state.shirt_color_hex in dark_colors:
+                    default_text_color = "#FFFFFF"  # 暗色T恤用白色文字
+                else:
+                    default_text_color = "#000000"  # 亮色T恤用黑色文字
+                
+                text_color = st.color_picker("文字颜色:", default_text_color)
+                
+                # Logo选项
+                st.subheader("Logo设置")
+                need_logo = st.checkbox("添加Logo", value=st.session_state.get("needs_logo", False))
+                
+                if need_logo:
+                    # Logo来源选择
+                    logo_source = st.radio("Logo来源:", ["上传Logo", "选择预设Logo"], horizontal=True)
+                    
+                    if logo_source == "上传Logo":
+                        # Logo上传选项
+                        uploaded_logo = st.file_uploader("上传您的Logo (PNG或JPG文件):", type=["png", "jpg", "jpeg"])
+                        if uploaded_logo is not None:
+                            try:
+                                # 显示上传的logo预览
+                                logo_preview = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
+                                st.image(logo_preview, width=150, caption="上传的Logo预览")
+                                st.session_state.selected_logo = uploaded_logo.getvalue()
+                                st.session_state.logo_type = "uploaded"
+                            except Exception as e:
+                                st.error(f"加载Logo出错: {e}")
+                    else:  # 选择预设Logo
+                        # 获取预设logo
+                        preset_logos = get_preset_logos()
+                        
+                        if not preset_logos:
+                            st.warning("未找到预设Logo。请在'logos'文件夹中添加图片。")
+                        else:
+                            # 显示预设logo选择
+                            st.write("选择一个预设Logo:")
+                            logo_cols = st.columns(min(3, len(preset_logos)))
+                            
+                            for i, logo_path in enumerate(preset_logos):
+                                with logo_cols[i % 3]:
+                                    logo_name = os.path.basename(logo_path)
+                                    try:
+                                        logo_preview = Image.open(logo_path).convert("RGBA")
+                                        # 调整预览大小
+                                        preview_width = 80
+                                        preview_height = int(preview_width * logo_preview.height / logo_preview.width)
+                                        preview = logo_preview.resize((preview_width, preview_height))
+                                        
+                                        st.image(preview, caption=logo_name)
+                                        if st.button(f"选择", key=f"logo_{i}"):
+                                            st.session_state.selected_logo = logo_path
+                                            st.session_state.logo_type = "preset"
+                                            st.rerun()
+                                    except Exception as e:
+                                        st.error(f"加载Logo {logo_name}出错: {e}")
+                    
+                    # Logo大小
+                    logo_size = st.slider("Logo大小:", 10, 100, 40, format="%d%%")
+                    
+                    # Logo位置
+                    logo_position_options = {
+                        "Center": "居中",
+                        "Top Left": "左上角",
+                        "Top Right": "右上角",
+                        "Bottom Left": "左下角",
+                        "Bottom Right": "右下角",
+                        "Top Center": "顶部居中",
+                        "Bottom Center": "底部居中"
+                    }
+                    logo_position_values = list(logo_position_options.keys())
+                    logo_position_labels = list(logo_position_options.values())
+                    
+                    default_logo_index = 0  # 默认居中
+                    logo_position = st.selectbox(
+                        "Logo位置:", 
+                        options=range(len(logo_position_values)),
+                        format_func=lambda i: logo_position_labels[i],
+                        index=default_logo_index,
+                        key="logo_position"
+                    )
+                    selected_logo_position = logo_position_values[logo_position]
+                    
+                    # Logo透明度
+                    logo_opacity = st.slider("Logo透明度:", 10, 100, 100, 5, format="%d%%")
+                
+                # 应用设计按钮
+                st.markdown("### 4. 完成设计")
+                if st.button("✅ 应用设计", key="apply_design_button", use_container_width=True):
+                    if not text_content.strip() and not need_logo:
+                        st.warning("请至少添加文字内容或Logo!")
+                    else:
+                        # 创建进度显示区
+                        progress_container = st.empty()
+                        progress_container.info("🔍 正在应用您的设计...")
+                        
+                        # 创建设计复合图像
+                        composite_image = st.session_state.base_image.copy()
+                        
+                        # 如果有文字内容，添加到设计中
+                        if text_content.strip():
+                            progress_container.info("✍️ 添加文字到设计...")
+                            # 准备绘图对象
+                            draw = ImageDraw.Draw(composite_image)
+                            
+                            try:
+                                # 使用默认字体
+                                from PIL import ImageFont
+                                try:
+                                    # 尝试加载合适的字体
+                                    font = ImageFont.truetype("arial.ttf", 48)
+                                except:
+                                    # 如果失败，使用默认字体
+                                    font = ImageFont.load_default()
+                            
+                                # 获取当前选择框位置
+                                left, top = st.session_state.current_box_position
+                                box_size = int(1024 * 0.25)
+                                
+                                # 计算文字位置 - 根据设计信息中的位置
+                                text_bbox = draw.textbbox((0, 0), text_content, font=font)
+                                text_width = text_bbox[2] - text_bbox[0]
+                                text_height = text_bbox[3] - text_bbox[1]
+                                
+                                # 根据position确定文字位置
+                                if selected_position == "Center":
+                                    text_x = left + (box_size - text_width) // 2
+                                    text_y = top + (box_size - text_height) // 2
+                                elif selected_position == "Top Left":
+                                    text_x = left + 10
+                                    text_y = top + 10
+                                elif selected_position == "Top Right":
+                                    text_x = left + box_size - text_width - 10
+                                    text_y = top + 10
+                                elif selected_position == "Bottom Left":
+                                    text_x = left + 10
+                                    text_y = top + box_size - text_height - 10
+                                elif selected_position == "Bottom Right":
+                                    text_x = left + box_size - text_width - 10
+                                    text_y = top + box_size - text_height - 10
+                                elif selected_position == "Top Center":
+                                    text_x = left + (box_size - text_width) // 2
+                                    text_y = top + 10
+                                else:  # "Bottom Center"
+                                    text_x = left + (box_size - text_width) // 2
+                                    text_y = top + box_size - text_height - 10
+                                
+                                # 使用设计信息中的文字颜色
+                                draw.text((text_x, text_y), text_content, fill=text_color, font=font)
+                            except Exception as e:
+                                st.warning(f"添加文字出错: {e}")
+                        
+                        # 如果需要添加Logo
+                        if need_logo and hasattr(st.session_state, 'selected_logo'):
+                            progress_container.info("🖼️ 添加Logo到设计...")
+                            try:
+                                # 根据Logo类型处理
+                                if st.session_state.logo_type == "uploaded":
+                                    logo_image = Image.open(BytesIO(st.session_state.selected_logo)).convert("RGBA")
+                                else:  # preset
+                                    logo_image = Image.open(st.session_state.selected_logo).convert("RGBA")
+                                
+                                # 调整Logo大小
+                                box_size = int(1024 * 0.25)
+                                logo_width = int(box_size * logo_size / 100)
+                                logo_height = int(logo_width * logo_image.height / logo_image.width)
+                                logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
+                                
+                                # 获取选择框位置
+                                left, top = st.session_state.current_box_position
+                                
+                                # 计算Logo位置
+                                if selected_logo_position == "Top Left":
+                                    logo_x, logo_y = left + 10, top + 10
+                                elif selected_logo_position == "Top Center":
+                                    logo_x, logo_y = left + (box_size - logo_width) // 2, top + 10
+                                elif selected_logo_position == "Top Right":
+                                    logo_x, logo_y = left + box_size - logo_width - 10, top + 10
+                                elif selected_logo_position == "Center":
+                                    logo_x, logo_y = left + (box_size - logo_width) // 2, top + (box_size - logo_height) // 2
+                                elif selected_logo_position == "Bottom Left":
+                                    logo_x, logo_y = left + 10, top + box_size - logo_height - 10
+                                elif selected_logo_position == "Bottom Center":
+                                    logo_x, logo_y = left + (box_size - logo_width) // 2, top + box_size - logo_height - 10
+                                else:  # Bottom Right
+                                    logo_x, logo_y = left + box_size - logo_width - 10, top + box_size - logo_height - 10
+                                
+                                # 设置透明度
+                                if logo_opacity < 100:
+                                    logo_data = logo_resized.getdata()
+                                    new_data = []
+                                    for item in logo_data:
+                                        r, g, b, a = item
+                                        new_a = int(a * logo_opacity / 100)
+                                        new_data.append((r, g, b, new_a))
+                                    logo_resized.putdata(new_data)
+                                
+                                # 粘贴Logo到设计
+                                composite_image.paste(logo_resized, (logo_x, logo_y), logo_resized)
+                            except Exception as e:
+                                st.warning(f"添加Logo出错: {e}")
+                        
+                        # 更新设计
+                        st.session_state.final_design = composite_image
+                        
+                        # 同时更新current_image以便在T恤图像上直接显示设计
+                        st.session_state.current_image = composite_image.copy()
+                        
+                        # 清除进度消息并显示成功消息
+                        progress_container.success("🎉 设计已成功应用到您的T恤!")
+                        
+                        # 更新设计步骤
+                        st.session_state.design_step = "completed"
+                        st.rerun()
     
+    with col2:
+        st.markdown("## 设计预览")
+        
         # Load T-shirt base image
-        if st.session_state.base_image is None:
+        if 'base_image' not in st.session_state or st.session_state.base_image is None:
             try:
                 # 加载原始白色T恤图像
                 original_image = Image.open("white_shirt.png").convert("RGBA")
@@ -430,7 +852,7 @@ def show_low_complexity_general_sales():
                 st.session_state.current_image = initial_image
                 st.session_state.current_box_position = initial_pos
             except Exception as e:
-                st.error(f"Error loading white T-shirt image: {e}")
+                st.error(f"加载T恤图像出错: {e}")
                 st.stop()
         
         # Display current image and get click coordinates
@@ -448,13 +870,15 @@ def show_low_complexity_general_sales():
             st.session_state.current_image = temp_image
             st.session_state.current_box_position = new_pos
             st.rerun()
+        
+        st.info("👆 点击T恤上的任意位置选择设计元素放置区域")
             
-        # 将Final Result部分移到左侧栏中
-        if st.session_state.final_design is not None:
-            st.markdown("### Final Result")
+        # 最终设计结果显示
+        if st.session_state.design_step == "completed" and st.session_state.final_design is not None:
+            st.markdown("### 最终设计")
             
             # 添加清空设计按钮
-            if st.button("🗑️ Clear All Designs", key="clear_designs"):
+            if st.button("🗑️ 清空设计", key="clear_designs"):
                 # 清空所有设计相关的状态变量
                 st.session_state.generated_design = None
                 # 重置最终设计为基础T恤图像
@@ -462,599 +886,65 @@ def show_low_complexity_general_sales():
                 # 重置当前图像为带选择框的基础图像
                 temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
                 st.session_state.current_image = temp_image
+                # 重置设计步骤
+                st.session_state.design_step = "input_prompt"
                 st.rerun()
-            
-            st.image(st.session_state.final_design, use_container_width=True)
             
             # 添加T恤规格信息
             # 显示当前颜色
             color_name = {
-                "#FFFFFF": "White",
-                "#000000": "Black",
-                "#FF0000": "Red",
-                "#00FF00": "Green",
-                "#0000FF": "Blue",
-                "#FFFF00": "Yellow",
-                "#FF00FF": "Magenta",
-                "#00FFFF": "Cyan",
-                "#C0C0C0": "Silver",
-                "#808080": "Gray"
-            }.get(st.session_state.shirt_color_hex.upper(), "Custom")
-            st.markdown(f"**Color:** {color_name} ({st.session_state.shirt_color_hex})")
+                "#FFFFFF": "白色",
+                "#000000": "黑色",
+                "#FF0000": "红色",
+                "#00FF00": "绿色",
+                "#0000FF": "蓝色",
+                "#FFFF00": "黄色",
+                "#FF00FF": "品红",
+                "#00FFFF": "青色",
+                "#C0C0C0": "银色",
+                "#808080": "灰色",
+                "#FFA500": "橙色",
+                "#A52A2A": "棕色"
+            }.get(st.session_state.shirt_color_hex.upper(), "自定义")
             
-            # Provide download option
-            col1a, col1b = st.columns(2)
-            with col1a:
+            # 创建规格卡片
+            st.markdown(f"""
+            <div style="background-color:#f8f9fa; padding:15px; border-radius:10px; margin:10px 0; border:1px solid #ddd;">
+            <h4 style="margin-top:0;">T恤规格</h4>
+            <p><strong>颜色:</strong> {color_name} ({st.session_state.shirt_color_hex})</p>
+            <p><strong>规格:</strong> 标准尺寸，100%棉</p>
+            <p><strong>定制:</strong> 个性化文字/Logo设计</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # 提供下载选项
+            download_col1, download_col2 = st.columns(2)
+            with download_col1:
                 buf = BytesIO()
                 st.session_state.final_design.save(buf, format="PNG")
                 buf.seek(0)
                 st.download_button(
-                    label="💾 Download Custom Design",
+                    label="💾 下载设计",
                     data=buf,
                     file_name="custom_tshirt.png",
                     mime="image/png"
                 )
             
-            with col1b:
-                # Confirm completion button
-                if st.button("Confirm Completion"):
+            with download_col2:
+                # 确认完成按钮
+                if st.button("✅ 确认完成", key="confirm_button"):
                     st.session_state.page = "survey"
                     st.rerun()
-
-    with col2:
-        st.markdown("## Design Parameters")
-        
-        # Simplified design option tabs
-        tab1, tab2 = st.tabs(["Design T-shirt", "Add Text/Logo"])
-        
-        with tab1:
-            st.markdown("### T-shirt Design")
-            
-            # 添加一个更明显的说明，解释新的设计流程
-            st.markdown("""
-            <div style="background-color:#e8f4f8; padding:15px; border-radius:10px; margin-bottom:20px; border-left:5px solid #2e86c1;">
-            <h4 style="color:#2e86c1; margin-top:0;">🆕 设计流程说明</h4>
-            <p>我们更新了设计流程，现在您可以：</p>
-            <ol>
-                <li>直接选择T恤颜色</li>
-                <li>使用设计提示描述您想要的设计，包含颜色、文字和位置</li>
-                <li>点击"应用设计"按钮查看效果</li>
-                <li>如需添加logo，可在"Add Text/Logo"选项卡中进行</li>
-            </ol>
-            <p><strong>不需要生成图像</strong> - 系统会直接根据您的描述设计T恤!</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # T恤颜色选择器 - 添加更多视觉反馈
-            st.markdown("#### 1. 选择T恤颜色")
-            color_col1, color_col2 = st.columns([1, 3])
-            with color_col1:
-                # 显示当前颜色预览
-                st.markdown(
-                    f"""
-                    <div style="background-color:{st.session_state.shirt_color_hex};
-                    width:50px; height:50px; border-radius:5px; border:1px solid #ddd;"></div>
-                    """,
-                    unsafe_allow_html=True
-                )
-            with color_col2:
-                shirt_color = st.color_picker("选择颜色:", st.session_state.shirt_color_hex)
-            
-            # 恢复颜色处理代码
-            if shirt_color != st.session_state.shirt_color_hex:
-                st.session_state.shirt_color_hex = shirt_color
-                
-                # 重新着色T恤图像
-                if st.session_state.original_base_image is not None:
-                    # 对原始白色T恤应用新颜色
-                    new_colored_image = change_shirt_color(st.session_state.original_base_image, shirt_color)
-                    st.session_state.base_image = new_colored_image
-                    
-                    # 更新当前图像（带红框的）
-                    new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
-                    st.session_state.current_image = new_current_image
-                    
-                    # 如果有最终设计，也需要更新
-                    if st.session_state.final_design is not None:
-                        # 重置最终设计，让用户重新应用设计元素
-                        st.session_state.final_design = None
-                    
-                    st.rerun()
-            
-            # AI辅助设计部分 - 使其更简洁
-            with st.expander("🤖 AI设计助手", expanded=False):
-                st.markdown("""
-                <div style="background-color:#f8f9fa; padding:15px; border-radius:10px; margin-bottom:15px">
-                <h4 style="color:#4B0082;">让AI帮你设计T恤</h4>
-                <p>输入一个主题或概念，AI将为您生成多种T恤设计方案，包括颜色、文字和位置建议。</p>
-                <div style="background-color:#fff; padding:8px; border-radius:5px; margin-top:10px; border:1px dashed #ccc;">
-                <strong>示例主题：</strong> 夏日海滩、网络朋克、复古风、极简主义、运动风、环保主题、城市景观、音乐节
-                </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # 用户输入设计关键词或主题
-                design_idea = st.text_input("输入您的设计概念或主题:", 
-                                           placeholder="例如：夏日海滩、网络朋克、抽象艺术等")
-                
-                # AI设计建议按钮
-                if st.button("🎨 获取AI设计建议", key="get_ai_suggestions"):
-                    if not design_idea.strip():
-                        st.warning("请输入设计概念或主题!")
-                    else:
-                        with st.spinner("AI正在生成设计方案..."):
-                            # 调用AI生成设计建议
-                            suggestions = get_ai_design_suggestions(design_idea)
-                            
-                            if suggestions and "designs" in suggestions:
-                                # 保存建议到session state
-                                st.session_state.design_suggestions = suggestions["designs"]
-                                
-                                # 强制页面刷新，以确保建议正确显示
-                                st.rerun()
-                            else:
-                                st.error("无法生成设计建议。请稍后再试。")
-                
-                # 如果已有设计建议，显示它们
-                if st.session_state.design_suggestions:
-                    st.markdown("### AI生成的设计建议")
-                    
-                    # 使用列布局美化展示
-                    suggestions_cols = st.columns(2)  # 2列显示
-                    
-                    for i, design in enumerate(st.session_state.design_suggestions):
-                        with suggestions_cols[i % 2]:  # 交替放置在两列中
-                            with st.container():
-                                # 为每个设计建议创建彩色卡片效果
-                                # 获取颜色对应的十六进制值用于显示
-                                color_name = design.get('color', 'white').lower()
-                                color_hex = {
-                                    "white": "#FFFFFF", "black": "#000000", "red": "#FF0000",
-                                    "blue": "#0000FF", "green": "#00FF00", "yellow": "#FFFF00",
-                                    "purple": "#800080", "pink": "#FFC0CB", "gray": "#808080",
-                                    "cyan": "#00FFFF"
-                                }.get(color_name, "#FFFFFF")
-                                
-                                # 文本颜色应该与T恤颜色形成对比
-                                text_preview_color = "#000000" if color_name in ["white", "yellow", "cyan", "pink"] else "#FFFFFF"
-                                
-                                st.markdown(f"""
-                                <div style="border:1px solid #ddd; padding:15px; margin:8px 0; border-radius:10px; 
-                                     background-color:rgba(240,248,255,0.6); box-shadow: 2px 2px 5px rgba(0,0,0,0.1);">
-                                <h4 style="color:#1E90FF; margin-top:0;">设计 {i+1}: {design.get('theme', '自定义设计')}</h4>
-                                <div style="display:flex; margin-bottom:10px;">
-                                  <div style="width:40px; height:40px; background-color:{color_hex}; border:1px solid #ddd; border-radius:5px;"></div>
-                                  <div style="margin-left:10px;">
-                                    <strong>颜色:</strong> {design.get('color', 'N/A')}
-                                  </div>
-                                </div>
-                                <div style="background-color:{color_hex}; padding:10px; border-radius:5px; text-align:center; margin-bottom:10px;">
-                                  <span style="color:{text_preview_color}; font-weight:bold;">{design.get('text', '')}</span>
-                                </div>
-                                <p><strong>位置:</strong> {design.get('position', 'Center')}</p>
-                                <p><strong>Logo:</strong> {"需要" if design.get('needs_logo', False) else "不需要"}</p>
-                                <p style="font-style:italic;">{design.get('description', '')}</p>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                
-                                # 将此设计用作提示词的按钮 - 更美观的按钮样式
-                                if st.button(f"✨ 使用设计 {i+1}", key=f"use_design_{i}"):
-                                    # 构建完整的设计提示词
-                                    prompt = f"{design.get('color', '白色')}T恤，{design.get('position', 'Center')}位置添加\"{design.get('text', 'My Brand')}\"文字"
-                                    if design.get('needs_logo', False):
-                                        prompt += "，需要添加logo"
-                                    # 设置到设计提示输入框
-                                    st.session_state.selected_prompt = prompt
-                                    st.rerun()
-            
-            # 设计提示输入 - 更加突出显示
-            st.markdown("#### 2. 描述您的设计")
-            design_prompt = st.text_area(
-                "设计描述:",
-                value=st.session_state.get("selected_prompt", "白色T恤，中心位置添加'My Brand'文字"),
-                help="描述您想要的T恤设计，包括颜色、文字、logo等元素",
-                height=80
-            )
-            
-            # 添加设计提示示例
-            st.markdown("""
-            <div style="background-color:#f0f0f0; padding:8px; border-radius:5px; margin:5px 0 15px 0; font-size:0.9em;">
-            <strong>设计提示示例:</strong>
-            <ul style="margin-top:5px; margin-bottom:5px;">
-              <li>黑色T恤，中心位置添加"CODER"文字</li>
-              <li>蓝色T恤，左上角添加logo，底部添加"Ocean"文字</li>
-              <li>红色T恤，右上位置添加"2024"文字</li>
-            </ul>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # 如果存在选择的提示词，添加提示
-            if st.session_state.selected_prompt:
-                st.info("👆 使用AI建议的设计提示。您可以修改或输入自己的提示。")
-            
-            # 使Apply Design按钮更加突出
-            st.markdown("#### 3. 应用您的设计")
-            if st.button("✨ 应用设计", key="parse_design_button", use_container_width=True):
-                if not design_prompt.strip():
-                    st.warning("请输入设计描述!")
-                else:
-                    # 创建进度显示区
-                    progress_container = st.empty()
-                    progress_container.info("🔍 正在分析您的设计描述...")
-                    
-                    # 解析设计提示
-                    design_info = parse_design_prompt(design_prompt)
-                    
-                    # 应用T恤颜色
-                    if design_info["color"] != st.session_state.shirt_color_hex:
-                        st.session_state.shirt_color_hex = design_info["color"]
-                        if st.session_state.original_base_image is not None:
-                            # 更新T恤颜色
-                            progress_container.info("🎨 应用T恤颜色...")
-                            new_colored_image = change_shirt_color(st.session_state.original_base_image, design_info["color"])
-                            st.session_state.base_image = new_colored_image
-                            
-                            # 更新当前图像
-                            new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
-                            st.session_state.current_image = new_current_image
-                    
-                    # 创建设计复合图像
-                    composite_image = st.session_state.base_image.copy()
-                    
-                    # 如果有文字内容，添加到设计中
-                    if design_info["text"]:
-                        progress_container.info("✍️ 添加文字到设计...")
-                        # 准备绘图对象
-                        draw = ImageDraw.Draw(composite_image)
-                        
-                        try:
-                            # 使用默认字体
-                            from PIL import ImageFont
-                            try:
-                                # 尝试加载合适的字体
-                                font = ImageFont.truetype("arial.ttf", 48)
-                            except:
-                                # 如果失败，使用默认字体
-                                font = ImageFont.load_default()
-                        
-                            # 获取当前选择框位置
-                            left, top = st.session_state.current_box_position
-                            box_size = int(1024 * 0.25)
-                            
-                            # 计算文字位置 - 根据设计信息中的位置
-                            text_bbox = draw.textbbox((0, 0), design_info["text"], font=font)
-                            text_width = text_bbox[2] - text_bbox[0]
-                            text_height = text_bbox[3] - text_bbox[1]
-                            
-                            # 根据position确定文字位置
-                            if design_info["position"] == "Center":
-                                text_x = left + (box_size - text_width) // 2
-                                text_y = top + (box_size - text_height) // 2
-                            elif design_info["position"] == "Top Left":
-                                text_x = left + 10
-                                text_y = top + 10
-                            elif design_info["position"] == "Top Right":
-                                text_x = left + box_size - text_width - 10
-                                text_y = top + 10
-                            elif design_info["position"] == "Bottom Left":
-                                text_x = left + 10
-                                text_y = top + box_size - text_height - 10
-                            elif design_info["position"] == "Bottom Right":
-                                text_x = left + box_size - text_width - 10
-                                text_y = top + box_size - text_height - 10
-                            elif design_info["position"] == "Top Center":
-                                text_x = left + (box_size - text_width) // 2
-                                text_y = top + 10
-                            else:  # "Bottom Center"
-                                text_x = left + (box_size - text_width) // 2
-                                text_y = top + box_size - text_height - 10
-                            
-                            # 使用设计信息中的文字颜色
-                            draw.text((text_x, text_y), design_info["text"], fill=design_info["text_color"], font=font)
-                        except Exception as e:
-                            st.warning(f"添加文字出错: {e}")
-                    
-                    # 如果需要logo，添加提示
-                    if design_info.get("needs_logo", False):
-                        progress_container.info("🔄 检测到需要添加logo - 请在'Add Text/Logo'选项卡中选择logo")
-                        
-                        # 可以考虑自动切换到Logo选项卡
-                        st.session_state.auto_switch_to_logo = True
-                    
-                    # 更新设计
-                    st.session_state.final_design = composite_image
-                    
-                    # 同时更新current_image以便在T恤图像上直接显示设计
-                    st.session_state.current_image = composite_image.copy()
-                    
-                    # 清除进度消息并显示成功消息
-                    progress_container.success("🎉 设计已成功应用到您的T恤!")
-                    
-                    # 添加设计详情反馈
-                    st.markdown(f"""
-                    <div style="background-color:#f0f8ff; padding:10px; border-radius:5px; margin:10px 0;">
-                    <h4>应用的设计详情:</h4>
-                    <p>✅ T恤颜色: {design_info['color']}</p>
-                    <p>✅ 文字内容: {design_info['text'] if design_info['text'] else '无'}</p>
-                    <p>✅ 位置: {design_info['position']}</p>
-                    <p>{"✅ 检测到需要添加logo - 请在下一个选项卡中添加" if design_info.get("needs_logo", False) else "❌ 未要求添加logo"}</p>
-                    </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # 如果应该自动切换到Logo选项卡
-                    if design_info.get("needs_logo", False) and st.session_state.get("auto_switch_to_logo", False):
-                        st.info("💡 提示: 切换到'Add Text/Logo'选项卡添加您的logo")
-                    
-                    # 重新加载页面以显示变化
-                    st.rerun()
-        
-        with tab2:
-            # 将标题改为更清晰的描述
-            st.markdown("### Add Additional Elements")
-            st.write("Add text or logo to further customize your T-shirt:")
-            
-            # 选择文字或Logo
-            text_or_logo = st.radio("Select option:", ["Text", "Logo"], horizontal=True)
-            
-            if text_or_logo == "Text":
-                # 文字选项
-                text_content = st.text_input("Enter text to add:", "My Brand")
-                
-                # 添加字体选择
-                font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
-                font_family = st.selectbox("Font family:", font_options)
-                
-                # 文字样式
-                text_style = st.multiselect("Text style:", ["Bold", "Italic"], default=[])
-                
-                # 文字颜色
-                text_color = st.color_picker("Text color:", "#000000")
-                
-                # 增大默认文字大小范围
-                text_size = st.slider("Text size:", 20, 120, 48)
-                
-                # 添加文字按钮
-                if st.button("Add Text to Design"):
-                    if not text_content.strip():
-                        st.warning("Please enter some text!")
-                    else:
-                        # 创建带有文字的设计
-                        if st.session_state.base_image is None:
-                            st.warning("Please wait for the T-shirt image to load")
-                        else:
-                            # 创建一个新的设计或使用现有最终设计
-                            if st.session_state.final_design is not None:
-                                new_design = st.session_state.final_design.copy()
-                            else:
-                                new_design = st.session_state.base_image.copy()
-                            
-                            # 准备绘图对象
-                            draw = ImageDraw.Draw(new_design)
-                            
-                            # 字体映射
-                            font_mapping = {
-                                "Arial": "arial.ttf",
-                                "Times New Roman": "times.ttf",
-                                "Courier": "cour.ttf",
-                                "Verdana": "verdana.ttf",
-                                "Georgia": "georgia.ttf",
-                                "Impact": "impact.ttf"
-                            }
-                            
-                            # 通用字体备选方案
-                            fallback_fonts = ["DejaVuSans.ttf", "FreeSans.ttf", "LiberationSans-Regular.ttf"]
-                            
-                            # 导入字体，尝试获取选择的字体
-                            font = None
-                            try:
-                                from PIL import ImageFont
-                                # 尝试获取选择的字体
-                                font_file = font_mapping.get(font_family, "arial.ttf")
-                                
-                                # 尝试加载字体，如果失败则尝试备选字体
-                                try:
-                                    font = ImageFont.truetype(font_file, text_size)
-                                except:
-                                    # 尝试系统字体路径
-                                    system_font_paths = [
-                                        "/Library/Fonts/",  # macOS
-                                        "/System/Library/Fonts/",  # macOS系统
-                                        "C:/Windows/Fonts/",  # Windows
-                                        "/usr/share/fonts/truetype/",  # Linux
-                                    ]
-                                    
-                                    # 尝试所有可能的字体位置
-                                    for path in system_font_paths:
-                                        try:
-                                            font = ImageFont.truetype(path + font_file, text_size)
-                                            break
-                                        except:
-                                            continue
-                                    
-                                    # 如果仍然失败，尝试备选字体
-                                    if font is None:
-                                        for fallback in fallback_fonts:
-                                            try:
-                                                for path in system_font_paths:
-                                                    try:
-                                                        font = ImageFont.truetype(path + fallback, text_size)
-                                                        break
-                                                    except:
-                                                        continue
-                                                if font:
-                                                    break
-                                            except:
-                                                continue
-                                
-                                # 如果所有尝试都失败，使用默认字体
-                                if font is None:
-                                    font = ImageFont.load_default()
-                                    # 尝试将默认字体放大到指定大小
-                                    default_size = 10  # 假设默认字体大小
-                                    scale_factor = text_size / default_size
-                                    # 注意：这种方法可能不是最佳方案，但可以在没有字体的情况下提供备选
-                            except Exception as e:
-                                st.warning(f"Font loading error: {e}")
-                                font = None
-                            
-                            # 获取当前选择框位置
-                            left, top = st.session_state.current_box_position
-                            box_size = int(1024 * 0.25)
-                            
-                            # 在选择框中居中绘制文字
-                            text_bbox = draw.textbbox((0, 0), text_content, font=font)
-                            text_width = text_bbox[2] - text_bbox[0]
-                            text_height = text_bbox[3] - text_bbox[1]
-                            
-                            text_x = left + (box_size - text_width) // 2
-                            text_y = top + (box_size - text_height) // 2
-                            
-                            # 绘制文字，使用抗锯齿渲染
-                            draw.text((text_x, text_y), text_content, fill=text_color, font=font)
-                            
-                            # 更新设计
-                            st.session_state.final_design = new_design
-                            
-                            # 同时更新current_image以保持两个显示区域的一致性
-                            st.session_state.current_image = new_design.copy()
-                            
-                            # 强制页面刷新以显示最新结果
-                            st.rerun()
-            else:  # Logo选项
-                # Logo来源选择
-                logo_source = st.radio("Logo source:", ["Upload your logo", "Choose from presets"], horizontal=True)
-                
-                if logo_source == "Upload your logo":
-                    # Logo上传选项
-                    uploaded_logo = st.file_uploader("Upload your logo (PNG or JPG file):", type=["png", "jpg", "jpeg"])
-                    logo_image = None
-                    
-                    if uploaded_logo is not None:
-                        try:
-                            logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
-                        except Exception as e:
-                            st.error(f"Error loading uploaded logo: {e}")
-                else:  # Choose from presets
-                    # 获取预设logo
-                    preset_logos = get_preset_logos()
-                    
-                    if not preset_logos:
-                        st.warning("No preset logos found. Please add some images to the 'logos' folder.")
-                        logo_image = None
-                    else:
-                        # 显示预设logo选择
-                        logo_cols = st.columns(min(3, len(preset_logos)))
-                        selected_preset_logo = None
-                        
-                        for i, logo_path in enumerate(preset_logos):
-                            with logo_cols[i % 3]:
-                                logo_name = os.path.basename(logo_path)
-                                try:
-                                    logo_preview = Image.open(logo_path).convert("RGBA")
-                                    # 调整预览大小
-                                    preview_width = 100
-                                    preview_height = int(preview_width * logo_preview.height / logo_preview.width)
-                                    preview = logo_preview.resize((preview_width, preview_height))
-                                    
-                                    st.image(preview, caption=logo_name)
-                                    if st.button(f"Select {logo_name}", key=f"logo_{i}"):
-                                        selected_preset_logo = logo_path
-                                except Exception as e:
-                                    st.error(f"Error loading logo {logo_name}: {e}")
-                        
-                        # 如果选择了预设logo
-                        logo_image = None
-                        if selected_preset_logo:
-                            try:
-                                logo_image = Image.open(selected_preset_logo).convert("RGBA")
-                                st.success(f"Selected logo: {os.path.basename(selected_preset_logo)}")
-                            except Exception as e:
-                                st.error(f"Error loading selected logo: {e}")
-                
-                # Logo大小和位置
-                logo_size = st.slider("Logo size:", 10, 100, 40, format="%d%%")
-                logo_position = st.radio("Position:", ["Top Left", "Top Center", "Top Right", "Center", "Bottom Left", "Bottom Center", "Bottom Right"], index=3)
-                
-                # Logo透明度
-                logo_opacity = st.slider("Logo opacity:", 10, 100, 100, 5, format="%d%%")
-                
-                # 应用Logo按钮
-                if st.button("Apply Logo", key="apply_logo"):
-                    if logo_image is None:
-                        if logo_source == "Upload your logo":
-                            st.warning("Please upload a logo first!")
-                        else:
-                            st.warning("Please select a preset logo first!")
-                    else:
-                        # 处理Logo
-                        try:
-                            # 调整Logo大小
-                            box_size = int(1024 * 0.25)
-                            logo_width = int(box_size * logo_size / 100)
-                            logo_height = int(logo_width * logo_image.height / logo_image.width)
-                            logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
-                            
-                            # 创建新的设计或使用现有最终设计
-                            if st.session_state.final_design is not None:
-                                new_design = st.session_state.final_design.copy()
-                            else:
-                                new_design = st.session_state.base_image.copy()
-                            
-                            # 获取选择框位置
-                            left, top = st.session_state.current_box_position
-                            
-                            # 计算Logo位置
-                            if logo_position == "Top Left":
-                                logo_x, logo_y = left + 10, top + 10
-                            elif logo_position == "Top Center":
-                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + 10
-                            elif logo_position == "Top Right":
-                                logo_x, logo_y = left + box_size - logo_width - 10, top + 10
-                            elif logo_position == "Center":
-                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + (box_size - logo_height) // 2
-                            elif logo_position == "Bottom Left":
-                                logo_x, logo_y = left + 10, top + box_size - logo_height - 10
-                            elif logo_position == "Bottom Center":
-                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + box_size - logo_height - 10
-                            else:  # Bottom Right
-                                logo_x, logo_y = left + box_size - logo_width - 10, top + box_size - logo_height - 10
-                            
-                            # 设置透明度
-                            if logo_opacity < 100:
-                                logo_data = logo_resized.getdata()
-                                new_data = []
-                                for item in logo_data:
-                                    r, g, b, a = item
-                                    new_a = int(a * logo_opacity / 100)
-                                    new_data.append((r, g, b, new_a))
-                                logo_resized.putdata(new_data)
-                            
-                            # 粘贴Logo到设计
-                            try:
-                                new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
-                            except Exception as e:
-                                st.warning(f"Logo paste failed: {e}")
-                            
-                            # 更新设计
-                            st.session_state.final_design = new_design
-                            
-                            # 同时更新current_image以保持两个显示区域的一致性
-                            st.session_state.current_image = new_design.copy()
-                            
-                            # 强制页面刷新以显示最新结果
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error processing logo: {e}")
     
-    # 删除原来页面底部的Final Result部分
-    # Return to main interface button - modified here
-    if st.button("Return to Main Page"):
+    # Return to main interface button
+    if st.button("返回主页"):
         # Clear all design-related states
         st.session_state.base_image = None
         st.session_state.current_image = None
         st.session_state.current_box_position = None
         st.session_state.generated_design = None
         st.session_state.final_design = None
+        st.session_state.design_step = "input_prompt"
         # Only change page state, retain user info and experiment group
         st.session_state.page = "welcome"
         st.rerun() 
