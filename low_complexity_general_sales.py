@@ -459,30 +459,41 @@ def show_low_complexity_general_sales():
                         ]
                         
                         font_file = font_mapping.get(text_info["font"], "arial.ttf")
+                        # 确保使用保存的字体大小
+                        actual_size = text_info["size"]
                         for path in system_font_paths:
                             try:
-                                font = ImageFont.truetype(path + font_file, text_info["size"])
+                                font = ImageFont.truetype(path + font_file, actual_size)
                                 break
                             except:
                                 continue
                         
                         if font is None:
                             font = ImageFont.load_default()
-                            
-                        # 重新计算文字位置
-                        left, top = st.session_state.current_box_position
-                        box_size = int(1024 * 0.25)
                         
+                        # 获取图像尺寸并使用更大的绘制区域
+                        img_width, img_height = st.session_state.final_design.size
+                        
+                        # 定义更大的T恤前胸区域
+                        chest_width = int(img_width * 0.95)  # 几乎整个宽度
+                        chest_height = int(img_height * 0.6)  # 更大的高度范围
+                        chest_left = (img_width - chest_width) // 2
+                        chest_top = int(img_height * 0.2)  # 更高的位置
+                        
+                        # 计算文字位置 - 在胸前区域居中
                         if font:
                             text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
                             text_width = text_bbox[2] - text_bbox[0]
                             text_height = text_bbox[3] - text_bbox[1]
                         else:
-                            text_width = len(text_info["text"]) * text_info["size"] * 0.5
-                            text_height = text_info["size"]
-                            
-                        text_x = left + (box_size - text_width) // 2
-                        text_y = top + (box_size - text_height) // 2
+                            text_width = len(text_info["text"]) * actual_size * 0.5
+                            text_height = actual_size
+                        
+                        # 在胸前区域中心对齐
+                        chest_center_x = chest_left + chest_width // 2
+                        chest_center_y = chest_top + chest_height // 2
+                        text_x = chest_center_x - text_width // 2
+                        text_y = chest_center_y - text_height // 2
                         
                         # 绘制文字
                         draw.text((text_x, text_y), text_info["text"], fill=text_info["color"], font=font)
@@ -500,27 +511,34 @@ def show_low_complexity_general_sales():
                         logo_path = st.session_state.selected_preset_logo
                         logo_image = Image.open(logo_path).convert("RGBA")
                         
-                        # 调整Logo大小
-                        box_size = int(1024 * 0.25)
-                        logo_width = int(box_size * logo_info["size"] / 100)
+                        # 获取图像尺寸并使用更大的绘制区域
+                        img_width, img_height = st.session_state.final_design.size
+                        
+                        # 定义更大的T恤前胸区域
+                        chest_width = int(img_width * 0.95)  # 几乎整个宽度
+                        chest_height = int(img_height * 0.6)  # 更大的高度范围
+                        chest_left = (img_width - chest_width) // 2
+                        chest_top = int(img_height * 0.2)  # 更高的位置
+                        
+                        # 调整Logo大小 - 相对于T恤区域而不是小框
+                        logo_size_factor = logo_info["size"] / 100
+                        logo_width = int(chest_width * logo_size_factor * 0.5)  # 控制最大为区域的一半
                         logo_height = int(logo_width * logo_image.height / logo_image.width)
                         logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
                         
-                        # 获取选择框位置
-                        left, top = st.session_state.current_box_position
-                        
-                        # 位置映射
+                        # 计算位置
+                        # 位置映射 - 现在相对于胸前设计区域
                         position_mapping = {
-                            "左上": (left + 10, top + 10),
-                            "上中": (left + (box_size - logo_width) // 2, top + 10),
-                            "右上": (left + box_size - logo_width - 10, top + 10),
-                            "居中": (left + (box_size - logo_width) // 2, top + (box_size - logo_height) // 2),
-                            "左下": (left + 10, top + box_size - logo_height - 10),
-                            "下中": (left + (box_size - logo_width) // 2, top + box_size - logo_height - 10),
-                            "右下": (left + box_size - logo_width - 10, top + box_size - logo_height - 10)
+                            "左上": (chest_left + 10, chest_top + 10),
+                            "上中": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
+                            "右上": (chest_left + chest_width - logo_width - 10, chest_top + 10),
+                            "居中": (chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2),
+                            "左下": (chest_left + 10, chest_top + chest_height - logo_height - 10),
+                            "下中": (chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10),
+                            "右下": (chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10)
                         }
                         
-                        logo_x, logo_y = position_mapping.get(logo_info["position"], (left + 10, top + 10))
+                        logo_x, logo_y = position_mapping.get(logo_info["position"], (chest_left + 10, chest_top + 10))
                         
                         # 设置透明度
                         if logo_info["opacity"] < 100:
@@ -808,11 +826,10 @@ def show_low_complexity_general_sales():
                 # 修改文字大小滑块范围
                 text_size = st.slider("文字大小:", 20, 120, 50, key="ai_text_size")
                 
-                # 预览效果 - 确保预览与应用大小一致
+                # 修改预览部分，使用固定大小的文字
                 if text_suggestion:
-                    # 使用与应用时相同的缩放因子
-                    preview_scale_factor = 4.0
-                    preview_text_size = int(text_size * preview_scale_factor * 0.25)  # 缩小以适应预览区域
+                    # 使用固定的大小预览，不随滑块变化
+                    fixed_preview_size = 36  # 固定预览文字大小
                     st.markdown(
                         f"""
                         <div style="
@@ -823,13 +840,17 @@ def show_low_complexity_general_sales():
                             font-family: {ai_font}, sans-serif;
                             color: {text_color};
                             text-align: center;
-                            font-size: {preview_text_size}px;
+                            font-size: {fixed_preview_size}px;
+                            line-height: 1.2;
                         ">
-                        {text_suggestion}
+                        <strong>{text_suggestion}</strong>
                         </div>
                         """,
                         unsafe_allow_html=True
                     )
+                    
+                    # 修改提示信息更清晰表达
+                    st.info(f"预览文字大小不会变化。当前设置的实际应用大小为 {text_size}，渲染后约为 {text_size*8} 像素")
                 
                 # 应用按钮
                 if st.button("应用文字到设计", key="apply_ai_text"):
@@ -846,7 +867,7 @@ def show_low_complexity_general_sales():
                         # 创建绘图对象
                         draw = ImageDraw.Draw(new_design)
                         
-                        # 显著增大字体尺寸并应用更好的字体处理逻辑
+                        # 完全重写字体处理逻辑 - 使用更大的缩放因子
                         try:
                             from PIL import ImageFont
                             font = None
@@ -869,9 +890,12 @@ def show_low_complexity_general_sales():
                                 "Impact": "impact.ttf"
                             }
                             
-                            # 使用字体缩放因子使字体显著更大
-                            font_scale_factor = 6.0  # 进一步增大字体的缩放因子
+                            # 使用超大字体缩放因子
+                            font_scale_factor = 8.0  # 极大提高字体可见度
                             actual_text_size = int(text_size * font_scale_factor)
+                            
+                            # 记录实际使用的字体大小
+                            st.session_state.actual_font_size = actual_text_size
                             
                             font_file = font_mapping.get(ai_font, "arial.ttf")
                             for path in system_font_paths:
@@ -888,17 +912,18 @@ def show_low_complexity_general_sales():
                         except Exception as e:
                             st.warning(f"加载字体时出错: {e}")
                             font = None
-                            actual_text_size = int(text_size * 2.0)  # 使用相同的缩放因子
+                            actual_text_size = int(text_size * 8.0)  # 确保即使使用默认字体也保持较大的尺寸
+                            st.session_state.actual_font_size = actual_text_size
                         
-                        # 使用整个T恤中心区域，而不是小选择框
+                        # 使用整个T恤中心区域
                         # 获取图像尺寸
                         img_width, img_height = new_design.size
                         
-                        # 定义T恤前胸区域 (占整个图像宽度的90%，高度的50%，位于中上部)
-                        chest_width = int(img_width * 0.9)
-                        chest_height = int(img_height * 0.5)
+                        # 将T恤设计区域进一步扩大
+                        chest_width = int(img_width * 0.95)  # 几乎整个宽度
+                        chest_height = int(img_height * 0.6)  # 更大的高度范围
                         chest_left = (img_width - chest_width) // 2
-                        chest_top = int(img_height * 0.25)  # 位于图像25%的高度处
+                        chest_top = int(img_height * 0.2)  # 更高的位置
                         
                         # 计算文字位置 - 在胸前区域居中
                         try:
@@ -930,14 +955,14 @@ def show_low_complexity_general_sales():
                                 "text": text_suggestion,
                                 "font": ai_font,
                                 "color": text_color,
-                                "size": actual_text_size,  # 保存实际使用的更大字体大小
+                                "size": actual_text_size,
                                 "position": (text_x, text_y)
                             }
                             
                             # 显式保存文本大小设置到会话状态，确保重新应用时使用相同大小
                             st.session_state.last_text_size = actual_text_size
                             
-                            st.success(f"文字已应用到设计中！字体大小：{actual_text_size}px")
+                            st.success(f"文字已应用到设计中！实际字体大小: {actual_text_size}px")
                             st.rerun()
                         except Exception as e:
                             st.error(f"应用文字时出错: {e}")
@@ -1024,27 +1049,33 @@ def show_low_complexity_general_sales():
                         try:
                             # 对应的logo_image应该已经在上面的逻辑中被设置
                             if logo_image:
-                                # 调整Logo大小
-                                box_size = int(1024 * 0.25)
-                                logo_width = int(box_size * logo_size / 100)
+                                # 获取图像尺寸并使用更大的绘制区域
+                                img_width, img_height = new_design.size
+                                
+                                # 定义更大的T恤前胸区域
+                                chest_width = int(img_width * 0.95)  # 几乎整个宽度
+                                chest_height = int(img_height * 0.6)  # 更大的高度范围
+                                chest_left = (img_width - chest_width) // 2
+                                chest_top = int(img_height * 0.2)  # 更高的位置
+                                
+                                # 调整Logo大小 - 相对于T恤区域而不是小框
+                                logo_size_factor = logo_size / 100
+                                logo_width = int(chest_width * logo_size_factor * 0.5)  # 控制最大为区域的一半
                                 logo_height = int(logo_width * logo_image.height / logo_image.width)
                                 logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
                                 
-                                # 获取选择框位置
-                                left, top = st.session_state.current_box_position
-                                
-                                # 位置映射
+                                # 位置映射 - 现在相对于胸前设计区域
                                 position_mapping = {
-                                    "左上": (left + 10, top + 10),
-                                    "上中": (left + (box_size - logo_width) // 2, top + 10),
-                                    "右上": (left + box_size - logo_width - 10, top + 10),
-                                    "居中": (left + (box_size - logo_width) // 2, top + (box_size - logo_height) // 2),
-                                    "左下": (left + 10, top + box_size - logo_height - 10),
-                                    "下中": (left + (box_size - logo_width) // 2, top + box_size - logo_height - 10),
-                                    "右下": (left + box_size - logo_width - 10, top + box_size - logo_height - 10)
+                                    "左上": (chest_left + 10, chest_top + 10),
+                                    "上中": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
+                                    "右上": (chest_left + chest_width - logo_width - 10, chest_top + 10),
+                                    "居中": (chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2),
+                                    "左下": (chest_left + 10, chest_top + chest_height - logo_height - 10),
+                                    "下中": (chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10),
+                                    "右下": (chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10)
                                 }
                                 
-                                logo_x, logo_y = position_mapping.get(logo_position, (left + 10, top + 10))
+                                logo_x, logo_y = position_mapping.get(logo_position, (chest_left + 10, chest_top + 10))
                                 
                                 # 设置透明度
                                 if logo_opacity < 100:
