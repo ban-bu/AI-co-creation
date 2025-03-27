@@ -840,7 +840,7 @@ def show_low_complexity_general_sales():
                             font-family: {ai_font}, sans-serif;
                             color: {text_color};
                             text-align: center;
-                            font-size: {text_size}px;
+                            font-size: {fixed_preview_size}px;
                             line-height: 1.2;
                         ">
                         <strong>{text_suggestion}</strong>
@@ -850,7 +850,7 @@ def show_low_complexity_general_sales():
                     )
                     
                     # 修改提示信息更清晰表达
-                    st.info(f"预览文字大小不会变化。当前设置的实际应用大小为 {text_size}，渲染后约为 {text_size*8} 像素")
+                    st.info(f"预览文字大小不会变化。当前设置的实际应用大小为 {text_size}，渲染后约为 {text_size*16} 像素（已增大文字比例以提高可见度）")
                 
                 # 应用按钮
                 if st.button("应用文字到设计", key="apply_ai_text"):
@@ -891,7 +891,7 @@ def show_low_complexity_general_sales():
                             }
                             
                             # 使用超大字体缩放因子
-                            font_scale_factor = 8.0  # 极大提高字体可见度
+                            font_scale_factor = 16.0  # 极大提高字体可见度，从8.0增加到16.0
                             actual_text_size = int(text_size * font_scale_factor)
                             
                             # 记录实际使用的字体大小
@@ -912,7 +912,7 @@ def show_low_complexity_general_sales():
                         except Exception as e:
                             st.warning(f"加载字体时出错: {e}")
                             font = None
-                            actual_text_size = int(text_size * 8.0)  # 确保即使使用默认字体也保持较大的尺寸
+                            actual_text_size = int(text_size * 16.0)  # 确保即使使用默认字体也保持较大的尺寸，从8.0增加到16.0
                             st.session_state.actual_font_size = actual_text_size
                         
                         # 使用整个T恤中心区域
