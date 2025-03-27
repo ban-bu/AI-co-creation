@@ -1725,46 +1725,46 @@ def show_high_complexity_general_sales():
                                             
                                             # 绘制当前行
                                             text_draw.text((line_x, line_y), line, fill=text_rgba, font=font)
-                                        else:
-                                            # 单行文本
-                                            text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
-                                        
-                                        # 特殊效果处理
-                                        if text_info["effect"] != "none" and text_info["effect"] != "None":
-                                            font_debug_info.append(f"Applying special effect: {text_info['effect']}")
-                                            if text_info["effect"] == "Gradient":
-                                                # 简单实现渐变效果
-                                                gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
-                                                gradient_draw = ImageDraw.Draw(gradient_layer)
-                                                
-                                                # 先绘制文字蒙版
-                                                gradient_draw.text((text_x, text_y), text_info["text"], 
-                                                                 fill=(255, 255, 255, 255), font=font)
-                                                
-                                                # 创建渐变色彩
-                                                from_color = text_rgb
-                                                to_color = (255 - text_rgb[0], 255 - text_rgb[1], 255 - text_rgb[2])
-                                                
-                                                # 将渐变应用到文字
-                                                gradient_data = gradient_layer.getdata()
-                                                new_data = []
-                                                for i, item in enumerate(gradient_data):
-                                                    y_pos = i // img_width  # 计算像素的y位置
-                                                    if item[3] > 0:  # 如果是文字部分
-                                                        # 根据y位置计算颜色混合比例
-                                                        ratio = y_pos / text_height
-                                                        if ratio > 1: ratio = 1
-                                                        
-                                                        # 线性混合两种颜色
-                                                        r = int(from_color[0] * (1 - ratio) + to_color[0] * ratio)
-                                                        g = int(from_color[1] * (1 - ratio) + to_color[1] * ratio)
-                                                        b = int(from_color[2] * (1 - ratio) + to_color[2] * ratio)
-                                                        new_data.append((r, g, b, item[3]))
-                                                    else:
-                                                        new_data.append(item)  # 保持透明部分
-                                                
-                                                gradient_layer.putdata(new_data)
-                                                text_layer = gradient_layer
+                                    else:
+                                        # 单行文本
+                                        text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
+                                    
+                                    # 特殊效果处理
+                                    if text_info["effect"] != "none" and text_info["effect"] != "None":
+                                        font_debug_info.append(f"Applying special effect: {text_info['effect']}")
+                                        if text_info["effect"] == "Gradient":
+                                            # 简单实现渐变效果
+                                            gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
+                                            gradient_draw = ImageDraw.Draw(gradient_layer)
+                                            
+                                            # 先绘制文字蒙版
+                                            gradient_draw.text((text_x, text_y), text_info["text"], 
+                                                             fill=(255, 255, 255, 255), font=font)
+                                            
+                                            # 创建渐变色彩
+                                            from_color = text_rgb
+                                            to_color = (255 - text_rgb[0], 255 - text_rgb[1], 255 - text_rgb[2])
+                                            
+                                            # 将渐变应用到文字
+                                            gradient_data = gradient_layer.getdata()
+                                            new_data = []
+                                            for i, item in enumerate(gradient_data):
+                                                y_pos = i // img_width  # 计算像素的y位置
+                                                if item[3] > 0:  # 如果是文字部分
+                                                    # 根据y位置计算颜色混合比例
+                                                    ratio = y_pos / text_height
+                                                    if ratio > 1: ratio = 1
+                                                    
+                                                    # 线性混合两种颜色
+                                                    r = int(from_color[0] * (1 - ratio) + to_color[0] * ratio)
+                                                    g = int(from_color[1] * (1 - ratio) + to_color[1] * ratio)
+                                                    b = int(from_color[2] * (1 - ratio) + to_color[2] * ratio)
+                                                    new_data.append((r, g, b, item[3]))
+                                                else:
+                                                    new_data.append(item)  # 保持透明部分
+                                            
+                                            gradient_layer.putdata(new_data)
+                                            text_layer = gradient_layer
                                     
                                     # 应用文字到设计
                                     new_design.paste(text_layer, (0, 0), text_layer)
