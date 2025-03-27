@@ -2061,11 +2061,11 @@ def show_high_complexity_general_sales():
                                                placeholder="For example: A simple modern mountain logo, using blue and white")
 
                 with logo_col2:
-                    # 修改自动生成状态显示
-                    if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
-                        st.info("You can modify the prompt to regenerate the Logo")
+                    # 修改自动生成状态显示 - 移除这部分提示
+                    # if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
+                    #    st.info("您可以修改提示词重新生成Logo")
                     
-                    if st.button("Generate Logo", key="generate_logo"):
+                    if st.button("生成Logo", key="generate_logo"):
                         if not logo_prompt:
                             st.warning("Please enter a Logo description")
                         else:
