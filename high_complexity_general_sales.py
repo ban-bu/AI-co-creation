@@ -155,7 +155,7 @@ def get_ai_design_suggestions(user_preferences=None):
                                 # 获取第一个Logo描述
                                 first_logo_desc = cleaned_descriptions[0]
                                 # 构建完整的提示词
-                                full_prompt = f"创建一个T恤Logo设计：{first_logo_desc}。要求：1. 使用简洁的设计 2. 适合T恤印花 3. 背景透明 4. 图案清晰可识别"
+                                full_prompt = f"Create a Logo design: {first_logo_desc}. Requirements: 1. Use a simple design 2. Suitable for printing 3. Background transparent 4. Clear and recognizable图案清晰可识别"
                                 
                                 # 调用DALL-E生成图像
                                 logo_image = generate_vector_image(full_prompt)
@@ -1295,11 +1295,36 @@ def show_high_complexity_general_sales():
                 st.session_state.generated_design = None
                 st.session_state.applied_text = None
                 st.session_state.applied_logo = None
-                # 重置最终设计为基础T恤图像
-                st.session_state.final_design = st.session_state.base_image.copy()
-                # 重置当前图像为带选择框的基础图像
-                temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
-                st.session_state.current_image = temp_image
+                st.session_state.generated_logo = None
+                st.session_state.logo_auto_generated = False
+                st.session_state.show_generated_logo = False
+                
+                # 重置颜色为默认白色
+                st.session_state.shirt_color_hex = "#FFFFFF"
+                st.session_state.current_applied_color = "#FFFFFF"
+                
+                # 重置纹理为默认棉质
+                st.session_state.fabric_type = "Cotton"
+                st.session_state.current_applied_fabric = "Cotton"
+                
+                # 重新应用默认颜色和纹理
+                if st.session_state.original_base_image is not None:
+                    # 应用默认颜色和纹理
+                    new_colored_image = change_shirt_color(
+                        st.session_state.original_base_image, 
+                        "#FFFFFF",  # 白色
+                        apply_texture=True, 
+                        fabric_type="Cotton"  # 默认棉质
+                    )
+                    st.session_state.base_image = new_colored_image
+                    st.session_state.final_design = new_colored_image.copy()
+                    
+                    # 重置当前图像为带选择框的基础图像
+                    temp_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                    st.session_state.current_image = temp_image
+                    
+                    print("Have reset the design to the default white cotton t-shirt")
+                
                 st.rerun()
             
             # 下载和确认按钮
