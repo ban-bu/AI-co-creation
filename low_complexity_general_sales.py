@@ -858,91 +858,80 @@ def show_low_complexity_general_sales():
                             # 创建绘图对象
                             draw = ImageDraw.Draw(new_design)
                             
-                            # 将字体映射和ImageFont导入移到try外部
-                            # 导入字体
-                            from PIL import ImageFont
-                            font = None
-                            
-                            # 字体映射
-                            font_mapping = {
-                                "Arial": "arial.ttf",
-                                "Times New Roman": "times.ttf",
-                                "Courier": "cour.ttf",
-                                "Verdana": "verdana.ttf",
-                                "Georgia": "georgia.ttf",
-                                "Impact": "impact.ttf"
-                            }
-                            
-                            # 使用固定的大像素值，不再基于图像百分比
-                            font_size = 250  # 固定使用250像素的大字体
-                            
-                            # 记录实际使用的字体大小
-                            st.session_state.actual_font_size = font_size
-                            
-                            # 尝试常见的系统字体路径
-                            system_font_paths = [
-                                "/Library/Fonts/",  # macOS
-                                "/System/Library/Fonts/",  # macOS系统
-                                "C:/Windows/Fonts/",  # Windows
-                                "/usr/share/fonts/truetype/",  # Linux
-                            ]
-                            
-                            # 加载字体
-                            font_file = font_mapping.get(ai_font, "arial.ttf")
-                            for path in system_font_paths:
-                                try:
-                                    font = ImageFont.truetype(path + font_file, font_size)
-                                    break
-                                except:
-                                    continue
-                            
-                            # 如果无法加载字体，使用默认字体
-                            if font is None:
-                                try:
-                                    # 尝试使用PIL的默认字体
-                                    font = ImageFont.load_default()
-                                except:
-                                    st.error("无法加载字体，请尝试其他字体。")
-                                    return
-                            
-                            # 获取图像尺寸
-                            img_width, img_height = new_design.size
-                            
-                            # 计算文字位置
-                            try:
-                                # 获取文字边界框
-                                text_bbox = draw.textbbox((0, 0), text_suggestion, font=font)
-                                text_width = text_bbox[2] - text_bbox[0]
-                                text_height = text_bbox[3] - text_bbox[1]
-                                
-                                # 计算居中位置
-                                text_x = (img_width - text_width) // 2
-                                text_y = (img_height // 2) - (text_height // 2)  # 垂直居中
-                                
-                                # 将位置略微向上移动
-                                text_y = int(text_y * 0.8)  # 移到中心位置稍上方
-                                
-                                # 绘制文字
-                                draw.text((text_x, text_y), text_suggestion, fill=text_color, font=font)
-                                
-                                # 更新设计
-                                st.session_state.final_design = new_design
-                                st.session_state.current_image = new_design.copy()
-                                
-                                # 保存文字信息
-                                st.session_state.applied_text = {
-                                    "text": text_suggestion,
-                                    "font": ai_font,
-                                    "color": text_color,
-                                    "size": font_size,
-                                    "position": (text_x, text_y)
+                            # 新的字体加载方案
+                            def load_custom_font(font_name, img_width):
+                                font_mapping = {
+                                    "Arial": "arial.ttf",
+                                    "Times New Roman": "times.ttf",
+                                    "Courier": "cour.ttf",
+                                    "Verdana": "verdana.ttf",
+                                    "Georgia": "georgia.ttf",
+                                    "Impact": "impact.ttf"
                                 }
                                 
-                                st.success(f"文字已成功应用到设计中！字体大小: {font_size}px")
-                                st.rerun()
-                            except Exception as e:
-                                st.error(f"应用文字时出错: {e}")
+                                # 动态计算基础字号（图像宽度的20%）
+                                base_size = int(img_width * 0.2)
+                                min_size = 120  # 最小字号
                                 
+                                # 系统字体路径优先级
+                                font_paths = [
+                                    "/usr/share/fonts/truetype/",  # Linux
+                                    "C:/Windows/Fonts/",           # Windows
+                                    "/Library/Fonts/",             # macOS
+                                    "/System/Library/Fonts/"       # macOS系统
+                                ]
+                                
+                                # 尝试加载字体
+                                for font_path in font_paths:
+                                    try:
+                                        font_file = font_mapping.get(font_name, "arial.ttf")
+                                        return ImageFont.truetype(font_path + font_file, base_size)
+                                    except (IOError, OSError):
+                                        # 逐步减小字号尝试
+                                        for scaled_size in [base_size, int(base_size*0.9), int(base_size*0.8)]:
+                                            if scaled_size < min_size:
+                                                break
+                                            try:
+                                                return ImageFont.truetype(font_path + font_file, scaled_size)
+                                            except:
+                                                continue
+                                
+                                # 全部失败时使用默认字体（强制放大）
+                                default_font = ImageFont.load_default()
+                                default_font.size = max(base_size, min_size)  # 强制设置字号
+                                return default_font
+
+                            # 使用新的字体加载方法
+                            font = load_custom_font(ai_font, img_width)
+                            
+                            # 获取实际字体大小
+                            actual_size = font.size if hasattr(font, 'size') else img_width//8
+                            
+                            # 文字位置计算（上1/3处）
+                            text_bbox = draw.textbbox((0, 0), text_suggestion, font=font)
+                            text_width = text_bbox[2] - text_bbox[0]
+                            text_height = text_bbox[3] - text_bbox[1]
+                            text_x = (img_width - text_width) // 2
+                            text_y = int(img_height * 0.3) - (text_height // 2)
+                            
+                            # 绘制文字
+                            draw.text((text_x, text_y), text_suggestion, fill=text_color, font=font)
+                            
+                            # 更新设计
+                            st.session_state.final_design = new_design
+                            st.session_state.current_image = new_design.copy()
+                            
+                            # 保存文字信息
+                            st.session_state.applied_text = {
+                                "text": text_suggestion,
+                                "font": ai_font,
+                                "color": text_color,
+                                "size": actual_size,
+                                "position": (text_x, text_y)
+                            }
+                            
+                            st.success(f"文字已成功应用到设计中！字体大小: {actual_size}px")
+                            st.rerun()
                         except Exception as e:
                             st.error(f"创建设计时出错: {e}")
                 
