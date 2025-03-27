@@ -1,3 +1,4 @@
+# 导入所有必要的基础依赖
 import streamlit as st
 import warnings
 warnings.filterwarnings('ignore')
@@ -32,6 +33,15 @@ from streamlit_image_coordinates import streamlit_image_coordinates
 from streamlit.components.v1 import html
 from streamlit_drawable_canvas import st_canvas
 
+# 导入OpenAI配置
+from openai import OpenAI
+API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
+BASE_URL = "https://api.deepbricks.ai/v1/"
+client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
+
+# 导入面料纹理模块
+from fabric_texture import apply_fabric_texture
+
 # 导入分拆出去的各页面模块
 from welcome_page import show_welcome_page
 # 导入四个组对应的新文件
@@ -41,13 +51,6 @@ from low_complexity_popup_sales import show_low_complexity_popup_sales
 from high_complexity_popup_sales import show_high_complexity_popup_sales
 from high_complexity_general_sales import show_high_complexity_general_sales
 from survey_page import show_survey_page, initialize_experiment_data, save_experiment_data
-
-# ========== Deepbricks Configuration ==========
-from openai import OpenAI
-API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
-BASE_URL = "https://api.deepbricks.ai/v1/"
-client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
-# ==============================================
 
 # Page configuration
 st.set_page_config(
@@ -180,7 +183,9 @@ if 'preset_scale' not in st.session_state:
 if 'design_mode' not in st.session_state:
     st.session_state.design_mode = "preset"  # 默认使用预设设计模式
 if 'fabric_type' not in st.session_state:
-    st.session_state.fabric_type = "cotton"  # 默认面料类型
+    st.session_state.fabric_type = None  # 初始状态下没有特定面料类型
+if 'apply_texture' not in st.session_state:
+    st.session_state.apply_texture = False  # 初始状态下不应用纹理
 
 # Ensure data file exists
 initialize_experiment_data()
