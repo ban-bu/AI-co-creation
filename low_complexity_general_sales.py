@@ -2,7 +2,20 @@ import streamlit as st
 from PIL import Image, ImageDraw
 import requests
 from io import BytesIO
-import cairosvg
+# 添加try-except导入cairosvg，避免因缺少这个库而导致整个应用崩溃
+try:
+    import cairosvg
+    CAIROSVG_AVAILABLE = True
+except ImportError:
+    CAIROSVG_AVAILABLE = False
+    # 尝试导入备选SVG处理库
+    try:
+        from svglib.svglib import svg2rlg
+        from reportlab.graphics import renderPM
+        SVGLIB_AVAILABLE = True
+    except ImportError:
+        SVGLIB_AVAILABLE = False
+        st.warning("SVG处理库未安装，SVG格式转换功能将不可用")
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
 import os
@@ -95,11 +108,39 @@ def generate_vector_image(prompt):
             if image_resp.status_code == 200:
                 content_type = image_resp.headers.get("Content-Type", "")
                 if "svg" in content_type.lower():
-                    try:
-                        png_data = cairosvg.svg2png(bytestring=image_resp.content)
-                        return Image.open(BytesIO(png_data)).convert("RGBA")
-                    except Exception as conv_err:
-                        st.error(f"Error converting SVG to PNG: {conv_err}")
+                    # 判断SVG处理库是否可用
+                    if CAIROSVG_AVAILABLE:
+                        try:
+                            png_data = cairosvg.svg2png(bytestring=image_resp.content)
+                            return Image.open(BytesIO(png_data)).convert("RGBA")
+                        except Exception as conv_err:
+                            st.error(f"Error converting SVG to PNG with cairosvg: {conv_err}")
+                            # 尝试使用备选方案
+                            if SVGLIB_AVAILABLE:
+                                try:
+                                    svg_data = BytesIO(image_resp.content)
+                                    drawing = svg2rlg(svg_data)
+                                    png_data = BytesIO()
+                                    renderPM.drawToFile(drawing, png_data, fmt="PNG")
+                                    png_data.seek(0)
+                                    return Image.open(png_data).convert("RGBA")
+                                except Exception as svg_err:
+                                    st.error(f"Error converting SVG to PNG with svglib: {svg_err}")
+                            return None
+                    elif SVGLIB_AVAILABLE:
+                        # 使用svglib作为备选
+                        try:
+                            svg_data = BytesIO(image_resp.content)
+                            drawing = svg2rlg(svg_data)
+                            png_data = BytesIO()
+                            renderPM.drawToFile(drawing, png_data, fmt="PNG")
+                            png_data.seek(0)
+                            return Image.open(png_data).convert("RGBA")
+                        except Exception as svg_err:
+                            st.error(f"Error converting SVG to PNG with svglib: {svg_err}")
+                            return None
+                    else:
+                        st.error("无法处理SVG格式，SVG处理库未安装")
                         return None
                 else:
                     return Image.open(BytesIO(image_resp.content)).convert("RGBA")
@@ -363,7 +404,7 @@ def show_low_complexity_general_sales():
                     st.session_state.ai_text_suggestion = text_suggestion
                     st.session_state.ai_font_selection = ai_font
                     st.session_state.ai_text_color = text_color
-                    st.success(f"已选择文字设置，请在"Add Text/Logo"选项卡中点击"Add Text to Design"应用")
+                    st.success(f"已选择文字设置，请在\"Add Text/Logo\"选项卡中点击\"Add Text to Design\"应用")
             else:
                 st.markdown("""
                 <div style="background-color: #f0f7ff; padding: 15px; border-radius: 10px; border-left: 5px solid #1e88e5;">
