@@ -6,10 +6,85 @@ import cairosvg
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
 import os
+import json
+import time
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
 BASE_URL = "https://api.deepbricks.ai/v1/"
+
+# 添加ChatGPT-4o-mini API 调用函数
+def get_ai_design_suggestions(prompt):
+    """使用ChatGPT-4o-mini生成设计方案建议"""
+    client = OpenAI(api_key=API_KEY)
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": """你是一位专业的T恤设计顾问。请针对用户提供的关键词或主题，提供5种不同的设计方案建议，包括图案描述、配色方案、风格特点等。
+                
+                必须严格按以下JSON格式输出：
+                {
+                  "designs": [
+                    {
+                      "theme": "主题名称",
+                      "style": "设计风格",
+                      "colors": "主要颜色组合",
+                      "description": "详细描述"
+                    },
+                    ... 更多设计方案 ...
+                  ]
+                }
+                
+                确保每个设计方案都是独特的、有创意的，并且适合T恤印刷。描述要简洁明了但富有表现力。
+                """},
+                {"role": "user", "content": f"请为'{prompt}'这个设计理念提供5种T恤图案设计方案。"}
+            ],
+            response_format={"type": "json_object"}
+        )
+        
+        # 解析JSON返回结果
+        try:
+            suggestions = json.loads(response.choices[0].message.content)
+            # 验证JSON格式是否包含designs字段
+            if "designs" not in suggestions or not isinstance(suggestions["designs"], list):
+                # 如果格式不正确，创建一个标准格式
+                return {
+                    "designs": [
+                        {
+                            "theme": "默认设计",
+                            "style": "现代简约",
+                            "colors": "黑白灰",
+                            "description": "无法获取AI设计建议，提供了一个默认设计方案。"
+                        }
+                    ]
+                }
+            return suggestions
+        except json.JSONDecodeError:
+            st.warning("AI返回的结果格式无效，使用默认设计建议。")
+            # 返回一个默认的建议格式
+            return {
+                "designs": [
+                    {
+                        "theme": f"{prompt}设计",
+                        "style": "现代简约",
+                        "colors": "黑白灰",
+                        "description": "基于您的关键词生成的简约风格设计。"
+                    }
+                ]
+            }
+    except Exception as e:
+        st.error(f"Error calling ChatGPT API: {e}")
+        return {
+            "designs": [
+                {
+                    "theme": "错误恢复设计",
+                    "style": "简约",
+                    "colors": "黑白",
+                    "description": "API调用出错时的备用设计方案。"
+                }
+            ]
+        }
 
 def generate_vector_image(prompt):
     """Generate an image based on the prompt"""
@@ -193,6 +268,11 @@ def show_low_complexity_general_sales():
         st.session_state.shirt_color_hex = "#FFFFFF"  # 默认白色
     if 'original_base_image' not in st.session_state:
         st.session_state.original_base_image = None  # 保存原始白色T恤图像
+    # 初始化AI设计建议相关变量    
+    if 'design_suggestions' not in st.session_state:
+        st.session_state.design_suggestions = []  # 存储AI生成的设计建议
+    if 'selected_prompt' not in st.session_state:
+        st.session_state.selected_prompt = ""  # 存储用户选择的设计提示词
     
     # Create two-column layout
     col1, col2 = st.columns([3, 2])
@@ -329,56 +409,170 @@ def show_low_complexity_general_sales():
                     
                     st.rerun()
             
-            # 设计生成主题
-            theme = st.text_input("Design prompt (describe your design idea)", "Elegant minimalist pattern in blue and white colors")
+            # 添加AI辅助设计功能
+            with st.expander("🤖 AI Design Assistant", expanded=True):
+                st.markdown("""
+                <div style="background-color:#f8f9fa; padding:15px; border-radius:10px; margin-bottom:15px">
+                <h4 style="color:#4B0082;">Let AI help you create design combinations</h4>
+                <p>Enter a theme or concept, and our AI will generate multiple design ideas including styles, colors, and descriptions.</p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # 用户输入设计关键词或主题
+                design_idea = st.text_input("Enter your design concept or theme:", 
+                                           placeholder="For example: summer beach, cyberpunk, abstract art, etc.")
+                
+                # AI设计建议按钮
+                if st.button("🎨 Get AI Design Suggestions", key="get_ai_suggestions"):
+                    if not design_idea.strip():
+                        st.warning("Please enter a design concept or theme!")
+                    else:
+                        with st.spinner("AI is generating design combinations..."):
+                            # 调用AI生成设计建议
+                            suggestions = get_ai_design_suggestions(design_idea)
+                            
+                            if suggestions and "designs" in suggestions:
+                                # 保存建议到session state
+                                st.session_state.design_suggestions = suggestions["designs"]
+                                
+                                # 强制页面刷新，以确保建议正确显示
+                                st.rerun()
+                            else:
+                                st.error("Failed to generate design suggestions. Please try again.")
+                
+                # 如果已有设计建议，显示它们
+                if st.session_state.design_suggestions:
+                    st.markdown("### AI Generated Design Suggestions")
+                    
+                    # 使用列布局美化展示
+                    suggestions_cols = st.columns(2)  # 2列显示，每列最多显示3个设计
+                    
+                    for i, design in enumerate(st.session_state.design_suggestions):
+                        with suggestions_cols[i % 2]:  # 交替放置在两列中
+                            with st.container():
+                                # 为每个设计建议创建彩色卡片效果
+                                st.markdown(f"""
+                                <div style="border:1px solid #ddd; padding:15px; margin:8px 0; border-radius:10px; 
+                                     background-color:rgba(240,248,255,0.6); box-shadow: 2px 2px 5px rgba(0,0,0,0.1);">
+                                <h4 style="color:#1E90FF; margin-top:0;">Design {i+1}: {design.get('theme', 'Custom Design')}</h4>
+                                <p><strong>Style:</strong> {design.get('style', 'N/A')}</p>
+                                <p><strong>Colors:</strong> <span style="color:#4B0082;">{design.get('colors', 'N/A')}</span></p>
+                                <p style="font-style:italic;">{design.get('description', '')}</p>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                
+                                # 将此设计用作提示词的按钮 - 更美观的按钮样式
+                                if st.button(f"✨ Use Design {i+1}", key=f"use_design_{i}"):
+                                    # 构建完整的设计提示词
+                                    prompt = f"{design.get('theme')} in {design.get('style')} style with {design.get('colors')} colors. {design.get('description')}"
+                                    # 设置到设计提示输入框
+                                    st.session_state.selected_prompt = prompt
+                                    st.rerun()
+            
+            # 设计生成主题 - 如果有AI建议选择的提示词，则使用它
+            theme = st.text_input("Design prompt (describe your design idea)", 
+                             value=st.session_state.get("selected_prompt", "Elegant minimalist pattern in blue and white colors"))
+            
+            # 如果存在选择的提示词，添加提示
+            if st.session_state.selected_prompt:
+                st.info("👆 Using AI suggested design prompt. You can modify it or enter your own.")
             
             # 生成AI设计按钮
-            if st.button("🎨 Generate Design"):
+            if st.button("🎨 Generate Design", key="generate_design_button"):
                 if not theme.strip():
                     st.warning("Please enter a design prompt!")
                 else:
-                    # 简化提示文本
-                    prompt_text = (
-                        f"Design a pattern with the following description: {theme}. "
-                        f"Create a PNG format image with transparent background, suitable for printing."
-                    )
+                    # 创建进度显示区
+                    progress_container = st.empty()
+                    progress_container.info("🔍 Analyzing your design prompt...")
                     
-                    with st.spinner("🔮 Generating design... please wait"):
-                        custom_design = generate_vector_image(prompt_text)
-                        
-                        if custom_design:
-                            st.session_state.generated_design = custom_design
-                            
-                            # Composite on the original image
-                            composite_image = st.session_state.base_image.copy()
-                            
-                            # Place design at current selection position
-                            left, top = st.session_state.current_box_position
-                            box_size = int(1024 * 0.25)
-                            
-                            # Scale generated pattern to selection area size
-                            scaled_design = custom_design.resize((box_size, box_size), Image.LANCZOS)
-                            
-                            try:
-                                # Ensure transparency channel is used for pasting
-                                composite_image.paste(scaled_design, (left, top), scaled_design)
-                            except Exception as e:
-                                st.warning(f"Transparent channel paste failed, direct paste: {e}")
-                                composite_image.paste(scaled_design, (left, top))
-                            
-                            # 保存最终设计但不立即刷新页面
-                            st.session_state.final_design = composite_image
-                            
-                            # 同时更新current_image以便在T恤图像上直接显示设计
-                            st.session_state.current_image = composite_image.copy()
-                            
-                            # 显示生成成功的消息
-                            st.success("Design successfully generated! Check the design area for the result.")
-                            
-                            # 强制页面刷新以显示结果
-                            st.rerun()
+                    # 检查是否使用AI建议的设计方案
+                    is_ai_suggested = st.session_state.selected_prompt and theme == st.session_state.selected_prompt
+                    
+                    # 构建更丰富的提示文本
+                    if is_ai_suggested:
+                        # 如果是AI建议的设计，使用更具体的提示词
+                        # 从选定的设计方案中提取关键信息
+                        for design in st.session_state.design_suggestions:
+                            if f"{design.get('theme')} in {design.get('style')} style with {design.get('colors')} colors. {design.get('description')}" == theme:
+                                # 使用更具体的设计指南增强提示词
+                                prompt_text = (
+                                    f"Create a T-shirt design with theme: {design.get('theme')}. "
+                                    f"Use {design.get('style')} style with these colors: {design.get('colors')}. "
+                                    f"Design details: {design.get('description')}. "
+                                    f"Create a high-quality PNG image with transparent background, suitable for T-shirt printing. "
+                                    f"The design should be clean, modern and visually appealing."
+                                )
+                                break
                         else:
-                            st.error("Failed to generate image, please try again later.")
+                            # 如果没有找到匹配项，使用原始主题
+                            prompt_text = theme
+                        
+                        progress_container.info("🎭 Using AI suggested design concept...")
+                    else:
+                        # 用户自定义提示词，增强提示内容
+                        prompt_text = (
+                            f"Design a pattern with the following description: {theme}. "
+                            f"Create a PNG format image with transparent background, suitable for printing. "
+                            f"Make the design visually appealing and modern."
+                        )
+                        progress_container.info("🖌️ Preparing your custom design concept...")
+                    
+                    # 更新进度
+                    time.sleep(0.5)  # 短暂延迟以使UI反应更自然
+                    progress_container.info("🧠 Generating unique design based on your prompt...")
+                    
+                    # 调用AI生成图像
+                    custom_design = generate_vector_image(prompt_text)
+                    
+                    if custom_design:
+                        # 更新进度
+                        progress_container.info("✨ Design created! Applying to your T-shirt...")
+                        time.sleep(0.5)  # 短暂延迟
+                        
+                        st.session_state.generated_design = custom_design
+                        
+                        # Composite on the original image
+                        composite_image = st.session_state.base_image.copy()
+                        
+                        # Place design at current selection position
+                        left, top = st.session_state.current_box_position
+                        box_size = int(1024 * 0.25)
+                        
+                        # Scale generated pattern to selection area size
+                        scaled_design = custom_design.resize((box_size, box_size), Image.LANCZOS)
+                        
+                        try:
+                            # Ensure transparency channel is used for pasting
+                            composite_image.paste(scaled_design, (left, top), scaled_design)
+                        except Exception as e:
+                            st.warning(f"Transparent channel paste failed, direct paste: {e}")
+                            composite_image.paste(scaled_design, (left, top))
+                        
+                        # 保存最终设计但不立即刷新页面
+                        st.session_state.final_design = composite_image
+                        
+                        # 同时更新current_image以便在T恤图像上直接显示设计
+                        st.session_state.current_image = composite_image.copy()
+                        
+                        # 清除进度消息并显示成功消息
+                        progress_container.success("🎉 Design successfully applied to your T-shirt!")
+                        
+                        # 添加一些关于设计的反馈
+                        st.markdown(f"""
+                        <div style="background-color:#f0f8ff; padding:10px; border-radius:5px; margin:10px 0;">
+                        <h4>Design Details:</h4>
+                        <p>✅ Applied design based on: "{theme}"</p>
+                        <p>✅ Positioned at your selected location</p>
+                        <p>✅ Ready for customization or download</p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # 强制页面刷新以显示结果
+                        st.rerun()
+                    else:
+                        # 清除进度消息并显示错误
+                        progress_container.error("❌ Could not generate the design. Please try a different prompt or try again later.")
         
         with tab2:
             # 添加文字/Logo选项
