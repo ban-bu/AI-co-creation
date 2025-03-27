@@ -537,6 +537,18 @@ def show_high_complexity_general_sales():
             if st.session_state.current_applied_color != st.session_state.shirt_color_hex:
                 # 颜色已变化，需要重新应用
                 original_image = st.session_state.original_base_image.copy()
+                
+                # 保存当前设计元素
+                has_logo = hasattr(st.session_state, 'applied_logo') and st.session_state.applied_logo is not None
+                temp_logo = None
+                temp_logo_info = None
+                if has_logo:
+                    temp_logo_info = st.session_state.applied_logo.copy()
+                    # 如果已生成的Logo存在，保存它
+                    if hasattr(st.session_state, 'generated_logo'):
+                        temp_logo = st.session_state.generated_logo.copy()
+                
+                # 应用新颜色和纹理
                 colored_image = change_shirt_color(
                     original_image, 
                     st.session_state.shirt_color_hex,
@@ -549,8 +561,71 @@ def show_high_complexity_general_sales():
                 new_image, _ = draw_selection_box(colored_image, st.session_state.current_box_position)
                 st.session_state.current_image = new_image
                 
-                # 如果有最终设计，也需要重新应用颜色
+                # 设置为当前设计
                 st.session_state.final_design = colored_image.copy()
+                
+                # 更新已应用的颜色
+                st.session_state.current_applied_color = st.session_state.shirt_color_hex
+                
+                # 如果有Logo，重新应用Logo
+                if has_logo and temp_logo is not None and temp_logo_info is not None:
+                    try:
+                        # 获取Logo信息
+                        logo_prompt = temp_logo_info.get("prompt", "")
+                        logo_size = temp_logo_info.get("size", 40)
+                        logo_position = temp_logo_info.get("position", "Center")
+                        logo_opacity = temp_logo_info.get("opacity", 100)
+                        
+                        # 获取图像尺寸
+                        img_width, img_height = st.session_state.final_design.size
+                        
+                        # 定义T恤前胸区域
+                        chest_width = int(img_width * 0.95)
+                        chest_height = int(img_height * 0.6)
+                        chest_left = (img_width - chest_width) // 2
+                        chest_top = int(img_height * 0.2)
+                        
+                        # 调整Logo大小
+                        logo_size_factor = logo_size / 100
+                        logo_width = int(chest_width * logo_size_factor * 0.5)
+                        logo_height = int(logo_width * temp_logo.height / temp_logo.width)
+                        logo_resized = temp_logo.resize((logo_width, logo_height), Image.LANCZOS)
+                        
+                        # 位置映射
+                        position_mapping = {
+                            "Top-left": (chest_left + 10, chest_top + 10),
+                            "Top-center": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
+                            "Top-right": (chest_left + chest_width - logo_width - 10, chest_top + 10),
+                            "Center": (chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2),
+                            "Bottom-left": (chest_left + 10, chest_top + chest_height - logo_height - 10),
+                            "Bottom-center": (chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10),
+                            "Bottom-right": (chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10)
+                        }
+                        
+                        logo_x, logo_y = position_mapping.get(logo_position, (chest_left + 10, chest_top + 10))
+                        
+                        # 设置透明度
+                        if logo_opacity < 100:
+                            logo_data = logo_resized.getdata()
+                            new_data = []
+                            for item in logo_data:
+                                r, g, b, a = item
+                                new_a = int(a * logo_opacity / 100)
+                                new_data.append((r, g, b, new_a))
+                            logo_resized.putdata(new_data)
+                        
+                        # 粘贴Logo到新设计
+                        st.session_state.final_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
+                        st.session_state.current_image = st.session_state.final_design.copy()
+                        
+                        # 重新保存Logo信息
+                        st.session_state.applied_logo = temp_logo_info
+                        
+                        print(f"Logo重新应用成功: {logo_prompt}")
+                    except Exception as e:
+                        print(f"重新应用Logo时出错: {e}")
+                        import traceback
+                        print(traceback.format_exc())
                 
                 # 修改颜色变更时重新应用文字的代码
                 if 'applied_text' in st.session_state:
