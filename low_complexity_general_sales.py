@@ -805,11 +805,14 @@ def show_low_complexity_general_sales():
                 font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
                 ai_font = st.selectbox("选择字体风格:", font_options, key="ai_font_selection")
                 
-                # 增加文字大小选项，大幅增加默认值和最大值
-                text_size = st.slider("文字大小:", 20, 300, 150, key="ai_text_size")
+                # 修改文字大小滑块范围
+                text_size = st.slider("文字大小:", 20, 120, 50, key="ai_text_size")
                 
-                # 预览效果
+                # 预览效果 - 确保预览与应用大小一致
                 if text_suggestion:
+                    # 使用与应用时相同的缩放因子
+                    preview_scale_factor = 4.0
+                    preview_text_size = int(text_size * preview_scale_factor * 0.25)  # 缩小以适应预览区域
                     st.markdown(
                         f"""
                         <div style="
@@ -820,7 +823,7 @@ def show_low_complexity_general_sales():
                             font-family: {ai_font}, sans-serif;
                             color: {text_color};
                             text-align: center;
-                            font-size: {text_size}px;
+                            font-size: {preview_text_size}px;
                         ">
                         {text_suggestion}
                         </div>
@@ -867,7 +870,7 @@ def show_low_complexity_general_sales():
                             }
                             
                             # 使用字体缩放因子使字体显著更大
-                            font_scale_factor = 4.0  # 增大字体的缩放因子
+                            font_scale_factor = 6.0  # 进一步增大字体的缩放因子
                             actual_text_size = int(text_size * font_scale_factor)
                             
                             font_file = font_mapping.get(ai_font, "arial.ttf")
@@ -891,11 +894,11 @@ def show_low_complexity_general_sales():
                         # 获取图像尺寸
                         img_width, img_height = new_design.size
                         
-                        # 定义T恤前胸区域 (占整个图像宽度的80%，高度的40%，位于中上部)
-                        chest_width = int(img_width * 0.8)
-                        chest_height = int(img_height * 0.4)
+                        # 定义T恤前胸区域 (占整个图像宽度的90%，高度的50%，位于中上部)
+                        chest_width = int(img_width * 0.9)
+                        chest_height = int(img_height * 0.5)
                         chest_left = (img_width - chest_width) // 2
-                        chest_top = int(img_height * 0.3)  # 位于图像30%的高度处
+                        chest_top = int(img_height * 0.25)  # 位于图像25%的高度处
                         
                         # 计算文字位置 - 在胸前区域居中
                         try:
@@ -934,7 +937,7 @@ def show_low_complexity_general_sales():
                             # 显式保存文本大小设置到会话状态，确保重新应用时使用相同大小
                             st.session_state.last_text_size = actual_text_size
                             
-                            st.success("文字已应用到设计中！")
+                            st.success(f"文字已应用到设计中！字体大小：{actual_text_size}px")
                             st.rerun()
                         except Exception as e:
                             st.error(f"应用文字时出错: {e}")
