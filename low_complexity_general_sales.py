@@ -1007,48 +1007,6 @@ def show_low_complexity_general_sales():
             }.get(st.session_state.shirt_color_hex.upper(), "Custom")
             st.markdown(f"**颜色:** {color_name} ({st.session_state.shirt_color_hex})")
             
-            # 显示调试信息
-            if st.checkbox("显示调试信息", value=True):
-                st.write("---")
-                st.subheader("调试信息")
-                
-                # 显示图像尺寸信息
-                if hasattr(st.session_state, 'tshirt_size'):
-                    st.write(f"T恤图像尺寸: {st.session_state.tshirt_size[0]} x {st.session_state.tshirt_size[1]} 像素")
-                
-                # 显示文字信息
-                if hasattr(st.session_state, 'text_size_info'):
-                    text_info = st.session_state.text_size_info
-                    st.write(f"字体大小: {text_info['font_size']} 像素")
-                    st.write(f"文字宽度: {text_info['text_width']} 像素")
-                    st.write(f"文字高度: {text_info['text_height']} 像素")
-                
-                # 显示位置信息
-                if hasattr(st.session_state, 'text_position'):
-                    st.write(f"文字位置: {st.session_state.text_position}")
-                
-                # 显示设计区域信息
-                if hasattr(st.session_state, 'design_area'):
-                    design_area = st.session_state.design_area
-                    st.write(f"设计区域: 左上({design_area[0]}, {design_area[1]}), 宽高({design_area[2]}, {design_area[3]})")
-                
-                # 显示字体加载路径
-                if hasattr(st.session_state, 'loaded_font_path'):
-                    st.write(f"加载的字体路径: {st.session_state.loaded_font_path}")
-                
-                # 显示字体加载状态
-                if hasattr(st.session_state, 'using_fallback_text'):
-                    if st.session_state.using_fallback_text:
-                        st.error("字体加载失败，使用了回退渲染方法")
-                    else:
-                        st.success("字体加载成功")
-                
-                # 显示详细的字体加载信息（如果存在）
-                if hasattr(st.session_state, 'font_debug_info'):
-                    with st.expander("字体加载详细信息"):
-                        for info in st.session_state.font_debug_info:
-                            st.write(f"- {info}")
-            
             # 添加清空设计按钮
             if st.button("🗑️ 清空所有设计", key="clear_designs"):
                 # 清空所有设计相关的状态变量
