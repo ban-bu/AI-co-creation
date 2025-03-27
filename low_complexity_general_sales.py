@@ -368,18 +368,37 @@ def show_low_complexity_general_sales():
             try:
                 # 加载原始白色T恤图像
                 original_image_path = "white_shirt.png"
-                if not os.path.exists(original_image_path):
-                    st.error(f"T恤图像文件未找到: {original_image_path}")
-                    # 尝试其他可能的路径
-                    alternative_paths = ["./white_shirt.png", "../white_shirt.png", "images/white_shirt.png"]
-                    for alt_path in alternative_paths:
-                        if os.path.exists(alt_path):
-                            original_image_path = alt_path
-                            st.success(f"在备选路径找到T恤图像: {alt_path}")
-                            break
+                # 检查各种可能的路径
+                possible_paths = [
+                    "white_shirt.png",
+                    "./white_shirt.png",
+                    "../white_shirt.png",
+                    "low_complexity_general_sales_files/white_shirt.png",
+                    "images/white_shirt.png",
+                    "white_shirt1.png",
+                    "white_shirt2.png"
+                ]
                 
+                # 尝试所有可能的路径
+                found = False
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        original_image_path = path
+                        st.success(f"找到T恤图像: {path}")
+                        found = True
+                        break
+                
+                if not found:
+                    # 如果未找到，显示当前工作目录和文件列表以便调试
+                    current_dir = os.getcwd()
+                    st.error(f"T恤图像未找到。当前工作目录: {current_dir}")
+                    files = os.listdir(current_dir)
+                    st.error(f"目录内容: {files}")
+                
+                st.info(f"尝试加载图像: {original_image_path}")
                 # 加载图像
                 original_image = Image.open(original_image_path).convert("RGBA")
+                st.success("成功加载T恤图像!")
                 
                 # 保存原始白色T恤图像
                 st.session_state.original_base_image = original_image.copy()
@@ -397,22 +416,8 @@ def show_low_complexity_general_sales():
                 st.session_state.final_design = colored_image.copy()
             except Exception as e:
                 st.error(f"加载T恤图像时出错: {e}")
-                # 创建一个简单的默认T恤图像
-                try:
-                    default_img = Image.new('RGBA', (1024, 1024), color=(255, 255, 255, 255))
-                    draw = ImageDraw.Draw(default_img)
-                    draw.rectangle([(300, 200), (724, 800)], outline=(200, 200, 200), width=2)
-                    draw.text((450, 500), "T-Shirt", fill=(100, 100, 100))
-                    
-                    st.session_state.original_base_image = default_img.copy()
-                    st.session_state.base_image = default_img.copy()
-                    initial_image, initial_pos = draw_selection_box(default_img)
-                    st.session_state.current_image = initial_image
-                    st.session_state.current_box_position = initial_pos
-                    st.session_state.final_design = default_img.copy()
-                except Exception as ex:
-                    st.error(f"创建默认图像也失败: {ex}")
-                    st.stop()
+                import traceback
+                st.error(traceback.format_exc())
         else:
             # 添加颜色变化检测：保存当前应用的颜色，用于检查是否发生变化
             if 'current_applied_color' not in st.session_state:
@@ -452,6 +457,17 @@ def show_low_complexity_general_sales():
                             from PIL import ImageFont
                             import os
                             
+                            # 创建text_info对象来存储文本信息
+                            text_info = {
+                                "text": text_info["text"],
+                                "font": text_info["font"],
+                                "color": text_info["color"],
+                                "size": text_info["size"],
+                                "style": text_info["style"],
+                                "effect": text_info["effect"],
+                                "alignment": text_info["alignment"]
+                            }
+                            
                             # 尝试加载系统字体
                             font = None
                             try:
@@ -482,13 +498,9 @@ def show_low_complexity_general_sales():
                                     text_draw.text((small_text_x + shadow_offset, small_text_y + shadow_offset), 
                                                   text_info["text"], fill=(0, 0, 0, 180), font=font, anchor="mm")
                             
-                            # 将文字颜色从十六进制转换为RGBA
-                            text_rgb = tuple(int(text_info["color"].lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-                            text_rgba = text_rgb + (255,)  # 完全不透明
-                            
                             # 绘制主文字
                             text_draw.text((small_text_x, small_text_y), text_info["text"], 
-                                          fill=text_rgba, font=font, anchor="mm")
+                                          fill=text_info["color"], font=font, anchor="mm")
                             
                             # 裁剪图像
                             bbox = text_img.getbbox()
@@ -550,6 +562,25 @@ def show_low_complexity_general_sales():
                                 from PIL import ImageFont
                                 import os
                                 
+                                # 创建text_info对象来存储文本信息
+                                text_info = {
+                                    "text": text_info["text"],
+                                    "font": text_info["font"],
+                                    "color": text_info["color"],
+                                    "size": text_info["size"],
+                                    "style": text_info["style"],
+                                    "effect": text_info["effect"],
+                                    "alignment": text_info["alignment"]
+                                }
+                                
+                                # 将文字颜色从十六进制转换为RGBA
+                                text_rgb = tuple(int(text_info["color"].lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                                text_rgba = text_rgb + (255,)  # 完全不透明
+                                
+                                # 初始化调试信息列表
+                                font_debug_info = []
+                                font_debug_info.append("开始重新应用文字设计")
+                                
                                 # 尝试加载系统字体
                                 font = None
                                 try:
@@ -582,7 +613,7 @@ def show_low_complexity_general_sales():
                                 
                                 # 绘制主文字 - 居中绘制
                                 text_draw.text((small_text_x, small_text_y), text_info["text"], 
-                                              fill=text_rgba, font=font, anchor="mm")
+                                              fill=text_info["color"], font=font, anchor="mm")
                                 
                                 # 裁剪图像以移除空白部分
                                 # 获取非空像素的边界
@@ -608,9 +639,9 @@ def show_low_complexity_general_sales():
                                     text_img_resized = text_img
                                 
                                 # 计算文字在T恤上的位置
-                                if alignment == "左对齐":
+                                if text_info["alignment"] == "左对齐":
                                     paste_x = int(img_width * 0.2)
-                                elif alignment == "右对齐":
+                                elif text_info["alignment"] == "右对齐":
                                     paste_x = int(img_width * 0.8 - text_img_resized.width)
                                 else:  # 居中
                                     paste_x = (img_width - text_img_resized.width) // 2
@@ -653,7 +684,7 @@ def show_low_complexity_general_sales():
                                     "effect": text_info["effect"],
                                     "alignment": text_info["alignment"],
                                     "position": (paste_x, paste_y),
-                                    "use_drawing_method": text_info.get("use_drawing_method", False)
+                                    "use_drawing_method": True  # 标记使用了绘图方法
                                 }
                                 
                                 # 添加详细调试信息
@@ -1156,6 +1187,25 @@ def show_low_complexity_general_sales():
                                 from PIL import ImageFont
                                 import os
                                 
+                                # 创建text_info对象来存储文本信息
+                                text_info = {
+                                    "text": text_content,
+                                    "font": font_family,
+                                    "color": text_color,
+                                    "size": text_size,
+                                    "style": text_style,
+                                    "effect": text_effect,
+                                    "alignment": alignment
+                                }
+                                
+                                # 将文字颜色从十六进制转换为RGBA
+                                text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                                text_rgba = text_rgb + (255,)  # 完全不透明
+                                
+                                # 初始化调试信息列表
+                                font_debug_info = []
+                                font_debug_info.append("开始重新应用文字设计")
+                                
                                 # 尝试加载系统字体
                                 font = None
                                 try:
@@ -1179,16 +1229,16 @@ def show_low_complexity_general_sales():
                                         offset = 2
                                         for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
                                             text_draw.text((small_text_x + offset_x, small_text_y + offset_y), 
-                                                          text_content, fill="black", font=font, anchor="mm")
+                                                          text_info["text"], fill="black", font=font, anchor="mm")
                                 
                                 if "阴影" in text_info["style"]:
                                     shadow_offset = 4
                                     text_draw.text((small_text_x + shadow_offset, small_text_y + shadow_offset), 
-                                                  text_content, fill=(0, 0, 0, 180), font=font, anchor="mm")
+                                                  text_info["text"], fill=(0, 0, 0, 180), font=font, anchor="mm")
                                 
                                 # 绘制主文字 - 居中绘制
-                                text_draw.text((small_text_x, small_text_y), text_content, 
-                                              fill=text_rgba, font=font, anchor="mm")
+                                text_draw.text((small_text_x, small_text_y), text_info["text"], 
+                                              fill=text_info["color"], font=font, anchor="mm")
                                 
                                 # 裁剪图像以移除空白部分
                                 # 获取非空像素的边界
@@ -1201,7 +1251,7 @@ def show_low_complexity_general_sales():
                                 
                                 # 计算放大比例 - 根据请求的字体大小
                                 # 使用一个比例因子将字体大小转换为图像大小
-                                scale_factor = text_size / 40  # 假设默认字体大小是40
+                                scale_factor = text_info["size"] / 40  # 假设默认字体大小是40
                                 new_width = max(int(text_img.width * scale_factor), 10)
                                 new_height = max(int(text_img.height * scale_factor), 10)
                                 
@@ -1214,9 +1264,9 @@ def show_low_complexity_general_sales():
                                     text_img_resized = text_img
                                 
                                 # 计算文字在T恤上的位置
-                                if alignment == "左对齐":
+                                if text_info["alignment"] == "左对齐":
                                     paste_x = int(img_width * 0.2)
-                                elif alignment == "右对齐":
+                                elif text_info["alignment"] == "右对齐":
                                     paste_x = int(img_width * 0.8 - text_img_resized.width)
                                 else:  # 居中
                                     paste_x = (img_width - text_img_resized.width) // 2
@@ -1229,7 +1279,7 @@ def show_low_complexity_general_sales():
                                 
                                 # 保存文字尺寸信息
                                 st.session_state.text_size_info = {
-                                    "font_size": text_size,
+                                    "font_size": text_info["size"],
                                     "text_bbox": bbox if bbox else (0, 0, 0, 0),
                                     "text_width": text_img_resized.width,
                                     "text_height": text_img_resized.height
@@ -1251,13 +1301,13 @@ def show_low_complexity_general_sales():
                                 
                                 # 保存完整的文字信息
                                 st.session_state.applied_text = {
-                                    "text": text_content,
-                                    "font": font_family,
-                                    "color": text_color,
-                                    "size": text_size,
-                                    "style": text_style,
-                                    "effect": text_effect,
-                                    "alignment": alignment,
+                                    "text": text_info["text"],
+                                    "font": text_info["font"],
+                                    "color": text_info["color"],
+                                    "size": text_info["size"],
+                                    "style": text_info["style"],
+                                    "effect": text_info["effect"],
+                                    "alignment": text_info["alignment"],
                                     "position": (paste_x, paste_y),
                                     "use_drawing_method": True  # 标记使用了绘图方法
                                 }
@@ -1265,8 +1315,8 @@ def show_low_complexity_general_sales():
                                 # 添加详细调试信息
                                 success_msg = f"""
                                 文字已应用到设计中！
-                                字体: {font_family}
-                                大小: {text_size}px
+                                字体: {text_info["font"]}
+                                大小: {text_info["size"]}px
                                 实际宽度: {text_img_resized.width}px
                                 实际高度: {text_img_resized.height}px
                                 位置: ({paste_x}, {paste_y})
