@@ -19,6 +19,7 @@ except ImportError:
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
 import os
+import re
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
@@ -75,7 +76,6 @@ def get_ai_design_suggestions(user_preferences=None):
             try:
                 # 提取颜色代码的简单方法
                 color_matches = {}
-                import re
                 
                 # 查找形如 "颜色名 (#XXXXXX)" 的模式
                 color_pattern = r'([^\s\(\)]+)\s*\(#([0-9A-Fa-f]{6})\)'
@@ -117,27 +117,12 @@ def get_ai_design_suggestions(user_preferences=None):
             formatted_text = re.sub(r'- (.*?)(?=\n- |\n[^-]|\n*$)', r'<div class="suggestion-item">• \1</div>', formatted_text)
             # 强调颜色名称和代码
             formatted_text = re.sub(r'([^\s\(\)]+)\s*\(#([0-9A-Fa-f]{6})\)', r'<span class="color-name">\1</span> <span class="color-code">(#\2)</span>', formatted_text)
-            # 强调引号内的文字并添加点击功能
-            formatted_text = re.sub(r'[""]([^""]+)[""]', r'<span class="suggested-text" onclick="selectText(\'text-\1\')">"<strong>\1</strong>"</span>', formatted_text)
-            formatted_text = re.sub(r'"([^"]+)"', r'<span class="suggested-text" onclick="selectText(\'text-\1\')">"<strong>\1</strong>"</span>', formatted_text)
             
-            # 添加JavaScript函数用于选择文本
+            # 不再使用JavaScript回调，而是简单地加粗文本
+            formatted_text = re.sub(r'[""]([^""]+)[""]', r'"<strong>\1</strong>"', formatted_text)
+            formatted_text = re.sub(r'"([^"]+)"', r'"<strong>\1</strong>"', formatted_text)
+            
             suggestion_with_style = f"""
-            <script>
-            function selectText(textId) {{
-                // 发送消息到Streamlit
-                const data = {{
-                    text: textId.substring(5),  // 移除'text-'前缀
-                    type: "select_text"
-                }};
-                
-                // 使用window.parent发送消息
-                window.parent.postMessage({{
-                    type: "streamlit:setComponentValue",
-                    value: data
-                }}, "*");
-            }}
-            </script>
             <div class="suggestion-container">
             {formatted_text}
             </div>
@@ -430,36 +415,6 @@ def show_low_complexity_general_sales():
                 """, unsafe_allow_html=True)
                 
                 st.markdown(st.session_state.ai_suggestions, unsafe_allow_html=True)
-                
-                # 添加JavaScript回调处理，接收点击事件
-                components_callback = st.components.v1.html(
-                    """
-                    <script>
-                    window.addEventListener('message', function(event) {
-                        if (event.data.type === 'streamlit:setComponentValue') {
-                            const data = event.data.value;
-                            if (data && data.type === 'select_text') {
-                                window.parent.postMessage({
-                                    type: 'streamlit:setComponentValue',
-                                    value: {
-                                        selectedText: data.text,
-                                        targetKey: 'ai_text_suggestion'
-                                    }
-                                }, '*');
-                            }
-                        }
-                    });
-                    </script>
-                    """,
-                    height=0
-                )
-                
-                # 处理文本选择回调
-                if components_callback and 'selectedText' in components_callback:
-                    # 设置文本到会话状态
-                    selected_text = components_callback['selectedText']
-                    st.session_state.ai_text_suggestion = selected_text
-                    st.rerun()
                 
                 # 添加应用建议的部分
                 st.markdown("---")
