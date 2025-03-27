@@ -38,13 +38,22 @@ def get_ai_design_suggestions(user_preferences=None):
     
     # 构建提示词
     prompt = f"""
-    作为T恤设计顾问，请为"{user_preferences}"风格简洁提供以下建议：
+    作为T恤设计顾问，请为"{user_preferences}"风格提供以下设计建议：
 
-    1. 颜色建议：列出3种颜色，格式为"颜色名(#十六进制) - 简短理由"
-    2. 文字建议：推荐2个短语及字体，一句话说明
-    3. Logo建议：推荐2种元素，一句话说明
-    
-    务必保持极度简洁，每点说明不超过15字，总字数控制在150字以内。
+    1. 颜色建议：推荐3种适合的颜色，包括：
+       - 颜色名称和十六进制代码(如 蓝色 (#0000FF))
+       - 为什么这种颜色适合该风格(2-3句话解释)
+       
+    2. 文字建议：推荐2个适合的文字/短语：
+       - 具体文字内容
+       - 推荐的字体风格
+       - 简短说明为什么适合
+       
+    3. Logo元素建议：推荐2种适合的设计元素：
+       - 元素描述
+       - 如何与整体风格搭配
+       
+    确保包含颜色的十六进制代码，保持内容详实但不过于冗长。
     """
     
     try:
@@ -52,7 +61,7 @@ def get_ai_design_suggestions(user_preferences=None):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "你是一个精简的设计顾问，只提供要点，无需详细解释。保持简洁，使用短句，确保包含颜色代码。"},
+                {"role": "system", "content": "你是一个专业的T恤设计顾问，提供有用且具体的建议。包含足够细节让用户理解你的推荐理由，但避免不必要的冗长。确保为每种颜色包含十六进制代码。"},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -80,10 +89,19 @@ def get_ai_design_suggestions(user_preferences=None):
             except Exception as e:
                 print(f"解析颜色代码时出错: {e}")
                 
-            # 添加HTML样式使文本更小，更紧凑
+            # 使用更好的排版处理文本
+            # 替换标题格式
+            formatted_text = suggestion_text
+            # 处理序号段落
+            formatted_text = re.sub(r'(\d\. .*?)(?=\n\d\. |\n*$)', r'<div class="suggestion-section">\1</div>', formatted_text)
+            # 处理子项目符号
+            formatted_text = re.sub(r'- (.*?)(?=\n- |\n[^-]|\n*$)', r'<div class="suggestion-item">• \1</div>', formatted_text)
+            # 强调颜色名称和代码
+            formatted_text = re.sub(r'([^\s\(\)]+)\s*\(#([0-9A-Fa-f]{6})\)', r'<span class="color-name">\1</span> <span class="color-code">(#\2)</span>', formatted_text)
+            
             suggestion_with_style = f"""
-            <div style="font-size: 0.85rem; line-height: 1.2;">
-            {suggestion_text}
+            <div class="suggestion-container">
+            {formatted_text}
             </div>
             """
             
@@ -337,27 +355,34 @@ def show_low_complexity_general_sales():
                 # 添加格式化的建议显示
                 st.markdown("""
                 <style>
-                .suggestion-box {
+                .suggestion-container {
                     background-color: #f8f9fa;
                     border-left: 4px solid #4CAF50;
-                    padding: 8px;
-                    margin: 8px 0;
+                    padding: 15px;
+                    margin: 10px 0;
                     border-radius: 0 5px 5px 0;
-                    font-size: 0.85rem;
-                    line-height: 1.2;
                 }
-                .suggestion-title {
-                    color: #1e88e5;
-                    font-weight: bold;
-                    margin-bottom: 4px;
-                    font-size: 0.9rem;
+                .suggestion-section {
+                    margin-bottom: 12px;
+                    font-weight: 500;
+                }
+                .suggestion-item {
+                    margin-left: 15px;
+                    margin-bottom: 8px;
+                }
+                .color-name {
+                    font-weight: 500;
+                }
+                .color-code {
+                    font-family: monospace;
+                    background-color: #f1f1f1;
+                    padding: 2px 4px;
+                    border-radius: 3px;
                 }
                 </style>
                 """, unsafe_allow_html=True)
                 
-                st.markdown("<div class='suggestion-box'>", unsafe_allow_html=True)
                 st.markdown(st.session_state.ai_suggestions, unsafe_allow_html=True)
-                st.markdown("</div>", unsafe_allow_html=True)
                 
                 # 添加应用建议的部分
                 st.markdown("---")
@@ -388,10 +413,14 @@ def show_low_complexity_general_sales():
                             <div style="
                                 background-color: {color_hex}; 
                                 width: 100%; 
-                                height: 30px; 
+                                height: 40px; 
                                 border-radius: 5px;
                                 border: 1px solid #ddd;
                                 margin-bottom: 5px;">
+                            </div>
+                            <div style="text-align: center; margin-bottom: 10px;">
+                                {color_name}<br>
+                                <span style="font-family: monospace; font-size: 0.9em;">{color_hex}</span>
                             </div>
                             """, 
                             unsafe_allow_html=True
@@ -402,13 +431,41 @@ def show_low_complexity_general_sales():
                 
                 # 文字建议应用
                 st.markdown("##### 应用推荐文字")
-                text_suggestion = st.text_input("输入或复制AI推荐的文字", "", key="ai_text_suggestion")
                 
+                # 改进文字应用部分的布局
+                text_col1, text_col2 = st.columns([2, 1])
+                
+                with text_col1:
+                    text_suggestion = st.text_input("输入或复制AI推荐的文字", "", key="ai_text_suggestion")
+                
+                with text_col2:
+                    text_color = st.color_picker("文字颜色:", "#000000", key="ai_text_color")
+                
+                # 字体选择部分
                 font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
                 ai_font = st.selectbox("选择字体风格:", font_options, key="ai_font_selection")
                 
-                text_color = st.color_picker("选择文字颜色:", "#000000", key="ai_text_color")
+                # 预览效果
+                if text_suggestion:
+                    st.markdown(
+                        f"""
+                        <div style="
+                            padding: 10px;
+                            margin: 10px 0;
+                            border: 1px solid #ddd;
+                            border-radius: 5px;
+                            font-family: {ai_font}, sans-serif;
+                            color: {text_color};
+                            text-align: center;
+                            font-size: 18px;
+                        ">
+                        {text_suggestion}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
                 
+                # 应用按钮
                 if st.button("应用文字到设计", key="apply_ai_text"):
                     # 将文字添加到会话状态中，以便在文字选项卡中使用
                     st.session_state.ai_text_suggestion = text_suggestion
@@ -416,6 +473,7 @@ def show_low_complexity_general_sales():
                     st.session_state.ai_text_color = text_color
                     st.success(f"已选择文字设置，请在\"Add Text/Logo\"选项卡中点击\"Add Text to Design\"应用")
             else:
+                # 显示欢迎信息
                 st.markdown("""
                 <div style="background-color: #f0f7ff; padding: 15px; border-radius: 10px; border-left: 5px solid #1e88e5;">
                 <h4 style="color: #1e88e5; margin-top: 0;">👋 欢迎使用AI设计助手</h4>
