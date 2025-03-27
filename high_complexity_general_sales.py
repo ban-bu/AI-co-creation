@@ -155,7 +155,7 @@ def get_ai_design_suggestions(user_preferences=None):
                                 # 获取第一个Logo描述
                                 first_logo_desc = cleaned_descriptions[0]
                                 # 构建完整的提示词
-                                full_prompt = f"创建一个Logo设计：{first_logo_desc}。要求：1. 使用简洁的设计 2. 适合印花 3. 背景透明 4. 图案清晰可识别"
+                                full_prompt = f"Create a Logo design: {first_logo_desc}. Requirements: 1. Use a simple design 2. Suitable for printing 3. Background transparent 4. Clear and recognizable图案清晰可识别"
                                 
                                 # 调用DALL-E生成图像
                                 logo_image = generate_vector_image(full_prompt)
@@ -171,13 +171,13 @@ def get_ai_design_suggestions(user_preferences=None):
                                     st.session_state.show_generated_logo = True
                                     
                                     # 在控制台打印日志以便调试
-                                    print(f"Logo自动生成成功: {first_logo_desc}")
+                                    print(f"Logo generated successfully: {first_logo_desc}")
                         except Exception as logo_gen_error:
-                            print(f"自动生成Logo时出错: {logo_gen_error}")
+                            print(f"Error generating Logo: {logo_gen_error}")
                             # 如果自动生成失败，不阻止其他功能
                     
             except Exception as e:
-                print(f"解析过程出错: {e}")
+                print(f"Error parsing: {e}")
                 st.session_state.ai_suggested_texts = []
                 
             # 使用更好的排版处理文本
@@ -202,9 +202,9 @@ def get_ai_design_suggestions(user_preferences=None):
             
             # 打印调试信息，确认Logo是否自动生成
             if hasattr(st.session_state, 'generated_logo'):
-                print("已成功生成Logo并保存到session_state")
+                print("Logo generated successfully and saved to session_state")
             else:
-                print("未能生成Logo或未保存到session_state")
+                print("Failed to generate Logo or not saved to session_state")
             
             return suggestion_with_style
         else:
@@ -1990,7 +1990,7 @@ def show_high_complexity_general_sales():
                     if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
                         st.info("You can modify the prompt to regenerate the Logo")
                     
-                    if st.button("生成Logo", key="generate_logo"):
+                    if st.button("Generate Logo", key="generate_logo"):
                         if not logo_prompt:
                             st.warning("Please enter a Logo description")
                         else:
