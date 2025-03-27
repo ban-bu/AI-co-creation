@@ -1013,10 +1013,10 @@ def show_low_complexity_general_sales():
                                 # 创建绘图对象
                                 draw = ImageDraw.Draw(new_design)
                                 
-                                # 导入字体
+                                # 导入字体和相关模块 - 确保这些都在同一个作用域中
                                 from PIL import ImageFont
                                 import platform
-                                import os
+                                import os  # 确保在使用前导入
                                 
                                 # 尝试导入额外的字体支持模块
                                 try:
