@@ -543,7 +543,9 @@ def show_high_complexity_general_sales():
                                     import os
                                     # 尝试直接加载系统字体
                                     if os.path.exists("C:/Windows/Fonts/arial.ttf"):
-                                        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 40)
+                                        # 使用原始文字大小来设置字体大小，而不是固定的40
+                                        font_size = text_info["size"]
+                                        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", font_size)
                                 except Exception:
                                     pass
                                 
@@ -557,13 +559,13 @@ def show_high_complexity_general_sales():
                                 
                                 # 应用效果
                                 if "style" in text_info:
-                                    if "轮廓" in text_info["style"]:
+                                    if "轮廓" in text_info["style"] or "Outline" in text_info["style"]:
                                         offset = 2
                                         for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
                                             text_draw.text((small_text_x + offset_x, small_text_y + offset_y), 
                                                           text_info["text"], fill="black", font=font, anchor="mm")
                                     
-                                    if "阴影" in text_info["style"]:
+                                    if "阴影" in text_info["style"] or "Shadow" in text_info["style"]:
                                         shadow_offset = 4
                                         text_draw.text((small_text_x + shadow_offset, small_text_y + shadow_offset), 
                                                       text_info["text"], fill=(0, 0, 0, 180), font=font, anchor="mm")
@@ -577,24 +579,36 @@ def show_high_complexity_general_sales():
                                 if bbox:
                                     text_img = text_img.crop(bbox)
                                 
-                                # 计算放大比例
-                                scale_factor = text_info["size"] / 40
-                                new_width = max(int(text_img.width * scale_factor), 10)
-                                new_height = max(int(text_img.height * scale_factor), 10)
+                                # 如果存在原始位置和大小信息，直接使用，避免大小变化
+                                if "position" in text_info and "original_size" in text_info:
+                                    # 直接使用原始尺寸和位置
+                                    text_img_resized = text_img.resize(text_info["original_size"], Image.LANCZOS)
+                                    paste_x, paste_y = text_info["position"]
+                                else:
+                                    # 计算放大比例 - 如果使用了字体大小，不需要额外缩放
+                                    if font_size == text_info["size"]:
+                                        # 不需要额外缩放，已经使用了正确的字体大小
+                                        text_img_resized = text_img
+                                    else:
+                                        # 计算比例并缩放
+                                        scale_factor = text_info["size"] / 40
+                                        new_width = max(int(text_img.width * scale_factor), 10)
+                                        new_height = max(int(text_img.height * scale_factor), 10)
+                                        text_img_resized = text_img.resize((new_width, new_height), Image.LANCZOS)
+                                    
+                                    # 计算位置
+                                    if text_info["alignment"] == "left" or text_info["alignment"] == "Left":
+                                        paste_x = int(img_width * 0.2)
+                                    elif text_info["alignment"] == "right" or text_info["alignment"] == "Right":
+                                        paste_x = int(img_width * 0.8 - text_img_resized.width)
+                                    else:  # 居中
+                                        paste_x = (img_width - text_img_resized.width) // 2
+                                    
+                                    # 垂直位置
+                                    paste_y = int(img_height * 0.4 - text_img_resized.height // 2)
                                 
-                                # 放大文字图像
-                                text_img_resized = text_img.resize((new_width, new_height), Image.LANCZOS)
-                                
-                                # 计算位置
-                                if text_info["alignment"] == "left":
-                                    paste_x = int(img_width * 0.2)
-                                elif text_info["alignment"] == "right":
-                                    paste_x = int(img_width * 0.8 - text_img_resized.width)
-                                else:  # 居中
-                                    paste_x = (img_width - text_img_resized.width) // 2
-                                
-                                # 垂直位置
-                                paste_y = int(img_height * 0.4 - text_img_resized.height // 2)
+                                # 保存原始尺寸信息以供后续使用
+                                text_info["original_size"] = (text_img_resized.width, text_img_resized.height)
                                 
                                 # 粘贴到T恤上
                                 st.session_state.final_design.paste(text_img_resized, (paste_x, paste_y), text_img_resized)
@@ -602,6 +616,7 @@ def show_high_complexity_general_sales():
                                 
                                 # 更新位置信息
                                 st.session_state.applied_text["position"] = (paste_x, paste_y)
+                                st.session_state.applied_text["original_size"] = text_info["original_size"]
                                 
                             except Exception as e:
                                 st.warning(f"Error reapplying text using drawing method: {e}")
@@ -1725,84 +1740,84 @@ def show_high_complexity_general_sales():
                                             
                                             # 绘制当前行
                                             text_draw.text((line_x, line_y), line, fill=text_rgba, font=font)
-                                    else:
-                                        # 单行文本
-                                        text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
-                                    
-                                    # 特殊效果处理
-                                    if text_info["effect"] != "none" and text_info["effect"] != "None":
-                                        font_debug_info.append(f"Applying special effect: {text_info['effect']}")
-                                        if text_info["effect"] == "Gradient":
-                                            # 简单实现渐变效果
-                                            gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
-                                            gradient_draw = ImageDraw.Draw(gradient_layer)
-                                            
-                                            # 先绘制文字蒙版
-                                            gradient_draw.text((text_x, text_y), text_info["text"], 
-                                                             fill=(255, 255, 255, 255), font=font)
-                                            
-                                            # 创建渐变色彩
-                                            from_color = text_rgb
-                                            to_color = (255 - text_rgb[0], 255 - text_rgb[1], 255 - text_rgb[2])
-                                            
-                                            # 将渐变应用到文字
-                                            gradient_data = gradient_layer.getdata()
-                                            new_data = []
-                                            for i, item in enumerate(gradient_data):
-                                                y_pos = i // img_width  # 计算像素的y位置
-                                                if item[3] > 0:  # 如果是文字部分
-                                                    # 根据y位置计算颜色混合比例
-                                                    ratio = y_pos / text_height
-                                                    if ratio > 1: ratio = 1
-                                                    
-                                                    # 线性混合两种颜色
-                                                    r = int(from_color[0] * (1 - ratio) + to_color[0] * ratio)
-                                                    g = int(from_color[1] * (1 - ratio) + to_color[1] * ratio)
-                                                    b = int(from_color[2] * (1 - ratio) + to_color[2] * ratio)
-                                                    new_data.append((r, g, b, item[3]))
-                                                else:
-                                                    new_data.append(item)  # 保持透明部分
-                                            
-                                            gradient_layer.putdata(new_data)
-                                            text_layer = gradient_layer
-                                    
-                                    # 应用文字到设计
-                                    new_design.paste(text_layer, (0, 0), text_layer)
-                                    
-                                    # 保存相关信息
-                                    st.session_state.text_position = (text_x, text_y)
-                                    st.session_state.text_size_info = {
-                                        "font_size": render_size,
-                                        "text_width": text_width,
-                                        "text_height": text_height
-                                    }
-                                    
-                                    # 应用成功
-                                    font_debug_info.append("High-definition text rendering applied successfully")
-                                
-                                except Exception as render_err:
-                                    font_debug_info.append(f"High-definition rendering failed: {str(render_err)}")
-                                    import traceback
-                                    font_debug_info.append(traceback.format_exc())
-                                    
-                                    # 紧急备用方案 - 创建一个简单文字图像
-                                    try:
-                                        font_debug_info.append("Using emergency backup rendering method")
-                                        # 创建一个白色底的图像
-                                        emergency_img = Image.new('RGBA', (img_width//2, img_height//5), (255, 255, 255, 255))
-                                        emergency_draw = ImageDraw.Draw(emergency_img)
+                                        else:
+                                            # 单行文本
+                                            text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
                                         
-                                        # 使用黑色绘制文字，较大字号确保可见
-                                        emergency_draw.text((10, 10), text_info["text"], fill="black")
+                                        # 特殊效果处理
+                                        if text_info["effect"] != "none" and text_info["effect"] != "None":
+                                            font_debug_info.append(f"Applying special effect: {text_info['effect']}")
+                                            if text_info["effect"] == "Gradient":
+                                                # 简单实现渐变效果
+                                                gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
+                                                gradient_draw = ImageDraw.Draw(gradient_layer)
+                                                
+                                                # 先绘制文字蒙版
+                                                gradient_draw.text((text_x, text_y), text_info["text"], 
+                                                                 fill=(255, 255, 255, 255), font=font)
+                                                
+                                                # 创建渐变色彩
+                                                from_color = text_rgb
+                                                to_color = (255 - text_rgb[0], 255 - text_rgb[1], 255 - text_rgb[2])
+                                                
+                                                # 将渐变应用到文字
+                                                gradient_data = gradient_layer.getdata()
+                                                new_data = []
+                                                for i, item in enumerate(gradient_data):
+                                                    y_pos = i // img_width  # 计算像素的y位置
+                                                    if item[3] > 0:  # 如果是文字部分
+                                                        # 根据y位置计算颜色混合比例
+                                                        ratio = y_pos / text_height
+                                                        if ratio > 1: ratio = 1
+                                                        
+                                                        # 线性混合两种颜色
+                                                        r = int(from_color[0] * (1 - ratio) + to_color[0] * ratio)
+                                                        g = int(from_color[1] * (1 - ratio) + to_color[1] * ratio)
+                                                        b = int(from_color[2] * (1 - ratio) + to_color[2] * ratio)
+                                                        new_data.append((r, g, b, item[3]))
+                                                    else:
+                                                        new_data.append(item)  # 保持透明部分
+                                                
+                                                gradient_layer.putdata(new_data)
+                                                text_layer = gradient_layer
                                         
-                                        # 放置在T恤中心位置
-                                        paste_x = (img_width - emergency_img.width) // 2
-                                        paste_y = (img_height - emergency_img.height) // 2
+                                        # 应用文字到设计
+                                        new_design.paste(text_layer, (0, 0), text_layer)
                                         
-                                        new_design.paste(emergency_img, (paste_x, paste_y))
-                                        font_debug_info.append("Applied emergency text rendering")
-                                    except Exception as emergency_err:
-                                        font_debug_info.append(f"Emergency rendering also failed: {str(emergency_err)}")
+                                        # 保存相关信息
+                                        st.session_state.text_position = (text_x, text_y)
+                                        st.session_state.text_size_info = {
+                                            "font_size": render_size,
+                                            "text_width": text_width,
+                                            "text_height": text_height
+                                        }
+                                        
+                                        # 应用成功
+                                        font_debug_info.append("High-definition text rendering applied successfully")
+                                    
+                                    except Exception as render_err:
+                                        font_debug_info.append(f"High-definition rendering failed: {str(render_err)}")
+                                        import traceback
+                                        font_debug_info.append(traceback.format_exc())
+                                        
+                                        # 紧急备用方案 - 创建一个简单文字图像
+                                        try:
+                                            font_debug_info.append("Using emergency backup rendering method")
+                                            # 创建一个白色底的图像
+                                            emergency_img = Image.new('RGBA', (img_width//2, img_height//5), (255, 255, 255, 255))
+                                            emergency_draw = ImageDraw.Draw(emergency_img)
+                                            
+                                            # 使用黑色绘制文字，较大字号确保可见
+                                            emergency_draw.text((10, 10), text_info["text"], fill="black")
+                                            
+                                            # 放置在T恤中心位置
+                                            paste_x = (img_width - emergency_img.width) // 2
+                                            paste_y = (img_height - emergency_img.height) // 2
+                                            
+                                            new_design.paste(emergency_img, (paste_x, paste_y))
+                                            font_debug_info.append("Applied emergency text rendering")
+                                        except Exception as emergency_err:
+                                            font_debug_info.append(f"Emergency rendering also failed: {str(emergency_err)}")
                                 
                                 # 保存字体加载和渲染信息
                                 st.session_state.font_debug_info = font_debug_info
