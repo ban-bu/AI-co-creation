@@ -446,6 +446,7 @@ def show_low_complexity_general_sales():
                             "Courier": "cour.ttf",
                             "Verdana": "verdana.ttf",
                             "Georgia": "georgia.ttf",
+                            "Script": "SCRIPTBL.TTF",
                             "Impact": "impact.ttf"
                         }
                         
@@ -456,8 +457,8 @@ def show_low_complexity_general_sales():
                             "/usr/share/fonts/truetype/",
                         ]
                         
-                        # 使用固定的大像素值，与应用文字逻辑保持一致
-                        font_size = 250  # 固定使用250像素的大字体
+                        # 使用保存在会话状态中的实际字体大小，而不是固定值
+                        font_size = text_info["size"]
                         
                         font_file = font_mapping.get(text_info["font"], "arial.ttf")
                         for path in system_font_paths:
@@ -470,27 +471,56 @@ def show_low_complexity_general_sales():
                         if font is None:
                             font = ImageFont.load_default()
                         
-                        # 计算文字位置 - 在中心位置
+                        # 获取图像尺寸和选择框位置
                         img_width, img_height = st.session_state.final_design.size
+                        
+                        # 使用保存的文字信息来计算位置
                         text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
                         text_width = text_bbox[2] - text_bbox[0]
                         text_height = text_bbox[3] - text_bbox[1]
                         
-                        # 居中位置
-                        text_x = (img_width - text_width) // 2
-                        text_y = (img_height // 2) - (text_height // 2)
-                        
-                        # 将位置略微向上移动
-                        text_y = int(text_y * 0.8)
+                        # 如果已有位置信息，使用它；否则计算新位置
+                        if "position" in text_info and "alignment" in text_info:
+                            # 根据保存的对齐方式重新计算位置
+                            left, top = st.session_state.current_box_position
+                            box_size = int(1024 * 0.25)
+                            
+                            if text_info["alignment"] == "左对齐":
+                                text_x = left + 10
+                            elif text_info["alignment"] == "右对齐":
+                                text_x = left + box_size - text_width - 10
+                            else:  # 居中
+                                text_x = left + (box_size - text_width) // 2
+                            
+                            text_y = top + (box_size - text_height) // 2
+                        else:
+                            # 如果没有保存位置信息，在图像中央放置文字
+                            text_x = (img_width - text_width) // 2
+                            text_y = (img_height // 2) - (text_height // 2)
+                            # 将位置略微向上移动
+                            text_y = int(text_y * 0.8)
                         
                         # 绘制文字
                         draw.text((text_x, text_y), text_info["text"], fill=text_info["color"], font=font)
                         
+                        # 应用特殊效果
+                        if "style" in text_info:
+                            if "轮廓" in text_info["style"]:
+                                # 绘制简单的轮廓效果
+                                for offset_x, offset_y in [(1,1), (-1,-1), (1,-1), (-1,1)]:
+                                    draw.text((text_x + offset_x, text_y + offset_y), text_info["text"], fill="black", font=font)
+                                draw.text((text_x, text_y), text_info["text"], fill=text_info["color"], font=font)
+                            
+                            if "阴影" in text_info["style"]:
+                                # 绘制简单的阴影效果
+                                shadow_offset = 3
+                                draw.text((text_x + shadow_offset, text_y + shadow_offset), text_info["text"], fill="rgba(0,0,0,128)", font=font)
+                                draw.text((text_x, text_y), text_info["text"], fill=text_info["color"], font=font)
+                        
                         # 更新当前图像
                         st.session_state.current_image = st.session_state.final_design.copy()
                         
-                        # 更新文字信息
-                        st.session_state.applied_text["size"] = font_size
+                        # 更新文字信息中的位置
                         st.session_state.applied_text["position"] = (text_x, text_y)
                         
                     except Exception as e:
