@@ -495,14 +495,20 @@ def show_high_complexity_general_sales():
                     original_image = Image.open("white_shirt.png").convert("RGBA")
                     st.session_state.original_base_image = original_image.copy()
                 
+                # 保存fabric_type的信息，以便恢复或变更
+                current_fabric_type = st.session_state.get('fabric_type')
+                
                 # 从原始图像应用新颜色和纹理
                 colored_image = change_shirt_color(
                     original_image, 
                     st.session_state.shirt_color_hex,
                     apply_texture=True,  # 应用纹理
-                    fabric_type=st.session_state.fabric_type  # 使用当前选择的面料
+                    fabric_type=current_fabric_type  # 使用当前选择的面料
                 )
+                
+                # 更新会话状态
                 st.session_state.base_image = colored_image
+                st.session_state.current_applied_color = st.session_state.shirt_color_hex
                 
                 # 更新当前图像和位置
                 new_image, _ = draw_selection_box(colored_image, st.session_state.current_box_position)
@@ -1343,30 +1349,41 @@ def show_high_complexity_general_sales():
                                 # 更新面料类型
                                 st.session_state.fabric_type = fabric_name
                                 
-                                # 应用面料纹理
-                                if st.session_state.original_base_image is not None:
-                                    try:
-                                        # 应用纹理
-                                        new_colored_image = change_shirt_color(
-                                            st.session_state.original_base_image,
-                                            st.session_state.shirt_color_hex,
-                                            apply_texture=True,
-                                            fabric_type=fabric_name
-                                        )
-                                        st.session_state.base_image = new_colored_image
-                                        
-                                        # 更新当前图像
-                                        new_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
-                                        st.session_state.current_image = new_image
-                                        
-                                        # 如果有最终设计，也需要更新
-                                        if st.session_state.final_design is not None:
-                                            st.session_state.final_design = new_colored_image.copy()
-                                        
-                                        st.success(f"Applied {fabric_name} texture")
-                                        st.rerun()
-                                    except Exception as e:
-                                        st.warning(f"Error applying fabric texture: {e}")
+                                # 检查是否需要更新纹理
+                                if st.session_state.current_applied_fabric != fabric_name:
+                                    # 设置需要更新纹理标记
+                                    st.session_state.needs_texture_update = True
+                                    # 记录当前选择的面料类型，稍后会更新current_applied_fabric
+                                    st.session_state.selected_fabric_type = fabric_name
+                                    st.rerun()
+                                else:
+                                    # 应用面料纹理
+                                    if st.session_state.original_base_image is not None:
+                                        try:
+                                            # 应用纹理
+                                            new_colored_image = change_shirt_color(
+                                                st.session_state.original_base_image,
+                                                st.session_state.shirt_color_hex,
+                                                apply_texture=True,
+                                                fabric_type=fabric_name
+                                            )
+                                            st.session_state.base_image = new_colored_image
+                                            
+                                            # 更新当前图像
+                                            new_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                                            st.session_state.current_image = new_image
+                                            
+                                            # 如果有最终设计，也需要更新
+                                            if st.session_state.final_design is not None:
+                                                st.session_state.final_design = new_colored_image.copy()
+                                            
+                                            # 更新当前应用的面料类型
+                                            st.session_state.current_applied_fabric = fabric_name
+                                            
+                                            st.success(f"Applied {fabric_name} texture")
+                                            st.rerun()
+                                        except Exception as e:
+                                            st.warning(f"Error applying fabric texture: {e}")
                 
                 st.markdown("---")
                 st.markdown("**All Available Fabrics:**")
@@ -1396,32 +1413,43 @@ def show_high_complexity_general_sales():
                         old_fabric = st.session_state.fabric_type
                         st.session_state.fabric_type = fabric_type
                         
-                        # 无论面料类型是否改变，都应用纹理
-                        if st.session_state.original_base_image is not None:
-                            try:
-                                # 应用纹理
-                                new_colored_image = change_shirt_color(
-                                    st.session_state.original_base_image, 
-                                    st.session_state.shirt_color_hex,
-                                    apply_texture=True, 
-                                    fabric_type=fabric_type
-                                )
-                                st.session_state.base_image = new_colored_image
-                                
-                                # 更新当前图像
-                                new_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
-                                st.session_state.current_image = new_image
-                                
-                                # 如果有最终设计，也需要更新
-                                if st.session_state.final_design is not None:
-                                    st.session_state.final_design = new_colored_image.copy()
-                                
-                                st.rerun()
-                            except Exception as e:
-                                st.warning(f"应用面料纹理时出错: {e}")
-                        
-                        # 显示确认信息
-                        st.success(f"Fabric texture updated: {fabric_type}")
+                        # 检查面料类型是否已经改变
+                        if old_fabric != fabric_type:
+                            # 如果改变了，设置需要更新纹理标记
+                            st.session_state.needs_texture_update = True
+                            # 记录当前选择的面料类型，稍后会更新current_applied_fabric
+                            st.session_state.selected_fabric_type = fabric_type
+                            st.rerun()
+                        else:
+                            # 无论面料类型是否改变，都应用纹理
+                            if st.session_state.original_base_image is not None:
+                                try:
+                                    # 应用纹理
+                                    new_colored_image = change_shirt_color(
+                                        st.session_state.original_base_image, 
+                                        st.session_state.shirt_color_hex,
+                                        apply_texture=True, 
+                                        fabric_type=fabric_type
+                                    )
+                                    st.session_state.base_image = new_colored_image
+                                    
+                                    # 更新当前图像
+                                    new_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                                    st.session_state.current_image = new_image
+                                    
+                                    # 如果有最终设计，也需要更新
+                                    if st.session_state.final_design is not None:
+                                        st.session_state.final_design = new_colored_image.copy()
+                                    
+                                    # 更新当前应用的面料类型
+                                    st.session_state.current_applied_fabric = fabric_type
+                                    
+                                    st.rerun()
+                                except Exception as e:
+                                    st.warning(f"应用面料纹理时出错: {e}")
+                            
+                            # 显示确认信息
+                            st.success(f"Fabric texture updated: {fabric_type}")
                 
                 # 文字建议应用
                 st.markdown("##### Apply recommended text")
@@ -1758,60 +1786,60 @@ def show_high_complexity_general_sales():
                                             
                                             # 绘制当前行
                                             text_draw.text((line_x, line_y), line, fill=text_rgba, font=font)
-                                    else:
-                                        # 单行文本
-                                        text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
-                                    
-                                    # 特殊效果处理
-                                    if text_info["effect"] != "none" and text_info["effect"] != "None":
-                                        font_debug_info.append(f"Applying special effect: {text_info['effect']}")
-                                        if text_info["effect"] == "Gradient":
-                                            # 简单实现渐变效果
-                                            gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
-                                            gradient_draw = ImageDraw.Draw(gradient_layer)
-                                            
-                                            # 先绘制文字蒙版
-                                            gradient_draw.text((text_x, text_y), text_info["text"], 
-                                                             fill=(255, 255, 255, 255), font=font)
-                                            
-                                            # 创建渐变色彩
-                                            from_color = text_rgb
-                                            to_color = (255 - text_rgb[0], 255 - text_rgb[1], 255 - text_rgb[2])
-                                            
-                                            # 将渐变应用到文字
-                                            gradient_data = gradient_layer.getdata()
-                                            new_data = []
-                                            for i, item in enumerate(gradient_data):
-                                                y_pos = i // img_width  # 计算像素的y位置
-                                                if item[3] > 0:  # 如果是文字部分
-                                                    # 根据y位置计算颜色混合比例
-                                                    ratio = y_pos / text_height
-                                                    if ratio > 1: ratio = 1
-                                                    
-                                                    # 线性混合两种颜色
-                                                    r = int(from_color[0] * (1 - ratio) + to_color[0] * ratio)
-                                                    g = int(from_color[1] * (1 - ratio) + to_color[1] * ratio)
-                                                    b = int(from_color[2] * (1 - ratio) + to_color[2] * ratio)
-                                                    new_data.append((r, g, b, item[3]))
-                                                else:
-                                                    new_data.append(item)  # 保持透明部分
-                                            
-                                            gradient_layer.putdata(new_data)
-                                            text_layer = gradient_layer
-                                    
-                                    # 应用文字到设计
-                                    new_design.paste(text_layer, (0, 0), text_layer)
-                                    
-                                    # 保存相关信息
-                                    st.session_state.text_position = (text_x, text_y)
-                                    st.session_state.text_size_info = {
-                                        "font_size": render_size,
-                                        "text_width": text_width,
-                                        "text_height": text_height
-                                    }
-                                    
-                                    # 应用成功
-                                    font_debug_info.append("High-definition text rendering applied successfully")
+                                        else:
+                                            # 单行文本
+                                            text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
+                                        
+                                        # 特殊效果处理
+                                        if text_info["effect"] != "none" and text_info["effect"] != "None":
+                                            font_debug_info.append(f"Applying special effect: {text_info['effect']}")
+                                            if text_info["effect"] == "Gradient":
+                                                # 简单实现渐变效果
+                                                gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
+                                                gradient_draw = ImageDraw.Draw(gradient_layer)
+                                                
+                                                # 先绘制文字蒙版
+                                                gradient_draw.text((text_x, text_y), text_info["text"], 
+                                                                 fill=(255, 255, 255, 255), font=font)
+                                                
+                                                # 创建渐变色彩
+                                                from_color = text_rgb
+                                                to_color = (255 - text_rgb[0], 255 - text_rgb[1], 255 - text_rgb[2])
+                                                
+                                                # 将渐变应用到文字
+                                                gradient_data = gradient_layer.getdata()
+                                                new_data = []
+                                                for i, item in enumerate(gradient_data):
+                                                    y_pos = i // img_width  # 计算像素的y位置
+                                                    if item[3] > 0:  # 如果是文字部分
+                                                        # 根据y位置计算颜色混合比例
+                                                        ratio = y_pos / text_height
+                                                        if ratio > 1: ratio = 1
+                                                        
+                                                        # 线性混合两种颜色
+                                                        r = int(from_color[0] * (1 - ratio) + to_color[0] * ratio)
+                                                        g = int(from_color[1] * (1 - ratio) + to_color[1] * ratio)
+                                                        b = int(from_color[2] * (1 - ratio) + to_color[2] * ratio)
+                                                        new_data.append((r, g, b, item[3]))
+                                                    else:
+                                                        new_data.append(item)  # 保持透明部分
+                                                
+                                                gradient_layer.putdata(new_data)
+                                                text_layer = gradient_layer
+                                        
+                                        # 应用文字到设计
+                                        new_design.paste(text_layer, (0, 0), text_layer)
+                                        
+                                        # 保存相关信息
+                                        st.session_state.text_position = (text_x, text_y)
+                                        st.session_state.text_size_info = {
+                                            "font_size": render_size,
+                                            "text_width": text_width,
+                                            "text_height": text_height
+                                        }
+                                        
+                                        # 应用成功
+                                        font_debug_info.append("High-definition text rendering applied successfully")
                                 
                                 except Exception as render_err:
                                     font_debug_info.append(f"High-definition rendering failed: {str(render_err)}")
