@@ -338,43 +338,16 @@ def show_low_complexity_general_sales():
     
     <div style="margin-left:15px">
     <h5 style="color:#2196F3">1. T-shirt Color Selection</h5>
-    <ul>
-        <li>Choose from AI-recommended colors based on your style</li>
-        <li>Select from preset color options</li>
-        <li>Use a color picker for custom colors</li>
-    </ul>
+    <p>Choose your preferred T-shirt color from AI recommendations, preset options, or use a custom color picker to find the perfect shade for your design.</p>
     
     <h5 style="color:#2196F3">2. Text Customization</h5>
-    <ul>
-        <li>Add custom text or use AI-suggested phrases</li>
-        <li>Adjust text properties:
-            <ul>
-                <li>Font style and size</li>
-                <li>Color and alignment</li>
-                <li>Special effects (shadow, outline, gradient)</li>
-            </ul>
-        </li>
-    </ul>
+    <p>Add personalized text with customizable font styles, sizes, colors, and special effects like shadows, outlines, or gradients to create eye-catching designs.</p>
     
     <h5 style="color:#2196F3">3. Logo Integration</h5>
-    <ul>
-        <li>Upload your own logo</li>
-        <li>Choose from preset logo designs</li>
-        <li>Customize logo:
-            <ul>
-                <li>Size and position</li>
-                <li>Opacity level</li>
-                <li>Placement options</li>
-            </ul>
-        </li>
-    </ul>
+    <p>Enhance your design by uploading your own logo or selecting from our preset collection, with options to adjust size, position, and transparency.</p>
     
     <h5 style="color:#2196F3">4. Design Positioning</h5>
-    <ul>
-        <li>Flexible placement options for both text and logos</li>
-        <li>Multiple position presets (top, center, bottom)</li>
-        <li>Fine-tune element positioning</li>
-    </ul>
+    <p>Fine-tune the placement of your text and logo elements using intuitive positioning controls and preset alignment options for perfect composition.</p>
     </div>
     
     <p style="margin-top:15px; color:#666">
@@ -405,7 +378,7 @@ def show_low_complexity_general_sales():
     
     with preview_col:
         # T恤预览区
-        st.markdown("### Design Preview")
+        st.markdown("### T-shirt Design")
         
         # Load T-shirt base image
         if st.session_state.base_image is None:
@@ -431,7 +404,6 @@ def show_low_complexity_general_sales():
                 for path in possible_paths:
                     if os.path.exists(path):
                         original_image_path = path
-                        st.success(f"Found t-shirt image: {path}")
                         found = True
                         break
                 
@@ -442,10 +414,8 @@ def show_low_complexity_general_sales():
                     files = os.listdir(current_dir)
                     st.error(f"Directory contents: {files}")
                 
-                st.info(f"Trying to load image: {original_image_path}")
                 # 加载图像
                 original_image = Image.open(original_image_path).convert("RGBA")
-                st.success("Successfully loaded t-shirt image!")
                 
                 # 保存原始白色T恤图像
                 st.session_state.original_base_image = original_image.copy()
