@@ -1792,27 +1792,27 @@ def show_high_complexity_general_sales():
                                         
                                         # 特殊效果处理
                                         if text_info["effect"] != "none" and text_info["effect"] != "None":
-                                            font_debug_info.append(f"Applying special effect: {text_info['effect']}")
-                                            if text_info["effect"] == "Gradient":
-                                                # 简单实现渐变效果
-                                                gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
-                                                gradient_draw = ImageDraw.Draw(gradient_layer)
-                                                
-                                                # 先绘制文字蒙版
-                                                gradient_draw.text((text_x, text_y), text_info["text"], 
-                                                                 fill=(255, 255, 255, 255), font=font)
-                                                
-                                                # 创建渐变色彩
-                                                from_color = text_rgb
-                                                to_color = (255 - text_rgb[0], 255 - text_rgb[1], 255 - text_rgb[2])
-                                                
-                                                # 将渐变应用到文字
-                                                gradient_data = gradient_layer.getdata()
-                                                new_data = []
-                                                for i, item in enumerate(gradient_data):
-                                                    y_pos = i // img_width  # 计算像素的y位置
-                                                    if item[3] > 0:  # 如果是文字部分
-                                                        # 根据y位置计算颜色混合比例
+                                                font_debug_info.append(f"Applying special effect: {text_info['effect']}")
+                                                if text_info["effect"] == "Gradient":
+                                                    # 简单实现渐变效果
+                                                    gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
+                                                    gradient_draw = ImageDraw.Draw(gradient_layer)
+                                                    
+                                                    # 先绘制文字蒙版
+                                                    gradient_draw.text((text_x, text_y), text_info["text"], 
+                                                                     fill=(255, 255, 255, 255), font=font)
+                                                    
+                                                    # 创建渐变色彩
+                                                    from_color = text_rgb
+                                                    to_color = (255 - text_rgb[0], 255 - text_rgb[1], 255 - text_rgb[2])
+                                                    
+                                                    # 将渐变应用到文字
+                                                    gradient_data = gradient_layer.getdata()
+                                                    new_data = []
+                                                    for i, item in enumerate(gradient_data):
+                                                        y_pos = i // img_width  # 计算像素的y位置
+                                                        if item[3] > 0:  # 如果是文字部分
+                                                            # 根据y位置计算颜色混合比例
                                                         ratio = y_pos / text_height
                                                         if ratio > 1: ratio = 1
                                                         
@@ -1905,10 +1905,7 @@ def show_high_complexity_general_sales():
                                     import traceback
                                     st.error(traceback.format_exc())
                             
-                        except Exception as e:
-                            st.error(f"Error applying text: {str(e)}")
-                            import traceback
-                            st.error(traceback.format_exc())
+
                 
                 # 添加Logo选择功能
                 st.markdown("##### Apply Logo")
