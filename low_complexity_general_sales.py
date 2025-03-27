@@ -344,6 +344,12 @@ def show_low_complexity_general_sales():
         st.session_state.shirt_color_hex = "#FFFFFF"  # 默认白色
     if 'original_base_image' not in st.session_state:
         st.session_state.original_base_image = None  # 保存原始白色T恤图像
+    if 'base_image' not in st.session_state:
+        st.session_state.base_image = None  # 确保base_image变量被初始化
+    if 'current_image' not in st.session_state:
+        st.session_state.current_image = None  # 确保current_image变量被初始化
+    if 'final_design' not in st.session_state:
+        st.session_state.final_design = None  # 确保final_design变量被初始化
     if 'ai_suggestions' not in st.session_state:
         st.session_state.ai_suggestions = None  # 存储AI建议
     
@@ -355,11 +361,26 @@ def show_low_complexity_general_sales():
     
     with preview_col:
         # T恤预览区
+        st.markdown("### 设计预览")
+        
         # Load T-shirt base image
         if st.session_state.base_image is None:
             try:
                 # 加载原始白色T恤图像
-                original_image = Image.open("white_shirt.png").convert("RGBA")
+                original_image_path = "white_shirt.png"
+                if not os.path.exists(original_image_path):
+                    st.error(f"T恤图像文件未找到: {original_image_path}")
+                    # 尝试其他可能的路径
+                    alternative_paths = ["./white_shirt.png", "../white_shirt.png", "images/white_shirt.png"]
+                    for alt_path in alternative_paths:
+                        if os.path.exists(alt_path):
+                            original_image_path = alt_path
+                            st.success(f"在备选路径找到T恤图像: {alt_path}")
+                            break
+                
+                # 加载图像
+                original_image = Image.open(original_image_path).convert("RGBA")
+                
                 # 保存原始白色T恤图像
                 st.session_state.original_base_image = original_image.copy()
                 
@@ -371,9 +392,27 @@ def show_low_complexity_general_sales():
                 initial_image, initial_pos = draw_selection_box(colored_image)
                 st.session_state.current_image = initial_image
                 st.session_state.current_box_position = initial_pos
+                
+                # 设置初始最终设计为彩色T恤
+                st.session_state.final_design = colored_image.copy()
             except Exception as e:
-                st.error(f"Error loading white T-shirt image: {e}")
-                st.stop()
+                st.error(f"加载T恤图像时出错: {e}")
+                # 创建一个简单的默认T恤图像
+                try:
+                    default_img = Image.new('RGBA', (1024, 1024), color=(255, 255, 255, 255))
+                    draw = ImageDraw.Draw(default_img)
+                    draw.rectangle([(300, 200), (724, 800)], outline=(200, 200, 200), width=2)
+                    draw.text((450, 500), "T-Shirt", fill=(100, 100, 100))
+                    
+                    st.session_state.original_base_image = default_img.copy()
+                    st.session_state.base_image = default_img.copy()
+                    initial_image, initial_pos = draw_selection_box(default_img)
+                    st.session_state.current_image = initial_image
+                    st.session_state.current_box_position = initial_pos
+                    st.session_state.final_design = default_img.copy()
+                except Exception as ex:
+                    st.error(f"创建默认图像也失败: {ex}")
+                    st.stop()
         else:
             # 添加颜色变化检测：保存当前应用的颜色，用于检查是否发生变化
             if 'current_applied_color' not in st.session_state:
@@ -505,35 +544,38 @@ def show_low_complexity_general_sales():
                 st.session_state.current_applied_color = st.session_state.shirt_color_hex
         
         # Display current image and get click coordinates
-        st.markdown("### 设计预览")
-        current_image = st.session_state.current_image
-        
-        # 确保T恤图像能完整显示
-        coordinates = streamlit_image_coordinates(
-            current_image,
-            key="shirt_image",
-            width="100%"
-        )
-        
-        # 添加CSS修复图像显示问题
-        st.markdown("""
-        <style>
-        .stImage img {
-            max-width: 100%;
-            height: auto;
-            object-fit: contain;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        # Handle selection area logic - simplify to directly move red box
-        if coordinates:
-            # Update selection box at current mouse position
-            current_point = (coordinates["x"], coordinates["y"])
-            temp_image, new_pos = draw_selection_box(st.session_state.base_image, current_point)
-            st.session_state.current_image = temp_image
-            st.session_state.current_box_position = new_pos
-            st.rerun()
+        # 确保current_image存在
+        if st.session_state.current_image is not None:
+            current_image = st.session_state.current_image
+            
+            # 确保T恤图像能完整显示
+            coordinates = streamlit_image_coordinates(
+                current_image,
+                key="shirt_image",
+                width="100%"
+            )
+            
+            # 添加CSS修复图像显示问题
+            st.markdown("""
+            <style>
+            .stImage img {
+                max-width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            # Handle selection area logic - simplify to directly move red box
+            if coordinates:
+                # Update selection box at current mouse position
+                current_point = (coordinates["x"], coordinates["y"])
+                temp_image, new_pos = draw_selection_box(st.session_state.base_image, current_point)
+                st.session_state.current_image = temp_image
+                st.session_state.current_box_position = new_pos
+                st.rerun()
+        else:
+            st.warning("设计预览图尚未加载，请刷新页面重试。")
         
         # 显示最终设计结果（如果有）
         if st.session_state.final_design is not None:
@@ -563,7 +605,7 @@ def show_low_complexity_general_sales():
                 st.session_state.applied_text = None
                 st.session_state.applied_logo = None
                 # 重置最终设计为基础T恤图像
-                st.session_state.final_design = None
+                st.session_state.final_design = st.session_state.base_image.copy()
                 # 重置当前图像为带选择框的基础图像
                 temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
                 st.session_state.current_image = temp_image
