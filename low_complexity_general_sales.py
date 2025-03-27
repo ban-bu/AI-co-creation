@@ -826,10 +826,9 @@ def show_low_complexity_general_sales():
                 # 修改文字大小滑块范围
                 text_size = st.slider("文字大小:", 20, 120, 50, key="ai_text_size")
                 
-                # 修改预览部分，使用固定大小的文字
+                # 修改预览部分，使字体大小根据滑块动态变化
                 if text_suggestion:
-                    # 使用固定的大小预览，不随滑块变化
-                    fixed_preview_size = 36  # 固定预览文字大小
+                    # 使用滑块设置的大小预览
                     st.markdown(
                         f"""
                         <div style="
@@ -840,7 +839,7 @@ def show_low_complexity_general_sales():
                             font-family: {ai_font}, sans-serif;
                             color: {text_color};
                             text-align: center;
-                            font-size: {fixed_preview_size}px;
+                            font-size: {text_size}px;
                             line-height: 1.2;
                         ">
                         <strong>{text_suggestion}</strong>
@@ -849,8 +848,8 @@ def show_low_complexity_general_sales():
                         unsafe_allow_html=True
                     )
                     
-                    # 修改提示信息更清晰表达
-                    st.info(f"预览文字大小不会变化。当前设置的实际应用大小为 {text_size}，渲染后约为 {text_size*8} 像素")
+                    # 更新提示信息
+                    st.info(f"预览文字大小为 {text_size} 像素。实际应用大小约为 {text_size*8} 像素")
                 
                 # 应用按钮
                 if st.button("应用文字到设计", key="apply_ai_text"):
