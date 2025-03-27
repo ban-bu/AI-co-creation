@@ -341,47 +341,79 @@ def match_background_to_shirt(design_image, shirt_image):
     design_image.putdata(newData)
     return design_image
 
-# 添加一个用于改变T恤颜色的函数
+# 修改change_shirt_color函数，添加恢复Logo的参数和功能
 def change_shirt_color(image, color_hex, apply_texture=False, fabric_type=None):
-    """改变T恤的颜色，可选择应用面料纹理"""
-    # 判断是否是应用了纹理的图像，如果是，则重新从原始图像开始处理
-    # 这可以确保每次更改颜色时都从原始状态开始，而不是在已应用纹理的图像上再次修改
-    if hasattr(st.session_state, 'original_base_image') and st.session_state.original_base_image is not None:
-        # 使用原始白色T恤图像作为基础
-        image = st.session_state.original_base_image.copy()
+    """改变T恤图像的颜色，可选应用纹理效果
     
-    # 转换十六进制颜色为RGB
-    color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+    参数:
+    image - 原始T恤图像（PIL.Image）
+    color_hex - 目标颜色的十六进制代码（如"#FF0000"）
+    apply_texture - 是否应用纹理（布尔值）
+    fabric_type - 面料类型（字符串）
     
-    # 创建副本避免修改原图
-    colored_image = image.copy().convert("RGBA")
+    返回:
+    新的彩色T恤图像
+    """
+    # 确保图像为RGBA模式
+    if image.mode != 'RGBA':
+        image = image.convert('RGBA')
+    
+    # 将十六进制颜色代码转换为RGB
+    try:
+        if color_hex.startswith('#'):
+            color_hex = color_hex[1:]
+        r, g, b = tuple(int(color_hex[i:i+2], 16) for i in (0, 2, 4))
+        target_color = (r, g, b)
+    except Exception as e:
+        print(f"颜色转换出错: {e}")
+        # 使用默认颜色（白色）
+        target_color = (255, 255, 255)
+    
+    # 创建一个新图像作为结果
+    result = Image.new('RGBA', image.size, (0, 0, 0, 0))
     
     # 获取图像数据
-    data = colored_image.getdata()
-    
-    # 创建新数据
+    img_data = image.getdata()
     new_data = []
-    # 白色阈值 - 调整这个值可以控制哪些像素被视为白色/浅色并被改变
-    threshold = 200
     
-    for item in data:
-        # 判断是否是白色/浅色区域 (RGB值都很高)
-        if item[0] > threshold and item[1] > threshold and item[2] > threshold and item[3] > 0:
-            # 保持原透明度，改变颜色
-            new_color = (color_rgb[0], color_rgb[1], color_rgb[2], item[3])
-            new_data.append(new_color)
-        else:
-            # 保持其他颜色不变
-            new_data.append(item)
+    # 计算颜色转换
+    for item in img_data:
+        # 为避免黑色或暗色区域被过度染色（通常是阴影或T恤边缘），我们使用阈值
+        r, g, b, a = item
+        
+        # 检查像素的亮度，如果很暗（边缘，阴影）则保持原样
+        brightness = (r + g + b) / 3
+        
+        if a == 0:  # 完全透明的部分保持透明
+            new_data.append((0, 0, 0, 0))
+        elif brightness < 40:  # 较暗的像素（边缘，阴影）
+            # 保持原有颜色，但透明度可能略微调整
+            new_data.append((r, g, b, a))
+        else:  # 正常的T恤面料部分
+            # 计算亮度因子（保持原始像素的亮度层次）
+            luminance_factor = brightness / 255.0
+            
+            # 根据亮度因子调整目标颜色
+            new_r = int(target_color[0] * luminance_factor)
+            new_g = int(target_color[1] * luminance_factor)
+            new_b = int(target_color[2] * luminance_factor)
+            
+            # 保持原有的透明度
+            new_data.append((new_r, new_g, new_b, a))
     
-    # 更新图像数据
-    colored_image.putdata(new_data)
+    # 应用新的像素数据
+    result.putdata(new_data)
     
     # 如果需要应用纹理
-    if apply_texture and fabric_type:
-        return apply_fabric_texture(colored_image, fabric_type)
+    if apply_texture and fabric_type is not None:
+        from fabric_texture import apply_fabric_texture
+        # 使用新的面料纹理函数
+        result = apply_fabric_texture(result, fabric_type)
+        print(f"已应用 {fabric_type} 纹理。")
     
-    return colored_image
+    # 返回新的彩色T恤图像
+    print(f"T恤颜色已更改为 {color_hex}。")
+    return result
 
 def get_preset_logos():
     """获取预设logo文件夹中的所有图片"""
@@ -535,6 +567,8 @@ def show_high_complexity_general_sales():
             
             # 检查颜色是否发生变化
             if st.session_state.current_applied_color != st.session_state.shirt_color_hex:
+                print(f"检测到颜色变化: {st.session_state.current_applied_color} -> {st.session_state.shirt_color_hex}")
+                
                 # 颜色已变化，需要重新应用
                 original_image = st.session_state.original_base_image.copy()
                 
@@ -542,11 +576,18 @@ def show_high_complexity_general_sales():
                 has_logo = hasattr(st.session_state, 'applied_logo') and st.session_state.applied_logo is not None
                 temp_logo = None
                 temp_logo_info = None
+                
                 if has_logo:
+                    print("检测到已应用的Logo，将在颜色变化后重新应用")
                     temp_logo_info = st.session_state.applied_logo.copy()
                     # 如果已生成的Logo存在，保存它
                     if hasattr(st.session_state, 'generated_logo'):
                         temp_logo = st.session_state.generated_logo.copy()
+                        print("已保存当前Logo图像和信息")
+                    else:
+                        print("警告: generated_logo不存在")
+                else:
+                    print("未检测到已应用的Logo")
                 
                 # 应用新颜色和纹理
                 colored_image = change_shirt_color(
@@ -575,6 +616,8 @@ def show_high_complexity_general_sales():
                         logo_size = temp_logo_info.get("size", 40)
                         logo_position = temp_logo_info.get("position", "Center")
                         logo_opacity = temp_logo_info.get("opacity", 100)
+                        
+                        print(f"正在重新应用Logo: {logo_prompt}, 大小: {logo_size}%, 位置: {logo_position}")
                         
                         # 获取图像尺寸
                         img_width, img_height = st.session_state.final_design.size
@@ -606,6 +649,7 @@ def show_high_complexity_general_sales():
                         
                         # 设置透明度
                         if logo_opacity < 100:
+                            print(f"应用Logo透明度: {logo_opacity}%")
                             logo_data = logo_resized.getdata()
                             new_data = []
                             for item in logo_data:
@@ -618,12 +662,17 @@ def show_high_complexity_general_sales():
                         st.session_state.final_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
                         st.session_state.current_image = st.session_state.final_design.copy()
                         
+                        # 确保重新保存Logo和其信息
+                        if not hasattr(st.session_state, 'generated_logo'):
+                            st.session_state.generated_logo = temp_logo
+                        
                         # 重新保存Logo信息
                         st.session_state.applied_logo = temp_logo_info
                         
-                        print(f"Logo重新应用成功: {logo_prompt}")
+                        print(f"Logo重新应用成功: {logo_prompt}, 位置: ({logo_x}, {logo_y}), 尺寸: {logo_width}x{logo_height}")
                     except Exception as e:
                         print(f"重新应用Logo时出错: {e}")
+                        st.error(f"重新应用Logo时出错: {e}")
                         import traceback
                         print(traceback.format_exc())
                 
@@ -2065,7 +2114,7 @@ def show_high_complexity_general_sales():
                     # if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
                     #    st.info("您可以修改提示词重新生成Logo")
                     
-                    if st.button("生成Logo", key="generate_logo"):
+                    if st.button("Generate Logo", key="generate_logo"):
                         if not logo_prompt:
                             st.warning("Please enter a Logo description")
                         else:
