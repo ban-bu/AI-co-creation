@@ -466,30 +466,30 @@ def show_low_complexity_general_sales():
                         
                         # 如果Windows系统字体加载失败，尝试常见路径
                         if font is None:
-                            font_mapping = {
-                                "Arial": "arial.ttf",
-                                "Times New Roman": "times.ttf",
-                                "Courier": "cour.ttf",
-                                "Verdana": "verdana.ttf",
-                                "Georgia": "georgia.ttf",
+                        font_mapping = {
+                            "Arial": "arial.ttf",
+                            "Times New Roman": "times.ttf",
+                            "Courier": "cour.ttf",
+                            "Verdana": "verdana.ttf",
+                            "Georgia": "georgia.ttf",
                                 "Script": "SCRIPTBL.TTF", 
-                                "Impact": "impact.ttf"
-                            }
-                            
+                            "Impact": "impact.ttf"
+                        }
+                        
                             font_file = font_mapping.get(text_info["font"], "arial.ttf")
-                            system_font_paths = [
-                                "/Library/Fonts/",
-                                "/System/Library/Fonts/",
-                                "C:/Windows/Fonts/",
-                                "/usr/share/fonts/truetype/",
-                            ]
-                            
-                            for path in system_font_paths:
-                                try:
+                        system_font_paths = [
+                            "/Library/Fonts/",
+                            "/System/Library/Fonts/",
+                            "C:/Windows/Fonts/",
+                            "/usr/share/fonts/truetype/",
+                        ]
+                        
+                        for path in system_font_paths:
+                            try:
                                     font = ImageFont.truetype(path + font_file, text_info["size"])
-                                    break
-                                except:
-                                    continue
+                                break
+                            except:
+                                continue
                         
                         # 如果仍然失败，使用默认字体
                         if font is None:
@@ -504,12 +504,12 @@ def show_low_complexity_general_sales():
                             text_x, text_y = text_info["position"]
                         else:
                             # 获取文字尺寸重新计算位置
-                            text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
-                            text_width = text_bbox[2] - text_bbox[0]
-                            text_height = text_bbox[3] - text_bbox[1]
-                            
-                            # 居中位置
-                            text_x = (img_width - text_width) // 2
+                        text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
+                        text_width = text_bbox[2] - text_bbox[0]
+                        text_height = text_bbox[3] - text_bbox[1]
+                        
+                        # 居中位置
+                        text_x = (img_width - text_width) // 2
                             text_y = int(img_height * 0.4) - (text_height // 2)
                         
                         # 创建临时图像来绘制文字
@@ -996,56 +996,33 @@ def show_low_complexity_general_sales():
                         """,
                         unsafe_allow_html=True
                     )
-                
+                    
                 # 修改应用文字到设计部分的代码，完全重写文字应用逻辑
                 if st.button("应用文字到设计", key="apply_ai_text"):
                     if not text_content.strip():
                         st.warning("请输入文字内容!")
                     else:
                         with st.spinner("正在应用文字设计..."):
-                            try:
-                                # 获取当前图像
-                                if st.session_state.final_design is not None:
-                                    new_design = st.session_state.final_design.copy()
-                                else:
-                                    new_design = st.session_state.base_image.copy()
-                                
-                                # 创建绘图对象
-                                draw = ImageDraw.Draw(new_design)
-                                
-                                # 导入字体和相关模块 - 确保这些都在同一个作用域中
-                                from PIL import ImageFont
+                        try:
+                            # 获取当前图像
+                            if st.session_state.final_design is not None:
+                                new_design = st.session_state.final_design.copy()
+                            else:
+                                new_design = st.session_state.base_image.copy()
+                            
+                            # 创建绘图对象
+                            draw = ImageDraw.Draw(new_design)
+                            
+                            # 导入字体
+                            from PIL import ImageFont
                                 import platform
-                                import os  # 确保在使用前导入
+                                import os
                                 
-                                # 尝试导入额外的字体支持模块
-                                try:
-                                    import freetype
-                                    has_freetype = True
-                                    font_debug_info = ["检测到freetype模块，将尝试使用freetype加载字体"]
-                                except ImportError:
-                                    has_freetype = False
-                                    font_debug_info = ["未检测到freetype模块，将使用标准PIL字体加载方法"]
-                                
+                                # 记录字体加载的详细信息
+                                font_debug_info = []
                                 font_debug_info.append(f"操作系统: {platform.system()}")
                                 font_debug_info.append(f"请求的字体: {font_family}")
                                 font_debug_info.append(f"请求的字体大小: {text_size}")
-                                
-                                # 检查PIL版本信息
-                                try:
-                                    from PIL import __version__ as pil_version
-                                    font_debug_info.append(f"PIL/Pillow版本: {pil_version}")
-                                    
-                                    # 检查布局引擎支持
-                                    layout_engines = []
-                                    if hasattr(ImageFont, "LAYOUT_BASIC"):
-                                        layout_engines.append("LAYOUT_BASIC")
-                                    if hasattr(ImageFont, "LAYOUT_RAQM"):
-                                        layout_engines.append("LAYOUT_RAQM")
-                                    
-                                    font_debug_info.append(f"支持的布局引擎: {', '.join(layout_engines) if layout_engines else '无特殊布局引擎'}")
-                                except:
-                                    font_debug_info.append("无法检测PIL/Pillow版本")
                                 
                                 # 检查Windows系统字体文件夹是否存在
                                 if platform.system() == 'Windows':
@@ -1054,89 +1031,130 @@ def show_low_complexity_general_sales():
                                     # 检查具体字体文件是否存在
                                     windows_font_map = {
                                         "Arial": "arial.ttf",
-                                        "Arial Bold": "arialbd.ttf",
                                         "Times New Roman": "times.ttf",
                                         "Courier": "cour.ttf",
                                         "Verdana": "verdana.ttf", 
                                         "Georgia": "georgia.ttf",
                                         "Script": "SCRIPTBL.TTF",
-                                        "Impact": "impact.ttf",
-                                        "Segoe UI": "segoeui.ttf"
+                                        "Impact": "impact.ttf"
                                     }
-                                    # 添加更多Windows常见字体
-                                    for font_name, font_file in windows_font_map.items():
-                                        font_path = windows_font_dir + font_file
-                                        font_debug_info.append(f"字体 {font_name}: {font_file} 存在: {os.path.exists(font_path)}")
+                                    font_file = windows_font_map.get(font_family, "arial.ttf")
+                                    font_path = windows_font_dir + font_file
+                                    font_debug_info.append(f"请求的字体文件: {font_path}")
+                                    font_debug_info.append(f"字体文件存在: {os.path.exists(font_path)}")
                                 
                                 # 先尝试使用Pillow的字体注册功能获取系统字体
-                                font = None
+                            font = None
                                 font_truetype_found = False
                                 
-                                # 尝试直接使用FreeType渲染引擎加载Arial字体
                                 try:
-                                    # 检查是否支持LAYOUT_RAQM布局引擎
-                                    if hasattr(ImageFont, "LAYOUT_RAQM"):
-                                        font_debug_info.append("尝试使用RAQM布局引擎加载字体")
-                                        try:
-                                            windows_font_path = "C:/Windows/Fonts/arial.ttf"
-                                            if os.path.exists(windows_font_path):
-                                                font = ImageFont.truetype(
-                                                    windows_font_path, 
-                                                    text_size,
-                                                    layout_engine=ImageFont.LAYOUT_RAQM
-                                                )
+                                    # 先尝试一个可能的解决方案：使用绝对路径加载Arial字体
+                                    if platform.system() == 'Windows':
+                                        common_fonts = [
+                                            "C:/Windows/Fonts/arial.ttf",
+                                            "C:/Windows/Fonts/ARIAL.TTF",
+                                            "C:/Windows/Fonts/Arial.ttf",
+                                            "C:/Windows/Fonts/verdana.ttf",
+                                            "C:/Windows/Fonts/VERDANA.TTF",
+                                            "C:/Windows/Fonts/segoeui.ttf"  # Windows 10默认字体
+                                        ]
+                                        
+                                        for common_font in common_fonts:
+                                            if os.path.exists(common_font):
+                                                try:
+                                                    font = ImageFont.truetype(common_font, text_size)
+                                                    font_truetype_found = True
+                                                    font_debug_info.append(f"成功加载常见字体: {common_font}")
+                                                    st.session_state.loaded_font_path = common_font
+                                                    break
+                                                except Exception as common_err:
+                                                    font_debug_info.append(f"加载常见字体失败 {common_font}: {common_err}")
+                                except Exception as e:
+                                    font_debug_info.append(f"尝试加载常见Windows字体时出错: {e}")
+                                
+                                # 如果常见字体加载失败，尝试原有的方法
+                                if not font_truetype_found:
+                                    try:
+                                        # 对Windows系统，直接使用系统字体名称
+                                        if platform.system() == 'Windows':
+                                            # Windows系统下可以直接使用字体名称
+                                            windows_font_map = {
+                                                "Arial": "arial.ttf",
+                                                "Times New Roman": "times.ttf",
+                                                "Courier": "cour.ttf",
+                                                "Verdana": "verdana.ttf", 
+                                                "Georgia": "georgia.ttf",
+                                                "Script": "SCRIPTBL.TTF",
+                                                "Impact": "impact.ttf"
+                                            }
+                                            try:
+                                                font_file = windows_font_map.get(font_family, "arial.ttf")
+                                                font_path = "C:/Windows/Fonts/" + font_file
+                                                font_debug_info.append(f"尝试加载Windows字体: {font_path}")
+                                                font = ImageFont.truetype(font_path, text_size)
                                                 font_truetype_found = True
-                                                font_debug_info.append(f"使用RAQM引擎成功加载Arial字体: {windows_font_path}")
-                                                st.session_state.loaded_font_path = f"RAQM引擎 - {windows_font_path}"
-                                        except Exception as raqm_err:
-                                            font_debug_info.append(f"RAQM引擎加载字体失败: {raqm_err}")
-                                except Exception as layout_err:
-                                    font_debug_info.append(f"检查布局引擎支持时出错: {layout_err}")
+                                                font_debug_info.append("Windows字体加载成功")
+                                                st.session_state.loaded_font_path = f"Windows系统字体: {font_path}"
+                                            except Exception as win_font_err:
+                                                font_debug_info.append(f"加载Windows字体失败: {win_font_err}")
+                                    except Exception as platform_err:
+                                        font_debug_info.append(f"检测操作系统失败: {platform_err}")
                                 
-                                # 如果未能使用RAQM引擎加载，尝试增加字体备选方案
+                                # 如果Windows系统字体加载失败，尝试常见路径
                                 if not font_truetype_found:
-                                    try:
-                                        # 尝试使用系统默认无衬线字体
+                            # 字体映射
+                            font_mapping = {
+                                "Arial": "arial.ttf",
+                                "Times New Roman": "times.ttf",
+                                "Courier": "cour.ttf",
+                                "Verdana": "verdana.ttf",
+                                "Georgia": "georgia.ttf",
+                                        "Script": "SCRIPTBL.TTF",
+                                "Impact": "impact.ttf"
+                            }
+                            
+                            # 尝试常见的系统字体路径
+                            system_font_paths = [
+                                "/Library/Fonts/",  # macOS
+                                "/System/Library/Fonts/",  # macOS系统
+                                "C:/Windows/Fonts/",  # Windows
+                                "/usr/share/fonts/truetype/",  # Linux
+                            ]
+                            
+                            # 加载字体
+                                    font_file = font_mapping.get(font_family, "arial.ttf")
+                            for path in system_font_paths:
+                                        font_path = path + font_file
                                         try:
-                                            # 尝试使用PIL内置默认字体
-                                            default_font_options = [
-                                                "C:/Windows/Fonts/arial.ttf",
-                                                "C:/Windows/Fonts/segoeui.ttf",
-                                                "C:/Windows/Fonts/tahoma.ttf",
-                                                "C:/Windows/Fonts/verdana.ttf"
-                                            ]
-                                            
-                                            for font_path in default_font_options:
-                                                if os.path.exists(font_path):
-                                                    # 尝试不同的大小
-                                                    for size_factor in [1.0, 0.75, 0.5, 0.25]:
-                                                        try:
-                                                            adjusted_size = int(text_size * size_factor)
-                                                            font = ImageFont.truetype(font_path, adjusted_size)
-                                                            font_truetype_found = True
-                                                            font_debug_info.append(f"成功加载备选字体: {font_path}，大小: {adjusted_size}px (调整因子: {size_factor})")
-                                                            st.session_state.loaded_font_path = f"{font_path} ({adjusted_size}px)"
-                                                            break
-                                                        except Exception as size_err:
-                                                            font_debug_info.append(f"使用大小 {adjusted_size}px 加载 {font_path} 失败: {size_err}")
-                                                    if font_truetype_found:
-                                                        break
-                                        except Exception as default_err:
-                                            font_debug_info.append(f"加载默认字体失败: {default_err}")
-                                    except Exception as e:
-                                        font_debug_info.append(f"尝试加载常见Windows字体时出错: {e}")
-                                
-                                # 如果尝试加载TrueType字体失败，回退到PIL默认字体
+                                            font_debug_info.append(f"尝试加载字体: {font_path}")
+                                            if os.path.exists(font_path):
+                                                font = ImageFont.truetype(font_path, text_size)
+                                                font_truetype_found = True
+                                                font_debug_info.append(f"字体加载成功: {font_path}")
+                                                st.session_state.loaded_font_path = font_path
+                                    break
+                                            else:
+                                                font_debug_info.append(f"字体文件不存在: {font_path}")
+                                        except Exception as font_err:
+                                            font_debug_info.append(f"加载字体错误: {font_err}")
+                                    continue
+                            
+                                    # 尝试使用PIL的默认字体
                                 if not font_truetype_found:
-                                    font_debug_info.append("所有TrueType字体加载失败，使用PIL默认字体")
+                                    font_debug_info.append("所有TrueType字体加载失败，尝试使用默认字体")
                                     try:
-                                        font = ImageFont.load_default()
-                                        font_debug_info.append("PIL默认字体加载成功")
+                                    font = ImageFont.load_default()
+                                        font_debug_info.append("默认字体加载成功")
                                         st.session_state.loaded_font_path = "PIL默认字体"
                                     except Exception as default_err:
                                         font_debug_info.append(f"加载默认字体也失败: {default_err}")
-                                        font = None
-                                
+                                        st.error("无法加载任何字体，无法应用文字。")
+                                        # 显示详细的字体加载调试信息
+                                        st.error("字体加载详细信息:")
+                                        for info in font_debug_info:
+                                            st.error(f"- {info}")
+                                    return
+                            
                                 # 保存字体加载信息
                                 st.session_state.font_debug_info = font_debug_info
                                 
@@ -1148,111 +1166,298 @@ def show_low_complexity_general_sales():
                                     for info in font_debug_info:
                                         st.error(f"- {info}")
                                     
-                                    # 尝试创建自定义字体图像
+                                    # 尝试使用纯文本渲染作为最后的回退选项
                                     try:
-                                        font_debug_info.append("尝试创建自定义大字体图像")
+                                        # 如果所有字体加载都失败，使用一个简单的文本图像代替
+                                        font_debug_info.append("尝试最后的回退方案：创建文本图像")
                                         
-                                        # 创建一个大尺寸空白图像
-                                        text_width = len(text_content) * 60  # 估计每个字符60像素宽
-                                        text_height = 200  # 估计高度200像素
-                                        text_img = Image.new('RGBA', (text_width, text_height), (0, 0, 0, 0))
-                                        text_draw = ImageDraw.Draw(text_img)
+                                        # 创建一个新的图像，纯粹用白色背景和黑色文字
+                                        text_img_size = (img_width, img_height)
+                                        text_only_img = Image.new('RGBA', text_img_size, (255, 255, 255, 0))  # 完全透明
+                                        text_draw = ImageDraw.Draw(text_only_img)
                                         
-                                        # 使用PIL默认字体，但重复绘制以增加粗细
-                                        default_font = ImageFont.load_default()
+                                        # 确定文字大小和位置
+                                        text_y = int(img_height * 0.4)
                                         
-                                        # 绘制黑色轮廓
-                                        for x_offset in range(-5, 6, 2):
-                                            for y_offset in range(-5, 6, 2):
-                                                text_draw.text(
-                                                    (text_width // 2 + x_offset, text_height // 2 + y_offset),
-                                                    text_content,
-                                                    font=default_font,
-                                                    fill=(0, 0, 0, 255),
-                                                    anchor="mm"  # 居中对齐
-                                                )
+                                        # 写入文字 - 没有fancy的字体和大小，只是基本文字
+                                        # 使用多行文字表示不同大小的效果
+                                        text_colors = [(0, 0, 0, 255), (255, 0, 0, 255), (0, 0, 255, 255)]
+                                        for i, scale in enumerate([1.0, 1.5, 2.0]):
+                                            y_offset = int(text_y + i * 50)  # 不同行垂直位置
+                                            # 使用不同颜色以便区分
+                                            text_color = text_colors[i % len(text_colors)]
+                                            
+                                            # 计算文本中心位置
+                                            if alignment == "左对齐":
+                                                x_pos = int(img_width * 0.1)
+                                            elif alignment == "右对齐":
+                                                x_pos = int(img_width * 0.9)
+                                            else:  # 居中
+                                                x_pos = img_width // 2
+                                            
+                                            # 从x_pos开始写一行，让用户至少能看到一些文字
+                                            text_draw.text((x_pos, y_offset), text_content, fill=text_color)
                                         
-                                        # 绘制彩色文字（使用用户选择的颜色）
+                                        # 保存位置信息 - 为回退方法也添加位置保存
+                                        st.session_state.text_position = (int(img_width * 0.5), int(img_height * 0.4))
+                                        
+                                        # 将文本图像覆盖到主图像上
+                                        font_debug_info.append("使用简单文本图像作为替代渲染")
+                                        new_design.paste(text_only_img, (0, 0), text_only_img)
+                                        
+                                        # 标记使用了回退方案
+                                        st.session_state.using_fallback_text = True
+                                    except Exception as fallback_err:
+                                        font_debug_info.append(f"最后的回退方案也失败: {fallback_err}")
+                                        st.error(f"所有文字渲染方法均失败，无法应用文字: {fallback_err}")
+                                        return
+                                else:
+                                    # 正常字体加载成功的情况
+                                    st.session_state.using_fallback_text = False
+                                    # 检查字体是否有效
+                                    try:
+                                        # 测试字体是否有效 - 尝试获取文本边界框
+                                        test_bbox = draw.textbbox((0, 0), "Test", font=font)
+                                        font_debug_info.append(f"字体对象有效，测试边界框: {test_bbox}")
+                                        st.session_state.font_valid = True
+                                    except Exception as font_test_err:
+                                        font_debug_info.append(f"字体对象加载成功但似乎无效: {font_test_err}")
+                                        st.session_state.font_valid = False
+                                
+                                # 保存更新后的字体调试信息
+                                st.session_state.font_debug_info = font_debug_info
+                                
+                                # 获取图像尺寸 - 使用整个T恤图像
+                            img_width, img_height = new_design.size
+                            
+                                # 添加调试信息
+                                st.session_state.tshirt_size = (img_width, img_height)
+                                
+                                # 使用绘图方法代替文字渲染
+                                try:
+                                    # 创建一个大尺寸的透明图层用于绘制
+                                    # 尺寸设定为T恤宽度的80%，确保文字足够大
+                                    text_width_percent = 0.8  # 文字宽度占T恤宽度的比例
+                                    text_img_width = int(img_width * text_width_percent)
+                                    text_img_height = int(text_img_width * 0.4)  # 高宽比约为0.4
+                                    
+                                    # 创建透明图层
+                                    text_img = Image.new('RGBA', (text_img_width, text_img_height), (0, 0, 0, 0))
+                                    text_draw = ImageDraw.Draw(text_img)
+                                    
+                                    # 将文字颜色从十六进制转换为RGBA
+                                    text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                                    text_rgba = text_rgb + (255,)  # 完全不透明
+                                    
+                                    # 计算文字间距和位置
+                                    letter_spacing = int(text_img_width * 0.05)  # 字符间距
+                                    letter_width = int((text_img_width - letter_spacing * (len(text_content) - 1)) / len(text_content))
+                                    letter_height = int(text_img_height * 0.9)  # 字符高度占图层的90%
+                                    
+                                    # 根据对齐方式确定起始X坐标
+                                    if alignment == "左对齐":
+                                        start_x = 0
+                                    elif alignment == "右对齐":
+                                        start_x = text_img_width - (letter_width * len(text_content) + letter_spacing * (len(text_content) - 1))
+                                    else:  # 居中
+                                        start_x = (text_img_width - (letter_width * len(text_content) + letter_spacing * (len(text_content) - 1))) // 2
+                                    
+                                    # 为每个字符创建一个矩形框，模拟文字效果
+                                    current_x = start_x
+                                    for char in text_content:
+                                        # 对于空格，仅增加位置
+                                        if char == " ":
+                                            current_x += letter_width + letter_spacing
+                                            continue
+                                        
+                                        # 确定字符绘制区域
+                                        char_left = current_x
+                                        char_top = (text_img_height - letter_height) // 2
+                                        
+                                        # 绘制字符效果
+                                        # 轮廓效果
+                                        if "轮廓" in text_style:
+                                            # 绘制黑色轮廓
+                                            outline_size = max(2, letter_height // 20)
+                                            # 上轮廓
+                                            text_draw.rectangle(
+                                                (char_left, char_top, char_left + letter_width, char_top + outline_size),
+                                                fill="black"
+                                            )
+                                            # 下轮廓
+                                            text_draw.rectangle(
+                                                (char_left, char_top + letter_height - outline_size, char_left + letter_width, char_top + letter_height),
+                                                fill="black"
+                                            )
+                                            # 左轮廓
+                                            text_draw.rectangle(
+                                                (char_left, char_top, char_left + outline_size, char_top + letter_height),
+                                                fill="black"
+                                            )
+                                            # 右轮廓
+                                            text_draw.rectangle(
+                                                (char_left + letter_width - outline_size, char_top, char_left + letter_width, char_top + letter_height),
+                                                fill="black"
+                                            )
+                                        
+                                        # 阴影效果
+                                        if "阴影" in text_style:
+                                            shadow_offset = max(5, letter_height // 10)
+                                            shadow_color = (0, 0, 0, 180)
+                                            text_draw.rectangle(
+                                                (char_left + shadow_offset, char_top + shadow_offset,
+                                                 char_left + letter_width + shadow_offset, char_top + letter_height + shadow_offset),
+                                                fill=shadow_color
+                                            )
+                                        
+                                        # 绘制主字符
+                                        text_draw.rectangle(
+                                            (char_left, char_top, char_left + letter_width, char_top + letter_height),
+                                            fill=text_rgba
+                                        )
+                                        
+                                        # 更新下一个字符的位置
+                                        current_x += letter_width + letter_spacing
+                                    
+                                    # 根据设计计算文字图层的放置位置
+                                    text_x = (img_width - text_img_width) // 2
+                                    text_y = int(img_height * 0.35)  # 放在T恤上部
+                                    
+                                    # 保存位置信息
+                                    st.session_state.text_position = (text_x, text_y)
+                                    st.session_state.text_size_info = {
+                                        "font_size": text_size,
+                                        "text_bbox": [0, 0, text_img_width, text_img_height],
+                                        "text_width": text_img_width,
+                                        "text_height": text_img_height
+                                    }
+                                    
+                                    # 合成文字图层到T恤图像上
+                                    new_design.paste(text_img, (text_x, text_y), text_img)
+                                    
+                                    # 设置渲染方法标记
+                                    st.session_state.using_drawing_method = True
+                                    font_debug_info.append("使用绘图方法代替文字渲染")
+                                    
+                                except Exception as drawing_err:
+                                    font_debug_info.append(f"尝试使用绘图方法失败: {drawing_err}")
+                                    st.session_state.using_drawing_method = False
+                                    
+                                    # 如果绘图方法失败，回退到测试字体渲染方法
+                                    try:
+                                        # 测试一种完全不同的方法 - 直接在T恤图像上绘制
+                                        # 先备份一下原始图像数据
+                                        original_design = new_design.copy()
+                                        
+                                        # 直接获取文字大小
+                                        text_bbox = draw.textbbox((0, 0), text_content, font=font)
+                                    text_width = text_bbox[2] - text_bbox[0]
+                                    text_height = text_bbox[3] - text_bbox[1]
+                                        
+                                        # 保存文字尺寸信息用于调试
+                                        st.session_state.text_size_info = {
+                                            "font_size": text_size,
+                                            "text_bbox": text_bbox,
+                                            "text_width": text_width,
+                                            "text_height": text_height
+                                        }
+                                        
+                                        # 计算位置 - 使用更大比例确保文字显示在T恤中心位置
+                                        text_x = (img_width - text_width) // 2  # 横向居中
+                                        text_y = int(img_height * 0.4) - (text_height // 2)  # 垂直放在偏上位置
+                                        
+                                        # 保存位置信息
+                                        st.session_state.text_position = (text_x, text_y)
+                                        
+                                        # 应用特殊效果 - 先绘制轮廓和阴影，确保在文字下方
+                                        if "轮廓" in text_style:
+                                            # 绘制更粗的轮廓效果
+                                            offset = max(3, text_size // 25)  # 加大偏移以增强效果
+                                            for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
+                                                draw.text((text_x + offset_x, text_y + offset_y), text_content, fill="black", font=font)
+                                        
+                                        if "阴影" in text_style:
+                                            # 绘制更明显的阴影效果
+                                            shadow_offset = max(5, text_size // 15)  # 增大阴影偏移
+                                            # 使用更深的阴影色
+                                            draw.text((text_x + shadow_offset, text_y + shadow_offset), text_content, fill=(0, 0, 0, 180), font=font)
+                                        
+                                        # 绘制主文字 - 确保使用完全不透明的颜色
+                                        # 将文字颜色从十六进制转换为RGBA - 确保完全不透明
                                         text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
                                         text_rgba = text_rgb + (255,)  # 完全不透明
                                         
                                         # 绘制主文字
-                                        text_draw.text(
-                                            (text_width // 2, text_height // 2),
-                                            text_content,
-                                            font=default_font,
-                                            fill=text_rgba,
-                                            anchor="mm"  # 居中对齐
-                                        )
+                                        draw.text((text_x, text_y), text_content, fill=text_rgba, font=font)
                                         
-                                        # 放大文字图像
-                                        big_text_img = text_img.resize(
-                                            (text_width * 2, text_height * 2),
-                                            Image.LANCZOS
-                                        )
-                                        
-                                        # 计算放置在T恤上的位置
-                                        paste_x = (img_width - big_text_img.width) // 2
-                                        paste_y = int(img_height * 0.4) - (big_text_img.height // 2)
-                                        
-                                        # 保存位置信息
-                                        st.session_state.text_position = (paste_x, paste_y)
-                                        
-                                        # 粘贴到T恤上
-                                        new_design.paste(big_text_img, (paste_x, paste_y), big_text_img)
-                                        
-                                        # 标记为使用自定义文字渲染
-                                        st.session_state.using_custom_text_render = True
-                                        font_debug_info.append("使用自定义文字渲染方法成功")
-                                    except Exception as custom_err:
-                                        font_debug_info.append(f"自定义文字渲染失败: {custom_err}")
-                                        return
-                                    
-                                # 正常字体加载成功的情况
-                                else:
-                                    st.session_state.using_fallback_text = False
-                                    st.session_state.using_custom_text_render = False
-                                    
-                                    # 检查字体是否有效及其大小是否正确
-                                    try:
-                                        test_text = "Test"
-                                        test_bbox = draw.textbbox((0, 0), test_text, font=font)
-                                        test_width = test_bbox[2] - test_bbox[0]
-                                        test_height = test_bbox[3] - test_bbox[1]
-                                        
-                                        # 估算单个字符宽度
-                                        char_width = test_width / len(test_text)
-                                        
-                                        font_debug_info.append(f"字体对象有效，测试文字'{test_text}'的边界框: {test_bbox}")
-                                        font_debug_info.append(f"测试文字宽度: {test_width}px, 高度: {test_height}px")
-                                        font_debug_info.append(f"估算单个字符宽度: {char_width}px")
-                                        
-                                        # 判断字体是否太小 (小于请求大小的10%)
-                                        if test_height < text_size * 0.1:
-                                            font_debug_info.append(f"警告：实际字体高度({test_height}px)远小于请求的大小({text_size}px)")
+                                        # 检查是否成功绘制 - 比较修改前后的图像
+                                        if original_design.tobytes() == new_design.tobytes():
+                                            st.warning("文字绘制可能未生效 - 尝试备选方法")
                                             
-                                            # 如果字体过小，创建一个放大的文字图像
-                                            estimated_text_width = int(char_width * len(text_content))
-                                            text_img = Image.new('RGBA', (estimated_text_width * 2, test_height * 2), (0, 0, 0, 0))
-                                            text_draw = ImageDraw.Draw(text_img)
+                                            # 备选方法 - 创建一个新图像层，绘制后合并
+                                            text_layer = Image.new('RGBA', new_design.size, (0, 0, 0, 0))
+                                            text_draw = ImageDraw.Draw(text_layer)
                                             
-                                            # 使用多次绘制创建更明显的文字
-                                            # 绘制阴影/轮廓
-                                            for offset in range(1, 4):
-                                                text_draw.text((offset, offset), text_content, fill="black", font=font)
-                                                text_draw.text((offset, -offset), text_content, fill="black", font=font)
-                                                text_draw.text((-offset, offset), text_content, fill="black", font=font)
-                                                text_draw.text((-offset, -offset), text_content, fill="black", font=font)
+                                            # 绘制效果到新图层
+                                            if "轮廓" in text_style:
+                                                offset = max(3, text_size // 25)
+                                                for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
+                                                    text_draw.text((text_x + offset_x, text_y + offset_y), text_content, fill="black", font=font)
+                                            
+                                            if "阴影" in text_style:
+                                                shadow_offset = max(5, text_size // 15)
+                                                text_draw.text((text_x + shadow_offset, text_y + shadow_offset), text_content, fill=(0, 0, 0, 180), font=font)
                                             
                                             # 绘制主文字
-                                            text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-                                        text_rgba = text_rgb + (255,)
-                                        text_draw.text((text_x, text_y), text_content, fill=text_rgba, font=font)
+                                            text_draw.text((text_x, text_y), text_content, fill=text_rgba, font=font)
+                                            
+                                            # 合并图层 - 使用paste而不是alpha_composite
+                                            new_design.paste(text_layer, (0, 0), text_layer)
+                                    except Exception as direct_draw_err:
+                                        st.warning(f"直接绘制文字失败: {direct_draw_err}，尝试备选方法")
                                         
-                                        # 直接粘贴合并
-                                        new_design.paste(text_img, (0, 0), text_img)
-                                    except Exception as alt_err:
-                                        st.error(f"备选文字渲染方法也失败: {alt_err}")
+                                        # 完全不同的替代方法 - 使用PIL的另一种文字渲染方式
+                                        try:
+                                            # 创建一个临时图像用于文字渲染
+                                            text_img = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
+                                            text_draw = ImageDraw.Draw(text_img)
+                                            
+                                            # 计算文字位置
+                                            text_bbox = text_draw.textbbox((0, 0), text_content, font=font)
+                                            text_width = text_bbox[2] - text_bbox[0]
+                                            text_height = text_bbox[3] - text_bbox[1]
+                                            
+                                            # 保存文字尺寸信息
+                                            st.session_state.text_size_info = {
+                                                "font_size": text_size,
+                                                "text_bbox": text_bbox,
+                                                "text_width": text_width,
+                                                "text_height": text_height
+                                            }
+                                
+                                        # 计算居中位置
+                                        text_x = (img_width - text_width) // 2
+                                                text_y = int(img_height * 0.4) - (text_height // 2)
+                                                
+                                                # 直接绘制到临时图像
+                                                if "轮廓" in text_style:
+                                                    offset = max(3, text_size // 25)
+                                                    for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
+                                                        text_draw.text((text_x + offset_x, text_y + offset_y), text_content, fill="black", font=font)
+                                                
+                                                if "阴影" in text_style:
+                                                    shadow_offset = max(5, text_size // 15)
+                                                    text_draw.text((text_x + shadow_offset, text_y + shadow_offset), text_content, fill=(0, 0, 0, 180), font=font)
+                                                
+                                                # 绘制主文字
+                                                text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                                                text_rgba = text_rgb + (255,)
+                                                text_draw.text((text_x, text_y), text_content, fill=text_rgba, font=font)
+                                                
+                                                # 直接粘贴合并
+                                                new_design.paste(text_img, (0, 0), text_img)
+                                        except Exception as alt_err:
+                                            st.error(f"备选文字渲染方法也失败: {alt_err}")
                                 
                                 # 更新设计和预览
                                 st.session_state.final_design = new_design
@@ -1276,8 +1481,8 @@ def show_low_complexity_general_sales():
                                 文字已应用到设计中！
                                 字体: {font_family}
                                 大小: {text_size}px
-                                实际宽度: {text_width}px
-                                实际高度: {text_height}px
+                                实际宽度: {text_info['text_width']}px
+                                实际高度: {text_info['text_height']}px
                                 位置: ({text_x}, {text_y})
                                 T恤尺寸: {img_width} x {img_height}
                                 """
@@ -1285,14 +1490,16 @@ def show_low_complexity_general_sales():
                                 # 添加字体信息
                                 if st.session_state.get('using_fallback_text', False):
                                     success_msg += "字体状态: 使用了回退渲染方法（字体加载失败）\n"
+                                elif st.session_state.get('using_drawing_method', False):
+                                    success_msg += "字体状态: 使用了图形绘制方法（避免字体渲染问题）\n"
                                 else:
                                     success_msg += f"字体状态: 成功加载 - {st.session_state.loaded_font_path}\n"
                                 
                                 success_msg += "已使用的渲染方法: 直接绘制到图像上"
                                 
                                 st.success(success_msg)
-
-                            except Exception as e:
+                                
+                        except Exception as e:
                                 st.error(f"应用文字时出错: {str(e)}")
                                 import traceback
                                 st.error(traceback.format_exc())
