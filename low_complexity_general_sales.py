@@ -857,73 +857,93 @@ def show_low_complexity_general_sales():
                             else:
                                 new_design = st.session_state.base_image.copy()
                             
-                            # 打印图像尺寸以便调试
-                            img_width, img_height = new_design.size
-                            st.write(f"图像尺寸: {img_width} x {img_height}")
-                            
                             # 创建绘图对象
                             draw = ImageDraw.Draw(new_design)
                             
-                            # 根据图像尺寸动态计算字体大小
-                            font_size = int(min(img_width, img_height) * 0.4)  # 使用图像较小边的40%作为字体大小
-                            st.write(f"计算的字体大小: {font_size}")
-                            
-                            # 尝试加载字体
+                            # 导入字体
+                            from PIL import ImageFont
                             font = None
-                            try:
-                                font_file = font_mapping.get(ai_font, "arial.ttf")
-                                for path in system_font_paths:
-                                    try:
-                                        font = ImageFont.truetype(path + font_file, font_size)
-                                        st.write(f"成功加载字体: {path + font_file}")
-                                        break
-                                    except:
-                                        continue
-                            except Exception as font_error:
-                                st.error(f"加载字体时出错: {font_error}")
                             
+                            # 字体映射
+                            font_mapping = {
+                                "Arial": "arial.ttf",
+                                "Times New Roman": "times.ttf",
+                                "Courier": "cour.ttf",
+                                "Verdana": "verdana.ttf",
+                                "Georgia": "georgia.ttf",
+                                "Impact": "impact.ttf"
+                            }
+                            
+                            # 使用固定的大像素值，不再基于图像百分比
+                            font_size = 250  # 固定使用250像素的大字体
+                            
+                            # 记录实际使用的字体大小
+                            st.session_state.actual_font_size = font_size
+                            
+                            # 尝试常见的系统字体路径
+                            system_font_paths = [
+                                "/Library/Fonts/",  # macOS
+                                "/System/Library/Fonts/",  # macOS系统
+                                "C:/Windows/Fonts/",  # Windows
+                                "/usr/share/fonts/truetype/",  # Linux
+                            ]
+                            
+                            # 加载字体
+                            font_file = font_mapping.get(ai_font, "arial.ttf")
+                            for path in system_font_paths:
+                                try:
+                                    font = ImageFont.truetype(path + font_file, font_size)
+                                    break
+                                except:
+                                    continue
+                            
+                            # 如果无法加载字体，使用默认字体
                             if font is None:
-                                st.error("无法加载字体，使用默认字体")
-                                font = ImageFont.load_default()
+                                try:
+                                    # 尝试使用PIL的默认字体
+                                    font = ImageFont.load_default()
+                                except:
+                                    st.error("无法加载字体，请尝试其他字体。")
+                                    return
                             
-                            # 获取文字边界框并打印尺寸
-                            text_bbox = draw.textbbox((0, 0), text_suggestion, font=font)
-                            text_width = text_bbox[2] - text_bbox[0]
-                            text_height = text_bbox[3] - text_bbox[1]
-                            st.write(f"文字尺寸: {text_width} x {text_height}")
+                            # 获取图像尺寸
+                            img_width, img_height = new_design.size
                             
-                            # 如果文字太大，逐步缩小直到适合
-                            while text_width > img_width * 0.8 or text_height > img_height * 0.4:
-                                font_size = int(font_size * 0.9)
-                                font = ImageFont.truetype(path + font_file, font_size)
+                            # 计算文字位置
+                            try:
+                                # 获取文字边界框
                                 text_bbox = draw.textbbox((0, 0), text_suggestion, font=font)
                                 text_width = text_bbox[2] - text_bbox[0]
                                 text_height = text_bbox[3] - text_bbox[1]
-                            
-                            # 计算居中位置
-                            text_x = (img_width - text_width) // 2
-                            text_y = (img_height // 2) - (text_height // 2)
-                            text_y = int(text_y * 0.7)  # 向上移动
-                            
-                            # 绘制文字
-                            draw.text((text_x, text_y), text_suggestion, fill=text_color, font=font)
-                            st.write(f"最终使用的字体大小: {font_size}")
-                            
-                            # 更新设计
-                            st.session_state.final_design = new_design
-                            st.session_state.current_image = new_design.copy()
-                            
-                            # 保存文字信息
-                            st.session_state.applied_text = {
-                                "text": text_suggestion,
-                                "font": ai_font,
-                                "color": text_color,
-                                "size": font_size,
-                                "position": (text_x, text_y)
-                            }
-                            
-                            st.success(f"文字已成功应用到设计中！字体大小: {font_size}px")
-                            st.rerun()
+                                
+                                # 计算居中位置
+                                text_x = (img_width - text_width) // 2
+                                text_y = (img_height // 2) - (text_height // 2)  # 垂直居中
+                                
+                                # 将位置略微向上移动
+                                text_y = int(text_y * 0.8)  # 移到中心位置稍上方
+                                
+                                # 绘制文字
+                                draw.text((text_x, text_y), text_suggestion, fill=text_color, font=font)
+                                
+                                # 更新设计
+                                st.session_state.final_design = new_design
+                                st.session_state.current_image = new_design.copy()
+                                
+                                # 保存文字信息
+                                st.session_state.applied_text = {
+                                    "text": text_suggestion,
+                                    "font": ai_font,
+                                    "color": text_color,
+                                    "size": font_size,
+                                    "position": (text_x, text_y)
+                                }
+                                
+                                st.success(f"文字已成功应用到设计中！字体大小: {font_size}px")
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"应用文字时出错: {e}")
+                                
                         except Exception as e:
                             st.error(f"创建设计时出错: {e}")
                 
