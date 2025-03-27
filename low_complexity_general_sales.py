@@ -471,34 +471,53 @@ def show_low_complexity_general_sales():
                         if font is None:
                             font = ImageFont.load_default()
                         
-                        # 获取图像尺寸和选择框位置
+                        # 获取图像尺寸
                         img_width, img_height = st.session_state.final_design.size
                         
-                        # 使用保存的文字信息来计算位置
+                        # 获取文字边界框
                         text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
                         text_width = text_bbox[2] - text_bbox[0]
                         text_height = text_bbox[3] - text_bbox[1]
                         
-                        # 如果已有位置信息，使用它；否则计算新位置
-                        if "position" in text_info and "alignment" in text_info:
-                            # 根据保存的对齐方式重新计算位置
-                            left, top = st.session_state.current_box_position
-                            box_size = int(1024 * 0.25)
+                        # 检查是否使用整个胸前区域
+                        if text_info.get("use_full_chest", False):
+                            # 计算T恤前胸的设计区域
+                            chest_width = int(img_width * 0.8)
+                            chest_height = int(img_height * 0.5)
+                            chest_left = (img_width - chest_width) // 2
+                            chest_top = int(img_height * 0.25)
                             
+                            # 根据对齐方式计算文字位置
                             if text_info["alignment"] == "左对齐":
-                                text_x = left + 10
+                                text_x = chest_left + int(chest_width * 0.1)
                             elif text_info["alignment"] == "右对齐":
-                                text_x = left + box_size - text_width - 10
+                                text_x = chest_left + chest_width - text_width - int(chest_width * 0.1)
                             else:  # 居中
-                                text_x = left + (box_size - text_width) // 2
+                                text_x = chest_left + (chest_width - text_width) // 2
                             
-                            text_y = top + (box_size - text_height) // 2
+                            # 垂直居中
+                            text_y = chest_top + (chest_height - text_height) // 2
                         else:
-                            # 如果没有保存位置信息，在图像中央放置文字
-                            text_x = (img_width - text_width) // 2
-                            text_y = (img_height // 2) - (text_height // 2)
-                            # 将位置略微向上移动
-                            text_y = int(text_y * 0.8)
+                            # 使用旧的计算方式（选择框内）
+                            if "position" in text_info and "alignment" in text_info:
+                                # 根据保存的对齐方式重新计算位置
+                                left, top = st.session_state.current_box_position
+                                box_size = int(1024 * 0.25)
+                                
+                                if text_info["alignment"] == "左对齐":
+                                    text_x = left + 10
+                                elif text_info["alignment"] == "右对齐":
+                                    text_x = left + box_size - text_width - 10
+                                else:  # 居中
+                                    text_x = left + (box_size - text_width) // 2
+                                
+                                text_y = top + (box_size - text_height) // 2
+                            else:
+                                # 如果没有保存位置信息，在图像中央放置文字
+                                text_x = (img_width - text_width) // 2
+                                text_y = (img_height // 2) - (text_height // 2)
+                                # 将位置略微向上移动
+                                text_y = int(text_y * 0.8)
                         
                         # 绘制文字
                         draw.text((text_x, text_y), text_info["text"], fill=text_info["color"], font=font)
@@ -849,7 +868,7 @@ def show_low_complexity_general_sales():
                 text_style = st.multiselect("文字样式:", ["粗体", "斜体", "下划线", "阴影", "轮廓"], default=["粗体"])
                 
                 # 添加动态文字大小滑块
-                text_size = st.slider("文字大小:", 20, 120, 48, key="ai_text_size")
+                text_size = st.slider("文字大小:", 20, 240, 80, key="ai_text_size")
                 
                 # 添加文字效果选项
                 text_effect = st.selectbox("文字效果:", ["无", "弯曲", "拱形", "波浪", "3D", "渐变"])
@@ -976,25 +995,30 @@ def show_low_complexity_general_sales():
                                     st.error("无法加载字体，请尝试其他字体。")
                                     return
                             
-                            # 获取图像尺寸和选择框位置
+                            # 获取图像尺寸
                             img_width, img_height = new_design.size
-                            left, top = st.session_state.current_box_position
-                            box_size = int(1024 * 0.25)
+                            
+                            # 计算T恤前胸的设计区域（更大范围）
+                            chest_width = int(img_width * 0.8)  # 用整个宽度的80%
+                            chest_height = int(img_height * 0.5)  # 用整个高度的50%
+                            chest_left = (img_width - chest_width) // 2
+                            chest_top = int(img_height * 0.25)  # 放在上方1/4处
                             
                             # 获取文字边界框
                             text_bbox = draw.textbbox((0, 0), text_content, font=font)
                             text_width = text_bbox[2] - text_bbox[0]
                             text_height = text_bbox[3] - text_bbox[1]
                             
-                            # 根据对齐方式计算文字位置
+                            # 根据对齐方式计算文字位置 - 相对于整个T恤前胸区域
                             if alignment == "左对齐":
-                                text_x = left + 10
+                                text_x = chest_left + int(chest_width * 0.1)  # 左对齐，留10%边距
                             elif alignment == "右对齐":
-                                text_x = left + box_size - text_width - 10
+                                text_x = chest_left + chest_width - text_width - int(chest_width * 0.1)  # 右对齐，留10%边距
                             else:  # 居中
-                                text_x = left + (box_size - text_width) // 2
+                                text_x = chest_left + (chest_width - text_width) // 2
                             
-                            text_y = top + (box_size - text_height) // 2
+                            # 垂直居中
+                            text_y = chest_top + (chest_height - text_height) // 2
                             
                             # 绘制文字
                             draw.text((text_x, text_y), text_content, fill=text_color, font=font)
@@ -1025,7 +1049,8 @@ def show_low_complexity_general_sales():
                                 "style": text_style,
                                 "effect": text_effect,
                                 "alignment": alignment,
-                                "position": (text_x, text_y)
+                                "position": (text_x, text_y),
+                                "use_full_chest": True  # 标记使用整个胸前区域
                             }
                             
                             st.success(f"文字已成功应用到设计中！")
