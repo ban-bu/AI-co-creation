@@ -132,6 +132,44 @@ def get_ai_design_suggestions(user_preferences=None):
                 # 保存推荐面料到会话状态
                 if fabric_matches:
                     st.session_state.ai_suggested_fabrics = fabric_matches
+                
+                # 提取Logo建议
+                logo_pattern = r'(?:Logo Element Suggestions|Logo|design elements?):(.*?)(?:\d\.|$)'
+                logo_section_match = re.search(logo_pattern, suggestion_text, re.DOTALL | re.IGNORECASE)
+                
+                if logo_section_match:
+                    logo_section = logo_section_match.group(1).strip()
+                    # 提取单个Logo描述
+                    logo_desc_pattern = r'(?:-|\d+\.)\s*(.*?)(?=(?:-|\d+\.)|$)'
+                    logo_descriptions = re.findall(logo_desc_pattern, logo_section, re.DOTALL)
+                    
+                    if logo_descriptions:
+                        # 清理描述（去除多余空格和换行）
+                        cleaned_descriptions = [re.sub(r'\s+', ' ', desc.strip()) for desc in logo_descriptions]
+                        # 保存到会话状态
+                        st.session_state.ai_suggested_logos = cleaned_descriptions
+                        
+                        # 自动生成第一个Logo
+                        try:
+                            if cleaned_descriptions and len(cleaned_descriptions) > 0:
+                                # 获取第一个Logo描述
+                                first_logo_desc = cleaned_descriptions[0]
+                                # 构建完整的提示词
+                                full_prompt = f"创建一个T恤Logo设计：{first_logo_desc}。要求：1. 使用简洁的设计 2. 适合T恤印花 3. 背景透明 4. 图案清晰可识别"
+                                
+                                # 调用DALL-E生成图像
+                                logo_image = generate_vector_image(full_prompt)
+                                
+                                if logo_image:
+                                    # 保存生成的Logo
+                                    st.session_state.generated_logo = logo_image
+                                    # 保存Logo提示词
+                                    st.session_state.logo_prompt = first_logo_desc
+                                    # 记录logo是自动生成的
+                                    st.session_state.logo_auto_generated = True
+                        except Exception as logo_gen_error:
+                            print(f"自动生成Logo时出错: {logo_gen_error}")
+                            # 如果自动生成失败，不阻止其他功能
                     
             except Exception as e:
                 print(f"解析过程出错: {e}")
@@ -1846,9 +1884,21 @@ def show_high_complexity_general_sales():
                 logo_col1, logo_col2 = st.columns([2, 1])
 
                 with logo_col1:
-                    logo_prompt = st.text_input("描述您想要的Logo样式", placeholder="例如：简约现代的山峰Logo，使用蓝色和白色")
+                    # 根据AI建议的Logo元素自动填充初始提示词
+                    initial_logo_prompt = ""
+                    if hasattr(st.session_state, 'ai_suggested_logos') and st.session_state.ai_suggested_logos:
+                        # 使用第一个推荐的Logo描述
+                        initial_logo_prompt = st.session_state.ai_suggested_logos[0]
+                    
+                    logo_prompt = st.text_input("描述您想要的Logo样式", 
+                                               value=initial_logo_prompt,
+                                               placeholder="例如：简约现代的山峰Logo，使用蓝色和白色")
 
                 with logo_col2:
+                    # 显示Logo自动生成状态
+                    if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
+                        st.success("已自动生成Logo")
+                    
                     if st.button("生成Logo", key="generate_logo"):
                         if not logo_prompt:
                             st.warning("请先输入Logo描述")
@@ -1866,6 +1916,34 @@ def show_high_complexity_general_sales():
                                         st.session_state.generated_logo = logo_image
                                         # 保存Logo提示词
                                         st.session_state.logo_prompt = logo_prompt
+                                        # 标记为用户手动生成的Logo
+                                        st.session_state.logo_auto_generated = False
+                                        st.success("Logo生成成功！")
+                                        st.rerun()
+                                except Exception as e:
+                                    st.error(f"生成Logo时出错：{str(e)}")
+
+                # 如果有其他AI建议的Logo元素，显示切换选项
+                if hasattr(st.session_state, 'ai_suggested_logos') and len(st.session_state.ai_suggested_logos) > 1:
+                    # 修改显示逻辑，即使已经生成了Logo也显示其他建议
+                    st.markdown("**AI建议的其他Logo元素:**")
+                    for i, logo_desc in enumerate(st.session_state.ai_suggested_logos[1:], 1):
+                        if st.button(f"使用建议 {i}: {logo_desc[:50]}...", key=f"use_logo_suggestion_{i}"):
+                            with st.spinner("正在生成Logo..."):
+                                try:
+                                    # 构建完整的提示词
+                                    full_prompt = f"创建一个T恤Logo设计：{logo_desc}。要求：1. 使用简洁的设计 2. 适合T恤印花 3. 背景透明 4. 图案清晰可识别"
+                                    
+                                    # 调用DALL-E生成图像
+                                    logo_image = generate_vector_image(full_prompt)
+                                    
+                                    if logo_image:
+                                        # 保存生成的Logo
+                                        st.session_state.generated_logo = logo_image
+                                        # 保存Logo提示词
+                                        st.session_state.logo_prompt = logo_desc
+                                        # 标记为用户选择的Logo
+                                        st.session_state.logo_auto_generated = False
                                         st.success("Logo生成成功！")
                                         st.rerun()
                                 except Exception as e:
@@ -1885,8 +1963,11 @@ def show_high_complexity_general_sales():
                         st.image(st.session_state.generated_logo, caption="生成的Logo", width=preview_width)
                     
                     with logo_regen_col:
-                        # 显示当前使用的提示词
-                        st.markdown(f"**当前提示词**：{st.session_state.logo_prompt if hasattr(st.session_state, 'logo_prompt') else '未指定'}")
+                        # 显示当前使用的提示词和生成方式
+                        if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
+                            st.markdown(f"**当前提示词**：{st.session_state.logo_prompt if hasattr(st.session_state, 'logo_prompt') else '未指定'} (自动生成)")
+                        else:
+                            st.markdown(f"**当前提示词**：{st.session_state.logo_prompt if hasattr(st.session_state, 'logo_prompt') else '未指定'}")
                         
                         # 添加重新生成选项
                         new_logo_prompt = st.text_input("输入新的Logo提示词重新生成", placeholder="描述您想要的新Logo样式", key="new_logo_prompt")
@@ -1908,6 +1989,8 @@ def show_high_complexity_general_sales():
                                             st.session_state.generated_logo = logo_image
                                             # 更新Logo提示词
                                             st.session_state.logo_prompt = new_logo_prompt
+                                            # 标记为用户手动生成的Logo
+                                            st.session_state.logo_auto_generated = False
                                             st.success("Logo重新生成成功！")
                                             st.rerun()
                                     except Exception as e:
