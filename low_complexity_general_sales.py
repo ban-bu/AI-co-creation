@@ -2,6 +2,7 @@ import streamlit as st
 from PIL import Image, ImageDraw
 import requests
 from io import BytesIO
+import os  # 确保os模块在这里导入
 # 添加try-except导入cairosvg，避免因缺少这个库而导致整个应用崩溃
 try:
     import cairosvg
@@ -18,7 +19,6 @@ except ImportError:
         st.warning("SVG处理库未安装，SVG格式转换功能将不可用")
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
-import os
 import re
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
@@ -580,55 +580,55 @@ def show_low_complexity_general_sales():
                                         break
                                     except:
                                         continue
-                            
-                            # 如果仍然失败，使用默认字体
-                            if font is None:
-                                font = ImageFont.load_default()
-                            
-                            # 获取图像尺寸
-                            img_width, img_height = st.session_state.final_design.size
-                            
-                            # 使用定位信息或重新计算位置
-                            if "position" in text_info:
-                                # 使用保存的位置 
-                                text_x, text_y = text_info["position"]
-                            else:
-                                # 获取文字尺寸重新计算位置
-                                text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
-                                text_width = text_bbox[2] - text_bbox[0]
-                                text_height = text_bbox[3] - text_bbox[1]
                                 
-                                # 居中位置
-                                text_x = (img_width - text_width) // 2
-                                text_y = int(img_height * 0.4) - (text_height // 2)
-                            
-                            # 创建临时图像来绘制文字
-                            text_img = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
-                            text_draw = ImageDraw.Draw(text_img)
-                            
-                            # 应用特殊效果 - 先绘制特效
-                            if "style" in text_info:
-                                if "轮廓" in text_info["style"]:
-                                    # 粗轮廓效果
-                                    offset = max(3, text_info["size"] // 25)
-                                    for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
-                                        text_draw.text((text_x + offset_x, text_y + offset_y), text_info["text"], fill="black", font=font)
+                                # 如果仍然失败，使用默认字体
+                                if font is None:
+                                    font = ImageFont.load_default()
+                                
+                                # 获取图像尺寸
+                                img_width, img_height = st.session_state.final_design.size
+                                
+                                # 使用定位信息或重新计算位置
+                                if "position" in text_info:
+                                    # 使用保存的位置 
+                                    text_x, text_y = text_info["position"]
+                                else:
+                                    # 获取文字尺寸重新计算位置
+                                    text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
+                                    text_width = text_bbox[2] - text_bbox[0]
+                                    text_height = text_bbox[3] - text_bbox[1]
+                                    
+                                    # 居中位置
+                                    text_x = (img_width - text_width) // 2
+                                    text_y = int(img_height * 0.4) - (text_height // 2)
+                                
+                                # 创建临时图像来绘制文字
+                                text_img = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
+                                text_draw = ImageDraw.Draw(text_img)
+                                
+                                # 应用特殊效果 - 先绘制特效
+                                if "style" in text_info:
+                                    if "轮廓" in text_info["style"]:
+                                        # 粗轮廓效果
+                                        offset = max(3, text_info["size"] // 25)
+                                        for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
+                                            text_draw.text((text_x + offset_x, text_y + offset_y), text_info["text"], fill="black", font=font)
                                 
                                 if "阴影" in text_info["style"]:
                                     # 明显阴影
                                     shadow_offset = max(5, text_info["size"] // 15)
                                     text_draw.text((text_x + shadow_offset, text_y + shadow_offset), text_info["text"], fill=(0, 0, 0, 180), font=font)
-                            
-                            # 将文字颜色从十六进制转换为RGBA
-                            text_rgb = tuple(int(text_info["color"].lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-                            text_rgba = text_rgb + (255,)  # 完全不透明
-                            
-                            # 绘制主文字
-                            text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
-                            
-                            # 直接粘贴合并
-                            st.session_state.final_design.paste(text_img, (0, 0), text_img)
-                            st.session_state.current_image = st.session_state.final_design.copy()
+                                
+                                # 将文字颜色从十六进制转换为RGBA
+                                text_rgb = tuple(int(text_info["color"].lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                                text_rgba = text_rgb + (255,)  # 完全不透明
+                                
+                                # 绘制主文字
+                                text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
+                                
+                                # 直接粘贴合并
+                                st.session_state.final_design.paste(text_img, (0, 0), text_img)
+                                st.session_state.current_image = st.session_state.final_design.copy()
                             
                         except Exception as e:
                             st.warning(f"重新应用文字时出错: {e}")
@@ -1093,82 +1093,55 @@ def show_low_complexity_general_sales():
                         st.warning("请输入文字内容!")
                     else:
                         with st.spinner("正在应用文字设计..."):
-                            try:
-                                # 获取当前图像
-                                if st.session_state.final_design is not None:
-                                    new_design = st.session_state.final_design.copy()
-                                else:
-                                    new_design = st.session_state.base_image.copy()
-                                
+                        try:
+                            # 获取当前图像
+                            if st.session_state.final_design is not None:
+                                new_design = st.session_state.final_design.copy()
+                            else:
+                                new_design = st.session_state.base_image.copy()
+                            
                                 # 获取图像尺寸
-                                    img_width, img_height = new_design.size
+                                img_width, img_height = new_design.size
                                 
                                 # 添加调试信息
-                                    st.session_state.tshirt_size = (img_width, img_height)
+                                st.session_state.tshirt_size = (img_width, img_height)
                                 
-                                # 创建一个小图像用于绘制文字，之后再放大
-                                    initial_text_width = min(400, img_width // 2)
-                                    initial_text_height = 200
-                                    text_img = Image.new('RGBA', (initial_text_width, initial_text_height), (0, 0, 0, 0))
-                                    text_draw = ImageDraw.Draw(text_img)
+                                # 创建小图像用于绘制文字
+                                initial_text_width = min(400, img_width // 2)
+                                initial_text_height = 200
+                                text_img = Image.new('RGBA', (initial_text_width, initial_text_height), (0, 0, 0, 0))
+                                text_draw = ImageDraw.Draw(text_img)
                                 
-                                # 加载任何可用的字体，优先使用系统字体
-                                    font = None
-                                    font_debug_info = []
-                                    font_debug_info.append("尝试使用简单的绘图方法")
+                                # 加载字体
+                                from PIL import ImageFont
+                                import os
                                 
                                 # 尝试加载系统字体
+                                font = None
                                 try:
-                                    import platform
-                                    if platform.system() == 'Windows':
-                                        # 尝试加载常见系统字体
-                                        common_fonts = [
-                                            "C:/Windows/Fonts/arial.ttf",
-                                            "C:/Windows/Fonts/ARIAL.TTF",
-                                            "C:/Windows/Fonts/verdana.ttf",
-                                            "C:/Windows/Fonts/VERDANA.TTF",
-                                            "C:/Windows/Fonts/segoeui.ttf"
-                                        ]
-                                        
-                                        for font_path in common_fonts:
-                                            if os.path.exists(font_path):
-                                                try:
-                                                    # 使用较小的字体大小
-                                                    font = ImageFont.truetype(font_path, 40)
-                                                    font_debug_info.append(f"加载系统字体成功: {font_path}")
-                                                    break
-                                                except Exception as font_err:
-                                                    font_debug_info.append(f"加载字体失败: {font_err}")
-                                except Exception as e:
-                                    font_debug_info.append(f"系统字体加载错误: {e}")
+                                    # 尝试直接加载系统字体
+                                    if os.path.exists("C:/Windows/Fonts/arial.ttf"):
+                                        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 40)
+                                except Exception:
+                                    pass
                                 
-                                # 如果系统字体加载失败，尝试使用默认字体
+                                # 如果系统字体加载失败，使用默认字体
                                 if font is None:
-                                    try:
-                                        font = ImageFont.load_default()
-                                        font_debug_info.append("使用PIL默认字体")
-                                    except Exception as default_err:
-                                        font_debug_info.append(f"默认字体加载失败: {default_err}")
-                                
-                                # 将文字颜色从十六进制转换为RGBA
-                                text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-                                text_rgba = text_rgb + (255,)  # 完全不透明
+                                    font = ImageFont.load_default()
                                 
                                 # 在小图像上绘制文字
-                                # 计算文字在小图像上的位置
                                 small_text_x = initial_text_width // 2
                                 small_text_y = initial_text_height // 2
                                 
-                                # 应用不同的效果
-                                if "轮廓" in text_style:
-                                    # 绘制轮廓 - 在多个位置绘制黑色文字
-                                    offset = 2
-                                    for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
-                                        text_draw.text((small_text_x + offset_x, small_text_y + offset_y), 
-                                                      text_content, fill="black", font=font, anchor="mm")
+                                # 应用效果
+                                if "style" in text_info:
+                                    if "轮廓" in text_info["style"]:
+                                        offset = 2
+                                        for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
+                                            text_draw.text((small_text_x + offset_x, small_text_y + offset_y), 
+                                                          text_content, fill="black", font=font, anchor="mm")
                                 
-                                if "阴影" in text_style:
-                                    # 绘制阴影
+                                if "阴影" in text_info["style"]:
                                     shadow_offset = 4
                                     text_draw.text((small_text_x + shadow_offset, small_text_y + shadow_offset), 
                                                   text_content, fill=(0, 0, 0, 180), font=font, anchor="mm")
