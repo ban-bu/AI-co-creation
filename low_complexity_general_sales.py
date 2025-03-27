@@ -303,15 +303,37 @@ def get_preset_logos():
     logos_dir = "logos"
     preset_logos = []
     
-    # 检查logos文件夹是否存在
-    if not os.path.exists(logos_dir):
-        os.makedirs(logos_dir)
-        return preset_logos
-    
-    # 获取所有支持的图片文件
-    for file in os.listdir(logos_dir):
-        if file.lower().endswith(('.png', '.jpg', '.jpeg')):
-            preset_logos.append(os.path.join(logos_dir, file))
+    try:
+        # 获取当前工作目录
+        current_dir = os.getcwd()
+        st.info(f"Current working directory: {current_dir}")
+        
+        # 构建完整的logos目录路径
+        logos_full_path = os.path.join(current_dir, logos_dir)
+        st.info(f"Looking for logos in: {logos_full_path}")
+        
+        # 检查logos文件夹是否存在
+        if not os.path.exists(logos_full_path):
+            os.makedirs(logos_full_path)
+            st.warning(f"Created logos directory at: {logos_full_path}")
+            return preset_logos
+        
+        # 获取所有支持的图片文件
+        for file in os.listdir(logos_full_path):
+            if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                full_path = os.path.join(logos_full_path, file)
+                if os.path.isfile(full_path):
+                    preset_logos.append(full_path)
+                    st.info(f"Found logo file: {full_path}")
+        
+        if not preset_logos:
+            st.warning("No logo files found in the logos directory")
+        else:
+            st.success(f"Found {len(preset_logos)} logo files")
+            
+    except Exception as e:
+        st.error(f"Error in get_preset_logos: {str(e)}")
+        return []
     
     return preset_logos
 
@@ -775,17 +797,121 @@ def show_low_complexity_general_sales():
                         unsafe_allow_html=True
                     )
                     
-                # Apply text button
-                if st.button("Apply Text to Design", key="apply_ai_text"):
-                    if not text_content.strip():
-                        st.warning("Please enter text content!")
-                    else:
-                        with st.spinner("Applying text design..."):
+                    # Apply text button
+                    if st.button("Apply Text to Design", key="apply_ai_text"):
+                        if not text_content.strip():
+                            st.warning("请输入文字内容！")
+                        else:
                             try:
-                                # ... rest of the text application code ...
-                                pass
+                                # 创建一个新的图像用于绘制文字
+                                if st.session_state.final_design is not None:
+                                    new_design = st.session_state.final_design.copy()
+                                else:
+                                    new_design = st.session_state.base_image.copy()
+
+                                # 创建一个绘图对象
+                                draw = ImageDraw.Draw(new_design)
+
+                                # 设置字体
+                                font_mapping = {
+                                    "Arial": "arial.ttf",
+                                    "Times New Roman": "times.ttf",
+                                    "Courier": "cour.ttf",
+                                    "Verdana": "verdana.ttf",
+                                    "Georgia": "georgia.ttf",
+                                    "Script": "script.ttf",
+                                    "Impact": "impact.ttf"
+                                }
+
+                                try:
+                                    from PIL import ImageFont
+                                    # 尝试获取选择的字体
+                                    font_file = font_mapping.get(font_family, "arial.ttf")
+                                    
+                                    # 尝试加载字体，如果失败则尝试系统字体路径
+                                    try:
+                                        font = ImageFont.truetype(font_file, text_size)
+                                    except:
+                                        # 尝试系统字体路径
+                                        system_font_paths = [
+                                            "/Library/Fonts/",  # macOS
+                                            "/System/Library/Fonts/",  # macOS系统
+                                            "C:/Windows/Fonts/",  # Windows
+                                            "/usr/share/fonts/truetype/",  # Linux
+                                        ]
+                                        
+                                        font_found = False
+                                        for path in system_font_paths:
+                                            try:
+                                                font = ImageFont.truetype(path + font_file, text_size)
+                                                font_found = True
+                                                break
+                                            except:
+                                                continue
+                                        
+                                        if not font_found:
+                                            # 如果找不到字体，使用默认字体
+                                            font = ImageFont.load_default()
+                                            st.warning("无法找到所选字体，使用默认字体。")
+
+                                    # 获取文字大小
+                                    bbox = draw.textbbox((0, 0), text_content, font=font)
+                                    text_width = bbox[2] - bbox[0]
+                                    text_height = bbox[3] - bbox[1]
+
+                                    # 获取选择框位置和大小
+                                    left, top = st.session_state.current_box_position
+                                    box_size = int(1024 * 0.25)
+
+                                    # 根据对齐方式计算文字位置
+                                    if alignment == "Left":
+                                        text_x = left + 10
+                                    elif alignment == "Right":
+                                        text_x = left + box_size - text_width - 10
+                                    else:  # Center
+                                        text_x = left + (box_size - text_width) // 2
+
+                                    # 垂直居中
+                                    text_y = top + (box_size - text_height) // 2
+
+                                    # 应用文字效果
+                                    if "Shadow" in text_style:
+                                        # 添加阴影
+                                        shadow_offset = 2
+                                        draw.text((text_x + shadow_offset, text_y + shadow_offset), 
+                                                text_content, 
+                                                font=font, 
+                                                fill=(128, 128, 128))
+
+                                    if "Outline" in text_style:
+                                        # 添加轮廓
+                                        outline_color = (0, 0, 0)
+                                        outline_width = 2
+                                        for dx, dy in [(x, y) for x in range(-outline_width, outline_width + 1) 
+                                                            for y in range(-outline_width, outline_width + 1)
+                                                            if x*x + y*y <= outline_width*outline_width]:
+                                            draw.text((text_x + dx, text_y + dy), 
+                                                    text_content, 
+                                                    font=font, 
+                                                    fill=outline_color)
+
+                                    # 绘制主要文字
+                                    draw.text((text_x, text_y), 
+                                            text_content, 
+                                            font=font, 
+                                            fill=text_color)
+
+                                    # 更新最终设计
+                                    st.session_state.final_design = new_design
+                                    st.session_state.current_image = new_design.copy()
+                                    st.success("文字已成功添加到设计中！")
+                                    st.rerun()
+
+                                except Exception as e:
+                                    st.error(f"添加文字时出错: {str(e)}")
+
                             except Exception as e:
-                                st.error(f"Error applying text: {str(e)}")
+                                st.error(f"处理设计时出错: {str(e)}")
                 
                 # Logo section
                 st.markdown("##### Apply Logo")
@@ -815,8 +941,12 @@ def show_low_complexity_general_sales():
                         
                         for i, logo_path in enumerate(preset_logos):
                             with logo_cols[i % 3]:
-                                logo_name = os.path.basename(logo_path)
                                 try:
+                                    if not isinstance(logo_path, str):
+                                        st.error(f"Invalid logo path type: {type(logo_path)}")
+                                        continue
+                                    logo_name = os.path.basename(logo_path)
+                                    st.info(f"Processing logo: {logo_path}")
                                     logo_preview = Image.open(logo_path).convert("RGBA")
                                     preview_width = 80
                                     preview_height = int(preview_width * logo_preview.height / logo_preview.width)
@@ -827,7 +957,7 @@ def show_low_complexity_general_sales():
                                         st.session_state.selected_preset_logo = logo_path
                                         st.rerun()
                                 except Exception as e:
-                                    st.error(f"Error loading logo {logo_name}: {e}")
+                                    st.error(f"Error processing logo {logo_path}: {str(e)}")
                 
                 # Logo size and position settings
                 if logo_source == "Upload Logo" and uploaded_logo is not None or \
