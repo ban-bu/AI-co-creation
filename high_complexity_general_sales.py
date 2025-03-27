@@ -1864,41 +1864,47 @@ def show_high_complexity_general_sales():
                                         font_debug_info.append("Applied emergency text rendering")
                                     except Exception as emergency_err:
                                         font_debug_info.append(f"Emergency rendering also failed: {str(emergency_err)}")
+                                
+                                try:
+                                    # 保存字体加载和渲染信息
+                                    st.session_state.font_debug_info = font_debug_info
+                                    
+                                    # 更新设计和预览
+                                    st.session_state.final_design = new_design
+                                    st.session_state.current_image = new_design.copy()
+                                    
+                                    # 保存完整的文字信息
+                                    st.session_state.applied_text = {
+                                        "text": text_info["text"],
+                                        "font": text_info["font"],
+                                        "color": text_info["color"],
+                                        "size": text_info["size"],
+                                        "style": text_info["style"],
+                                        "effect": text_info["effect"],
+                                        "alignment": text_info["alignment"],
+                                        "position": (text_x, text_y),
+                                        "use_drawing_method": True  # 标记使用了绘图方法
+                                    }
+                                    
+                                    # 添加详细调试信息
+                                    success_msg = f"""
+                                    Text applied to design successfully!
+                                    Font: {text_info["font"]}
+                                    Size: {text_info["size"]}px
+                                    Actual width: {text_width}px
+                                    Actual height: {text_height}px
+                                    Position: ({text_x}, {text_y})
+                                    T-shirt size: {img_width} x {img_height}
+                                    Rendering method: High-definition rendering
+                                    """
+                                    
+                                    st.success(success_msg)
+                                    st.rerun()
+                                except Exception as update_err:
+                                    st.error(f"Error updating session state: {str(update_err)}")
+                                    import traceback
+                                    st.error(traceback.format_exc())
                             
-                            # 保存字体加载和渲染信息
-                            st.session_state.font_debug_info = font_debug_info
-                            
-                            # 更新设计和预览
-                            st.session_state.final_design = new_design
-                            st.session_state.current_image = new_design.copy()
-                            
-                            # 保存完整的文字信息
-                            st.session_state.applied_text = {
-                                "text": text_info["text"],
-                                "font": text_info["font"],
-                                "color": text_info["color"],
-                                "size": text_info["size"],
-                                "style": text_info["style"],
-                                "effect": text_info["effect"],
-                                "alignment": text_info["alignment"],
-                                "position": (text_x, text_y),
-                                "use_drawing_method": True  # 标记使用了绘图方法
-                            }
-                            
-                            # 添加详细调试信息
-                            success_msg = f"""
-                            Text applied to design successfully!
-                            Font: {text_info["font"]}
-                            Size: {text_info["size"]}px
-                            Actual width: {text_width}px
-                            Actual height: {text_height}px
-                            Position: ({text_x}, {text_y})
-                            T-shirt size: {img_width} x {img_height}
-                            Rendering method: High-definition rendering
-                            """
-                            
-                            st.success(success_msg)
-                            st.rerun()
                         except Exception as e:
                             st.error(f"Error applying text: {str(e)}")
                             import traceback
