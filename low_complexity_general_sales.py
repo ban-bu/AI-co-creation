@@ -1688,42 +1688,38 @@ def show_low_complexity_general_sales():
                             st.error(f"加载上传的Logo时出错: {e}")
                 else:  # 选择预设Logo
                     # 获取预设logo
-                    preset_logos = get_preset_logos()
-                    
-                    if not preset_logos:
-                        st.warning("未找到预设Logo。请在'logos'文件夹中添加一些图片。")
-                        logo_image = None
-                    else:
-                        # 显示预设logo选择
-                        logo_cols = st.columns(min(3, len(preset_logos)))
-                        selected_preset_logo = None
+                    try:
+                        # 确保os模块在这个作用域内可用
+                        import os
+                        preset_logos = get_preset_logos()
                         
-                        for i, logo_path in enumerate(preset_logos):
-                            with logo_cols[i % 3]:
-                                logo_name = os.path.basename(logo_path)
-                                try:
-                                    logo_preview = Image.open(logo_path).convert("RGBA")
-                                    # 调整预览大小
-                                    preview_width = 80
-                                    preview_height = int(preview_width * logo_preview.height / logo_preview.width)
-                                    preview = logo_preview.resize((preview_width, preview_height))
-                                    
-                                    st.image(preview, caption=logo_name)
-                                    if st.button(f"选择", key=f"ai_logo_{i}"):
-                                        st.session_state.selected_preset_logo = logo_path
-                                        st.rerun()
-                                except Exception as e:
-                                    st.error(f"加载Logo {logo_name}时出错: {e}")
-                        
-                        # 如果已选择Logo
-                        if 'selected_preset_logo' in st.session_state:
-                            try:
-                                logo_image = Image.open(st.session_state.selected_preset_logo).convert("RGBA")
-                            except Exception as e:
-                                st.error(f"加载选择的Logo时出错: {e}")
-                                logo_image = None
-                        else:
+                        if not preset_logos:
+                            st.warning("未找到预设Logo。请在'logos'文件夹中添加一些图片。")
                             logo_image = None
+                        else:
+                            # 显示预设logo选择
+                            logo_cols = st.columns(min(3, len(preset_logos)))
+                            selected_preset_logo = None
+                            
+                            for i, logo_path in enumerate(preset_logos):
+                                with logo_cols[i % 3]:
+                                    logo_name = os.path.basename(logo_path)
+                                    try:
+                                        logo_preview = Image.open(logo_path).convert("RGBA")
+                                        # 调整预览大小
+                                        preview_width = 80
+                                        preview_height = int(preview_width * logo_preview.height / logo_preview.width)
+                                        preview = logo_preview.resize((preview_width, preview_height))
+                                        
+                                        st.image(preview, caption=logo_name)
+                                        if st.button(f"选择", key=f"ai_logo_{i}"):
+                                            st.session_state.selected_preset_logo = logo_path
+                                            st.rerun()
+                                    except Exception as e:
+                                        st.error(f"加载Logo {logo_name}时出错: {e}")
+                    except Exception as e:
+                        st.error(f"处理预设Logo时出错: {e}")
+                        logo_image = None
                 
                 # Logo大小和位置设置(只在有logo_image时显示)
                 if logo_source == "上传Logo" and uploaded_logo is not None or \
