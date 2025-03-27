@@ -1044,7 +1044,7 @@ def show_low_complexity_general_sales():
                                     font_debug_info.append(f"字体文件存在: {os.path.exists(font_path)}")
                                 
                                 # 先尝试使用Pillow的字体注册功能获取系统字体
-                            font = None
+                                font = None
                                 font_truetype_found = False
                                 
                                 try:
