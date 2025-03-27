@@ -348,30 +348,30 @@ def show_low_complexity_general_sales():
         st.session_state.ai_suggestions = None  # 存储AI建议
     
     # 创建单列布局，移除右侧Design Parameters部分
-    col1 = st
+    # col1 = st
     
-    with col1:
-        st.markdown("## Design Area")
+    # with col1:
+    st.markdown("## Design Area")
+    
+    # 添加AI建议框
+    with st.expander("🤖 AI Design Suggestions", expanded=True):
+        # 添加用户偏好输入
+        user_preference = st.text_input("描述您喜欢的风格或用途", placeholder="例如：运动风格、商务场合、休闲日常等")
         
-        # 添加AI建议框
-        with st.expander("🤖 AI Design Suggestions", expanded=True):
-            # 添加用户偏好输入
-            user_preference = st.text_input("描述您喜欢的风格或用途", placeholder="例如：运动风格、商务场合、休闲日常等")
-            
-            col_pref1, col_pref2 = st.columns([1, 1])
-            with col_pref1:
-                # 添加预设风格选择
-                preset_styles = ["", "时尚休闲", "商务正式", "运动风格", "摇滚朋克", "日系动漫", "文艺复古", "美式街头"]
-                selected_preset = st.selectbox("或选择预设风格:", preset_styles)
-                if selected_preset and not user_preference:
-                    user_preference = selected_preset
-            
-            with col_pref2:
-                # 添加获取建议按钮
-                if st.button("获取个性化AI建议", key="get_ai_advice"):
-                    with st.spinner("正在生成个性化设计建议..."):
-                        suggestions = get_ai_design_suggestions(user_preference)
-                        st.session_state.ai_suggestions = suggestions
+        col_pref1, col_pref2 = st.columns([1, 1])
+        with col_pref1:
+            # 添加预设风格选择
+            preset_styles = ["", "时尚休闲", "商务正式", "运动风格", "摇滚朋克", "日系动漫", "文艺复古", "美式街头"]
+            selected_preset = st.selectbox("或选择预设风格:", preset_styles)
+            if selected_preset and not user_preference:
+                user_preference = selected_preset
+        
+        with col_pref2:
+            # 添加获取建议按钮
+            if st.button("获取个性化AI建议", key="get_ai_advice"):
+                with st.spinner("正在生成个性化设计建议..."):
+                    suggestions = get_ai_design_suggestions(user_preference)
+                    st.session_state.ai_suggestions = suggestions
             
             # 显示AI建议
             if st.session_state.ai_suggestions:
