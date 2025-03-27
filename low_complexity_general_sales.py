@@ -459,7 +459,7 @@ def show_low_complexity_general_sales():
                         ]
                         
                         # 使用固定的大像素值，与应用文字逻辑保持一致
-                        font_size = 500  # 固定使用250像素的大字体
+                        font_size = 5000  # 固定使用250像素的大字体
                         
                         font_file = font_mapping.get(text_info["font"], "arial.ttf")
                         for path in system_font_paths:
