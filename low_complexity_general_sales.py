@@ -1101,21 +1101,21 @@ def show_low_complexity_general_sales():
                                     new_design = st.session_state.base_image.copy()
                                 
                                 # 获取图像尺寸
-                                img_width, img_height = new_design.size
+                                    img_width, img_height = new_design.size
                                 
                                 # 添加调试信息
-                                st.session_state.tshirt_size = (img_width, img_height)
+                                    st.session_state.tshirt_size = (img_width, img_height)
                                 
                                 # 创建一个小图像用于绘制文字，之后再放大
-                                initial_text_width = min(400, img_width // 2)
-                                initial_text_height = 200
-                                text_img = Image.new('RGBA', (initial_text_width, initial_text_height), (0, 0, 0, 0))
-                                text_draw = ImageDraw.Draw(text_img)
+                                    initial_text_width = min(400, img_width // 2)
+                                    initial_text_height = 200
+                                    text_img = Image.new('RGBA', (initial_text_width, initial_text_height), (0, 0, 0, 0))
+                                    text_draw = ImageDraw.Draw(text_img)
                                 
                                 # 加载任何可用的字体，优先使用系统字体
-                                font = None
-                                font_debug_info = []
-                                font_debug_info.append("尝试使用简单的绘图方法")
+                                    font = None
+                                    font_debug_info = []
+                                    font_debug_info.append("尝试使用简单的绘图方法")
                                 
                                 # 尝试加载系统字体
                                 try:
