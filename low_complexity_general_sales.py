@@ -38,13 +38,13 @@ def get_ai_design_suggestions(user_preferences=None):
     
     # 构建提示词
     prompt = f"""
-    作为一个T恤定制设计师，请为用户提供以下方面的建议：
-    1. 请推荐3种适合"{user_preferences}"的T恤颜色，并说明理由。请提供颜色名称和RGB十六进制代码(如#FFFFFF)
-    2. 针对"{user_preferences}"风格，推荐3个适合的文字或短语及字体风格
-    3. 建议3种适合"{user_preferences}"的logo类型或元素
+    作为T恤设计顾问，请为"{user_preferences}"风格简洁提供以下建议：
+
+    1. 颜色建议：列出3种颜色，格式为"颜色名(#十六进制) - 简短理由"
+    2. 文字建议：推荐2个短语及字体，一句话说明
+    3. Logo建议：推荐2种元素，一句话说明
     
-    请在回答中分类整理这些建议，并简要解释每个建议的理由。
-    对于颜色，请确保包含十六进制颜色代码，例如白色 (#FFFFFF)，便于系统解析。
+    务必保持极度简洁，每点说明不超过15字，总字数控制在150字以内。
     """
     
     try:
@@ -52,7 +52,7 @@ def get_ai_design_suggestions(user_preferences=None):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "你是一个专业的T恤设计顾问，擅长根据用户偏好提供设计建议。"},
+                {"role": "system", "content": "你是一个精简的设计顾问，只提供要点，无需详细解释。保持简洁，使用短句，确保包含颜色代码。"},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -80,7 +80,14 @@ def get_ai_design_suggestions(user_preferences=None):
             except Exception as e:
                 print(f"解析颜色代码时出错: {e}")
                 
-            return suggestion_text
+            # 添加HTML样式使文本更小，更紧凑
+            suggestion_with_style = f"""
+            <div style="font-size: 0.85rem; line-height: 1.2;">
+            {suggestion_text}
+            </div>
+            """
+            
+            return suggestion_with_style
         else:
             return "无法获取AI建议，请稍后再试。"
     except Exception as e:
@@ -333,20 +340,23 @@ def show_low_complexity_general_sales():
                 .suggestion-box {
                     background-color: #f8f9fa;
                     border-left: 4px solid #4CAF50;
-                    padding: 10px;
-                    margin: 10px 0;
+                    padding: 8px;
+                    margin: 8px 0;
                     border-radius: 0 5px 5px 0;
+                    font-size: 0.85rem;
+                    line-height: 1.2;
                 }
                 .suggestion-title {
                     color: #1e88e5;
                     font-weight: bold;
-                    margin-bottom: 5px;
+                    margin-bottom: 4px;
+                    font-size: 0.9rem;
                 }
                 </style>
                 """, unsafe_allow_html=True)
                 
                 st.markdown("<div class='suggestion-box'>", unsafe_allow_html=True)
-                st.markdown(st.session_state.ai_suggestions)
+                st.markdown(st.session_state.ai_suggestions, unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 
                 # 添加应用建议的部分
