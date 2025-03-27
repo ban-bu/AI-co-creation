@@ -1097,7 +1097,7 @@ def show_low_complexity_popup_sales():
         # 操作区，包含AI建议和其他控制选项
         with st.expander("🤖 AI design suggestions", expanded=True):
             # 添加用户偏好输入
-            user_preference = st.text_input("Describe your preferred style or usage", placeholder="For example: sports style, business场合, casual daily, etc.")
+            user_preference = st.text_input("Describe your preferred style or usage", placeholder="For example: sports style, business, casual daily, etc.")
             
             col_pref1, col_pref2 = st.columns([1, 1])
             with col_pref1:
