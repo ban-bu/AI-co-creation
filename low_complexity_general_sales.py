@@ -1714,8 +1714,15 @@ def show_low_complexity_general_sales():
                                         preview = logo_preview.resize((preview_width, preview_height))
                                         
                                         st.image(preview, caption=logo_name)
-                                        if st.button(f"选择", key=f"ai_logo_{i}"):
+                                        if st.button(f"Choose", key=f"ai_logo_{i}"):
                                             st.session_state.selected_preset_logo = logo_path
+                                            # 立即加载选中的Logo
+                                            try:
+                                                logo_image = Image.open(logo_path).convert("RGBA")
+                                                st.session_state.current_logo_image = logo_image
+                                                st.success(f"Logo '{logo_name}' selected successfully!")
+                                            except Exception as e:
+                                                st.error(f"Error loading selected logo: {e}")
                                             st.rerun()
                                     except Exception as e:
                                         st.error(f"Error loading logo {logo_name}: {e}")
@@ -1724,31 +1731,42 @@ def show_low_complexity_general_sales():
                         logo_image = None
                 
                 # Logo大小和位置设置(只在有logo_image时显示)
-                if logo_source == "Upload Logo" and uploaded_logo is not None or \
-                   logo_source == "Select Preset Logo" and 'selected_preset_logo' in st.session_state:
+                if (logo_source == "Upload Logo" and uploaded_logo is not None) or \
+                   (logo_source == "Select Preset Logo" and 'selected_preset_logo' in st.session_state):
                     
-                    # Logo大小
-                    logo_size = st.slider("Logo size:", 10, 100, 40, format="%d%%", key="ai_logo_size")
-                    
-                    # Logo位置
-                    logo_position = st.radio("Position:", 
-                        ["Top-left", "Top-center", "Top-right", "Center", "Bottom-left", "Bottom-center", "Bottom-right"], 
-                        index=3, horizontal=True, key="ai_logo_position")
-                    
-                    # Logo透明度
-                    logo_opacity = st.slider("Logo opacity:", 10, 100, 100, 5, format="%d%%", key="ai_logo_opacity")
-                    
-                    # 应用Logo按钮
-                    if st.button("Apply Logo to design", key="apply_ai_logo"):
-                        # 获取当前图像
-                        if st.session_state.final_design is not None:
-                            new_design = st.session_state.final_design.copy()
-                        else:
-                            new_design = st.session_state.base_image.copy()
+                    try:
+                        # 获取logo图像
+                        if logo_source == "Upload Logo" and uploaded_logo is not None:
+                            logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
+                        elif logo_source == "Select Preset Logo" and 'selected_preset_logo' in st.session_state:
+                            logo_image = Image.open(st.session_state.selected_preset_logo).convert("RGBA")
                         
-                        try:
-                            # 对应的logo_image应该已经在上面的逻辑中被设置
-                            if logo_image:
+                        # 显示当前选中的Logo预览
+                        preview_width = 100
+                        preview_height = int(preview_width * logo_image.height / logo_image.width)
+                        preview = logo_image.resize((preview_width, preview_height))
+                        st.image(preview, caption="Current selected Logo", width=preview_width)
+                        
+                        # Logo大小
+                        logo_size = st.slider("Logo size:", 10, 100, 40, format="%d%%", key="ai_logo_size")
+                        
+                        # Logo位置
+                        logo_position = st.radio("Position:", 
+                            ["Top-left", "Top-center", "Top-right", "Center", "Bottom-left", "Bottom-center", "Bottom-right"], 
+                            index=3, horizontal=True, key="ai_logo_position")
+                        
+                        # Logo透明度
+                        logo_opacity = st.slider("Logo opacity:", 10, 100, 100, 5, format="%d%%", key="ai_logo_opacity")
+                        
+                        # 应用Logo按钮
+                        if st.button("Apply Logo to design", key="apply_ai_logo"):
+                            with st.spinner("Applying logo to design..."):
+                                # 获取当前图像
+                                if st.session_state.final_design is not None:
+                                    new_design = st.session_state.final_design.copy()
+                                else:
+                                    new_design = st.session_state.base_image.copy()
+                                
                                 # 获取图像尺寸并使用更大的绘制区域
                                 img_width, img_height = new_design.size
                                 
@@ -1758,13 +1776,13 @@ def show_low_complexity_general_sales():
                                 chest_left = (img_width - chest_width) // 2
                                 chest_top = int(img_height * 0.2)  # 更高的位置
                                 
-                                # 调整Logo大小 - 相对于T恤区域而不是小框
+                                # 调整Logo大小
                                 logo_size_factor = logo_size / 100
-                                logo_width = int(chest_width * logo_size_factor * 0.5)  # 控制最大为区域的一半
+                                logo_width = int(chest_width * logo_size_factor * 0.5)
                                 logo_height = int(logo_width * logo_image.height / logo_image.width)
                                 logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
                                 
-                                # 位置映射 - 现在相对于胸前设计区域
+                                # 位置映射
                                 position_mapping = {
                                     "Top-left": (chest_left + 10, chest_top + 10),
                                     "Top-center": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
@@ -1788,30 +1806,28 @@ def show_low_complexity_general_sales():
                                     logo_resized.putdata(new_data)
                                 
                                 # 粘贴Logo到设计
-                                try:
-                                    new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
-                                except Exception as e:
-                                    st.warning(f"Logo pasting failed: {e}")
+                                new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
                                 
                                 # 更新设计
                                 st.session_state.final_design = new_design
                                 st.session_state.current_image = new_design.copy()
                                 
-                                # 保存Logo信息用于后续可能的更新
+                                # 保存Logo信息
                                 st.session_state.applied_logo = {
                                     "source": logo_source,
-                                    "path": st.session_state.get('selected_preset_logo', None),
+                                    "path": st.session_state.selected_preset_logo if logo_source == "Select Preset Logo" else None,
                                     "size": logo_size,
                                     "position": logo_position,
                                     "opacity": logo_opacity
                                 }
                                 
-                                st.success("Logo applied to design successfully!")
+                                st.success("Logo applied successfully!")
                                 st.rerun()
-                            else:
-                                st.error("Please select or upload a logo first")
-                        except Exception as e:
-                            st.error(f"Error applying logo: {e}")
+                                
+                    except Exception as e:
+                        st.error(f"Error processing logo: {str(e)}")
+                        import traceback
+                        st.error(traceback.format_exc())
             else:
                 # 显示欢迎信息
                 st.markdown("""
