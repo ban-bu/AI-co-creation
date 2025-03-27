@@ -13,3 +13,4 @@ python-dotenv
 # 添加备选SVG处理库
 svglib
 reportlab
+freetype-py
