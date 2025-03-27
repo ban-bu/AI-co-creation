@@ -771,15 +771,17 @@ def show_low_complexity_general_sales():
                 # 显示解析的推荐文字，点击直接填充
                 if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
                     st.markdown("**点击下方推荐文字快速应用：**")
-                    text_buttons = st.columns(min(2, len(st.session_state.ai_suggested_texts)))
-                    
-                    for i, text in enumerate(st.session_state.ai_suggested_texts):
-                        with text_buttons[i % 2]:
-                            # 修改按钮实现方式，避免直接设置会话状态
-                            if st.button(f'"{text}"', key=f"text_btn_{i}"):
-                                # 创建一个临时状态变量
-                                st.session_state.temp_text_selection = text
-                                st.rerun()
+                    suggested_texts_container = st.container()
+                    with suggested_texts_container:
+                        text_buttons = st.columns(min(2, len(st.session_state.ai_suggested_texts)))
+                        
+                        for i, text in enumerate(st.session_state.ai_suggested_texts):
+                            with text_buttons[i % 2]:
+                                # 修改按钮实现方式，避免直接设置会话状态
+                                if st.button(f'"{text}"', key=f"text_btn_{i}"):
+                                    # 创建一个临时状态变量
+                                    st.session_state.temp_text_selection = text
+                                    st.rerun()
                 
                 # 改进文字应用部分的布局
                 text_col1, text_col2 = st.columns([2, 1])
@@ -803,8 +805,8 @@ def show_low_complexity_general_sales():
                 font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
                 ai_font = st.selectbox("选择字体风格:", font_options, key="ai_font_selection")
                 
-                # 增加文字大小选项
-                text_size = st.slider("文字大小:", 20, 120, 48, key="ai_text_size")
+                # 增加文字大小选项，默认值调大
+                text_size = st.slider("文字大小:", 20, 160, 80, key="ai_text_size")
                 
                 # 预览效果
                 if text_suggestion:
@@ -818,7 +820,7 @@ def show_low_complexity_general_sales():
                             font-family: {ai_font}, sans-serif;
                             color: {text_color};
                             text-align: center;
-                            font-size: 18px;
+                            font-size: {text_size//2}px;
                         ">
                         {text_suggestion}
                         </div>
@@ -876,9 +878,13 @@ def show_low_complexity_general_sales():
                             # 如果无法加载字体，使用默认字体
                             if font is None:
                                 font = ImageFont.load_default()
+                                
+                            # 记录实际使用的字体大小
+                            actual_text_size = text_size
                         except Exception as e:
                             st.warning(f"加载字体时出错: {e}")
                             font = None
+                            actual_text_size = text_size
                         
                         # 在选择框中居中绘制文字
                         left, top = st.session_state.current_box_position
@@ -910,9 +916,12 @@ def show_low_complexity_general_sales():
                                 "text": text_suggestion,
                                 "font": ai_font,
                                 "color": text_color,
-                                "size": text_size,
+                                "size": actual_text_size,
                                 "position": (text_x, text_y)
                             }
+                            
+                            # 显式保存文本大小设置到会话状态，确保重新应用时使用相同大小
+                            st.session_state.last_text_size = actual_text_size
                             
                             st.success("文字已应用到设计中！")
                             st.rerun()
