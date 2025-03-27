@@ -471,15 +471,26 @@ def show_low_complexity_general_sales():
                     
                     for i, text in enumerate(st.session_state.ai_suggested_texts):
                         with text_buttons[i % 2]:
+                            # 修改按钮实现方式，避免直接设置会话状态
                             if st.button(f'"{text}"', key=f"text_btn_{i}"):
-                                st.session_state.ai_text_suggestion = text
+                                # 创建一个临时状态变量
+                                st.session_state.temp_text_selection = text
                                 st.rerun()
                 
                 # 改进文字应用部分的布局
                 text_col1, text_col2 = st.columns([2, 1])
                 
                 with text_col1:
-                    text_suggestion = st.text_input("输入或复制AI推荐的文字", "", key="ai_text_suggestion")
+                    # 使用临时变量的值作为默认值
+                    default_input = ""
+                    if 'temp_text_selection' in st.session_state:
+                        default_input = st.session_state.temp_text_selection
+                        # 使用后清除临时状态
+                        del st.session_state.temp_text_selection
+                    elif 'ai_text_suggestion' in st.session_state:
+                        default_input = st.session_state.ai_text_suggestion
+                    
+                    text_suggestion = st.text_input("输入或复制AI推荐的文字", default_input, key="ai_text_suggestion")
                 
                 with text_col2:
                     text_color = st.color_picker("文字颜色:", "#000000", key="ai_text_color")
@@ -510,10 +521,13 @@ def show_low_complexity_general_sales():
                 
                 # 应用按钮
                 if st.button("应用文字到设计", key="apply_ai_text"):
-                    # 将文字添加到会话状态中，以便在文字选项卡中使用
-                    st.session_state.ai_text_suggestion = text_suggestion
-                    st.session_state.ai_font_selection = ai_font
-                    st.session_state.ai_text_color = text_color
+                    # 不直接设置会话状态，而是使用中间变量来传递
+                    # 将字体和颜色设置存储在新的状态变量中
+                    st.session_state.text_design_settings = {
+                        "text": text_suggestion,
+                        "font": ai_font,
+                        "color": text_color
+                    }
                     st.success(f"已选择文字设置，请在\"Add Text/Logo\"选项卡中点击\"Add Text to Design\"应用")
             else:
                 # 显示欢迎信息
@@ -756,25 +770,35 @@ def show_low_complexity_general_sales():
             if text_or_logo == "Text":
                 # 文字选项
                 # 如果有AI推荐的文字，默认填充
-                default_text = st.session_state.get('ai_text_suggestion', "My Brand")
+                default_text = "My Brand"
+                default_font_index = 0
+                default_text_color = "#000000"
+                
+                # 检查是否有来自AI建议的设计设置
+                if 'text_design_settings' in st.session_state:
+                    settings = st.session_state.text_design_settings
+                    default_text = settings.get("text", default_text)
+                    default_text_color = settings.get("color", default_text_color)
+                    
+                    # 获取字体索引
+                    font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
+                    font_name = settings.get("font")
+                    if font_name in font_options:
+                        default_font_index = font_options.index(font_name)
+                    
+                    # 使用后清除设置，避免重复应用
+                    del st.session_state.text_design_settings
+                
                 text_content = st.text_input("Enter text to add:", default_text)
                 
                 # 添加字体选择
                 font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
-                # 如果有AI推荐的字体，默认选择
-                default_font_index = 0
-                if 'ai_font_selection' in st.session_state:
-                    try:
-                        default_font_index = font_options.index(st.session_state.ai_font_selection)
-                    except ValueError:
-                        default_font_index = 0
                 font_family = st.selectbox("Font family:", font_options, index=default_font_index)
                 
                 # 文字样式
                 text_style = st.multiselect("Text style:", ["Bold", "Italic"], default=[])
                 
-                # 文字颜色 - 使用AI推荐的颜色（如果有）
-                default_text_color = st.session_state.get('ai_text_color', "#000000")
+                # 文字颜色
                 text_color = st.color_picker("Text color:", default_text_color)
                 
                 # 增大默认文字大小范围
