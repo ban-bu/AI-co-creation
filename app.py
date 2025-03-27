@@ -23,9 +23,9 @@ from streamlit_drawable_canvas import st_canvas
 from welcome_page import show_welcome_page
 # 导入四个组对应的新文件
 from low_complexity_general_sales import show_low_complexity_general_sales, generate_vector_image, draw_selection_box, get_selection_coordinates, match_background_to_shirt
-from low_complexity_popup_sales import show_low_complexity_popup_sales
-from high_complexity_popup_sales import show_high_complexity_popup_sales
-from high_complexity_general_sales import show_high_complexity_general_sales
+#from low_complexity_popup_sales import show_low_complexity_popup_sales
+#from high_complexity_popup_sales import show_high_complexity_popup_sales
+#from high_complexity_general_sales import show_high_complexity_general_sales
 from survey_page import show_survey_page, initialize_experiment_data, save_experiment_data
 
 # ========== Deepbricks Configuration ==========
