@@ -1,19 +1,138 @@
 import streamlit as st
 from PIL import Image, ImageDraw
-import os
 import requests
 from io import BytesIO
-import cairosvg
+# 添加try-except导入cairosvg，避免因缺少这个库而导致整个应用崩溃
+try:
+    import cairosvg
+    CAIROSVG_AVAILABLE = True
+except ImportError:
+    CAIROSVG_AVAILABLE = False
+    # 尝试导入备选SVG处理库
+    try:
+        from svglib.svglib import svg2rlg
+        from reportlab.graphics import renderPM
+        SVGLIB_AVAILABLE = True
+    except ImportError:
+        SVGLIB_AVAILABLE = False
+        st.warning("SVG处理库未安装，SVG格式转换功能将不可用")
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
-from streamlit_drawable_canvas import st_canvas
-import numpy as np
-# 导入面料纹理模块
-from fabric_texture import apply_fabric_texture
+import os
+import re
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
 BASE_URL = "https://api.deepbricks.ai/v1/"
+
+# GPT-4o-mini API配置
+GPT4O_MINI_API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
+GPT4O_MINI_BASE_URL = "https://api.deepbricks.ai/v1/"
+
+def get_ai_design_suggestions(user_preferences=None):
+    """从GPT-4o-mini获取设计建议"""
+    client = OpenAI(api_key=GPT4O_MINI_API_KEY, base_url=GPT4O_MINI_BASE_URL)
+    
+    # 默认提示如果没有用户偏好
+    if not user_preferences:
+        user_preferences = "时尚休闲风格的T恤设计"
+    
+    # 构建提示词
+    prompt = f"""
+    作为T恤设计顾问，请为"{user_preferences}"风格提供以下设计建议：
+
+    1. 颜色建议：推荐3种适合的颜色，包括：
+       - 颜色名称和十六进制代码(如 蓝色 (#0000FF))
+       - 为什么这种颜色适合该风格(2-3句话解释)
+       
+    2. 文字建议：推荐2个适合的文字/短语：
+       - 具体文字内容
+       - 推荐的字体风格
+       - 简短说明为什么适合
+       
+    3. Logo元素建议：推荐2种适合的设计元素：
+       - 元素描述
+       - 如何与整体风格搭配
+       
+    确保包含颜色的十六进制代码，保持内容详实但不过于冗长。
+    文字建议部分，请将每个推荐的短语/文字单独放在一行上，并使用引号包裹，例如："Just Do It"。
+    """
+    
+    try:
+        # 调用GPT-4o-mini
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "你是一个专业的T恤设计顾问，提供有用且具体的建议。包含足够细节让用户理解你的推荐理由，但避免不必要的冗长。确保为每种颜色包含十六进制代码。对于文字建议，请将推荐的短语用引号包裹并单独放在一行。"},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        
+        # 返回建议内容
+        if response.choices and len(response.choices) > 0:
+            suggestion_text = response.choices[0].message.content
+            
+            # 尝试解析颜色代码
+            try:
+                # 提取颜色代码的简单方法
+                color_matches = {}
+                
+                # 查找形如 "颜色名 (#XXXXXX)" 的模式
+                color_pattern = r'([^\s\(\)]+)\s*\(#([0-9A-Fa-f]{6})\)'
+                matches = re.findall(color_pattern, suggestion_text)
+                
+                if matches:
+                    color_matches = {name.strip(): f"#{code}" for name, code in matches}
+                    
+                # 保存到会话状态
+                if color_matches:
+                    st.session_state.ai_suggested_colors = color_matches
+                    
+                # 尝试提取推荐文字
+                text_pattern = r'[""]([^""]+)[""]'
+                text_matches = re.findall(text_pattern, suggestion_text)
+                
+                # 保存推荐文字到会话状态
+                if text_matches:
+                    st.session_state.ai_suggested_texts = text_matches
+                else:
+                    # 尝试使用另一种模式匹配
+                    text_pattern2 = r'"([^"]+)"'
+                    text_matches = re.findall(text_pattern2, suggestion_text)
+                    if text_matches:
+                        st.session_state.ai_suggested_texts = text_matches
+                    else:
+                        st.session_state.ai_suggested_texts = []
+                        
+            except Exception as e:
+                print(f"解析过程出错: {e}")
+                st.session_state.ai_suggested_texts = []
+                
+            # 使用更好的排版处理文本
+            # 替换标题格式
+            formatted_text = suggestion_text
+            # 处理序号段落
+            formatted_text = re.sub(r'(\d\. .*?)(?=\n\d\. |\n*$)', r'<div class="suggestion-section">\1</div>', formatted_text)
+            # 处理子项目符号
+            formatted_text = re.sub(r'- (.*?)(?=\n- |\n[^-]|\n*$)', r'<div class="suggestion-item">• \1</div>', formatted_text)
+            # 强调颜色名称和代码
+            formatted_text = re.sub(r'([^\s\(\)]+)\s*\(#([0-9A-Fa-f]{6})\)', r'<span class="color-name">\1</span> <span class="color-code">(#\2)</span>', formatted_text)
+            
+            # 不再使用JavaScript回调，而是简单地加粗文本
+            formatted_text = re.sub(r'[""]([^""]+)[""]', r'"<strong>\1</strong>"', formatted_text)
+            formatted_text = re.sub(r'"([^"]+)"', r'"<strong>\1</strong>"', formatted_text)
+            
+            suggestion_with_style = f"""
+            <div class="suggestion-container">
+            {formatted_text}
+            </div>
+            """
+            
+            return suggestion_with_style
+        else:
+            return "无法获取AI建议，请稍后再试。"
+    except Exception as e:
+        return f"获取AI建议时出错: {str(e)}"
 
 def generate_vector_image(prompt):
     """Generate an image based on the prompt"""
@@ -37,11 +156,39 @@ def generate_vector_image(prompt):
             if image_resp.status_code == 200:
                 content_type = image_resp.headers.get("Content-Type", "")
                 if "svg" in content_type.lower():
-                    try:
-                        png_data = cairosvg.svg2png(bytestring=image_resp.content)
-                        return Image.open(BytesIO(png_data)).convert("RGBA")
-                    except Exception as conv_err:
-                        st.error(f"Error converting SVG to PNG: {conv_err}")
+                    # 判断SVG处理库是否可用
+                    if CAIROSVG_AVAILABLE:
+                        try:
+                            png_data = cairosvg.svg2png(bytestring=image_resp.content)
+                            return Image.open(BytesIO(png_data)).convert("RGBA")
+                        except Exception as conv_err:
+                            st.error(f"Error converting SVG to PNG with cairosvg: {conv_err}")
+                            # 尝试使用备选方案
+                            if SVGLIB_AVAILABLE:
+                                try:
+                                    svg_data = BytesIO(image_resp.content)
+                                    drawing = svg2rlg(svg_data)
+                                    png_data = BytesIO()
+                                    renderPM.drawToFile(drawing, png_data, fmt="PNG")
+                                    png_data.seek(0)
+                                    return Image.open(png_data).convert("RGBA")
+                                except Exception as svg_err:
+                                    st.error(f"Error converting SVG to PNG with svglib: {svg_err}")
+                            return None
+                    elif SVGLIB_AVAILABLE:
+                        # 使用svglib作为备选
+                        try:
+                            svg_data = BytesIO(image_resp.content)
+                            drawing = svg2rlg(svg_data)
+                            png_data = BytesIO()
+                            renderPM.drawToFile(drawing, png_data, fmt="PNG")
+                            png_data.seek(0)
+                            return Image.open(png_data).convert("RGBA")
+                        except Exception as svg_err:
+                            st.error(f"Error converting SVG to PNG with svglib: {svg_err}")
+                            return None
+                    else:
+                        st.error("无法处理SVG格式，SVG处理库未安装")
                         return None
                 else:
                     return Image.open(BytesIO(image_resp.content)).convert("RGBA")
@@ -53,123 +200,6 @@ def generate_vector_image(prompt):
         st.error("Could not get image URL from API response.")
     return None
 
-# 修改改变T恤颜色的函数，添加纹理支持
-def change_shirt_color(image, color_hex, apply_texture=False, fabric_type=None):
-    """改变T恤的颜色，可选择应用面料纹理"""
-    # 判断是否是应用了纹理的图像，如果是，则重新从原始图像开始处理
-    # 这可以确保每次更改颜色时都从原始状态开始，而不是在已应用纹理的图像上再次修改
-    if hasattr(st.session_state, 'original_base_image') and st.session_state.original_base_image is not None:
-        # 使用原始白色T恤图像作为基础
-        image = st.session_state.original_base_image.copy()
-    
-    # 转换十六进制颜色为RGB
-    color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-    
-    # 创建副本避免修改原图
-    colored_image = image.copy().convert("RGBA")
-    
-    # 获取图像数据
-    data = colored_image.getdata()
-    
-    # 创建新数据
-    new_data = []
-    # 白色阈值 - 调整这个值可以控制哪些像素被视为白色/浅色并被改变
-    white_threshold = 200
-    # 黑色边缘阈值 - 用于识别边框和阴影
-    dark_threshold = 40  # 更低的值，确保捕捉所有边缘部分
-    
-    # 首先进行第一次扫描，收集边缘像素
-    edge_pixels = set()
-    
-    # 先扫描一遍找出所有边缘像素位置
-    width, height = colored_image.size
-    for y in range(height):
-        for x in range(width):
-            try:
-                pixel = colored_image.getpixel((x, y))
-                if len(pixel) == 4:  # RGBA
-                    r, g, b, a = pixel
-                    if a > 0:  # 非透明像素
-                        brightness = (r + g + b) / 3
-                        # 识别边缘区域
-                        if brightness <= dark_threshold:
-                            edge_pixels.add((x, y))
-            except:
-                continue
-    
-    # 稍微扩展边缘区域，确保完整捕捉
-    expanded_edges = set(edge_pixels)
-    for x, y in edge_pixels:
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                expanded_edges.add((x+dx, y+dy))
-    
-    # 第二次扫描，应用颜色变化，但保留边缘
-    idx = 0
-    for y in range(height):
-        for x in range(width):
-            try:
-                pixel = data[idx]
-                idx += 1
-                
-                # 检查是否是边缘像素
-                if (x, y) in expanded_edges:
-                    # 保留边缘像素
-                    new_data.append(pixel)
-                    continue
-                
-                # 非边缘像素的处理
-                if len(pixel) == 4:  # RGBA
-                    r, g, b, a = pixel
-                    if a > 0:  # 非透明像素
-                        brightness = (r + g + b) / 3
-                        if brightness > white_threshold:
-                            # 高亮区域 - 完全替换颜色
-                            new_data.append((color_rgb[0], color_rgb[1], color_rgb[2], a))
-                        elif brightness > dark_threshold:
-                            # 中间色调区域 - 混合新颜色
-                            blend_factor = (brightness - dark_threshold) / (white_threshold - dark_threshold)
-                            new_r = int(r * (1 - blend_factor) + color_rgb[0] * blend_factor)
-                            new_g = int(g * (1 - blend_factor) + color_rgb[1] * blend_factor)
-                            new_b = int(b * (1 - blend_factor) + color_rgb[2] * blend_factor)
-                            new_data.append((new_r, new_g, new_b, a))
-                        else:
-                            # 如果不在扩展边缘中但亮度低，也保留原色
-                            new_data.append(pixel)
-                    else:
-                        # 完全透明的像素保持不变
-                        new_data.append(pixel)
-                else:  # RGB
-                    r, g, b = pixel
-                    brightness = (r + g + b) / 3
-                    if brightness > white_threshold:
-                        # 高亮区域
-                        new_data.append(color_rgb)
-                    elif brightness > dark_threshold:
-                        # 中间色调
-                        blend_factor = (brightness - dark_threshold) / (white_threshold - dark_threshold)
-                        new_r = int(r * (1 - blend_factor) + color_rgb[0] * blend_factor)
-                        new_g = int(g * (1 - blend_factor) + color_rgb[1] * blend_factor)
-                        new_b = int(b * (1 - blend_factor) + color_rgb[2] * blend_factor)
-                        new_data.append((new_r, new_g, new_b))
-                    else:
-                        # 暗区域
-                        new_data.append(pixel)
-            except:
-                # 如果出错，保留原像素
-                if idx < len(data):
-                    new_data.append(data[idx-1])
-    
-    # 更新图像数据
-    colored_image.putdata(new_data)
-    
-    # 如果需要应用纹理
-    if apply_texture and fabric_type:
-        return apply_fabric_texture(colored_image, fabric_type)
-    
-    return colored_image
-
-# 复用ai_design_group等文件中的draw_selection_box函数
 def draw_selection_box(image, point=None):
     """Calculate position for design placement without drawing visible selection box"""
     # Create a copy to avoid modifying the original image
@@ -191,749 +221,78 @@ def draw_selection_box(image, point=None):
     # Return the image without drawing any visible box, just the position
     return img_copy, (x1, y1)
 
-# Preset Design Group design page
-def show_high_complexity_general_sales():
-    st.title("👕 AI Co-Creation Experiment Platform")
-    st.markdown("### High Task Complexity-General Sales - Create Your Unique T-shirt Design")
-    
-    # 添加General Sales情境描述
-    st.info("""
-    **General Sales Environment**
-    
-    Welcome to our regular T-shirt customization service available in our standard online store. 
-    You are browsing our website from the comfort of your home or office, with no time pressure. 
-    Take your time to explore the design options and create a T-shirt that matches your personal style.
-    This is a typical online shopping experience where you can customize at your own pace.
-    """)
-    
-    # 任务复杂度说明
-    st.markdown("""
-    <div style="background-color:#f0f0f0; padding:10px; border-radius:5px; margin-bottom:15px">
-    <b>Advanced Customization Options</b>: In this experience, you can customize your T-shirt with these extensive options:
-    <ul>
-        <li>Select fabric types and materials</li>
-        <li>Create detailed design patterns</li>
-        <li>Position your design precisely on the T-shirt</li>
-        <li>Add text and logo to your design</li>
-    </ul>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # 添加AI建议框
-    with st.expander("🤖 AI Design Suggestions", expanded=True):
-        st.markdown("""
-        **Advanced Personalization Design Guide:**
-        
-        Consider color psychology when designing your T-shirt - blue conveys professionalism and trust, red expresses passion, while green represents nature and harmony. Choose fabric types based on comfort and durability - cotton fabrics offer softness ideal for everyday wear, while polyester maintains vibrant colors longer. Create visual focus through the rule of thirds and balance your design across the entire T-shirt. Typography serves as a powerful design element, so experiment with various font combinations and text effects for unique visual impact. Ensure your design maintains consistency with your personal or brand identity to enhance recognition. Pay attention to details like text spacing, pattern intricacies, and color transitions to significantly improve design quality. Finally, visualize your design from different angles and distances to ensure clarity and impact in various viewing scenarios.
-        """)
-    
-    # 初始化T恤颜色状态变量 - 固定为白色
-    if 'shirt_color_hex' not in st.session_state:
-        st.session_state.shirt_color_hex = "#FFFFFF"  # 固定为白色
-    if 'original_base_image' not in st.session_state:
-        st.session_state.original_base_image = None  # 保存原始白色T恤图像
-    if 'fabric_type' not in st.session_state:
-        st.session_state.fabric_type = "Cotton"  # 默认面料类型
-    if 'active_tab' not in st.session_state:
-        st.session_state.active_tab = "T-shirt & Text/Logo"  # 默认活动标签页
-    
-    # Create two-column layout
-    col1, col2 = st.columns([3, 2])
-    
-    with col1:
-        st.markdown("## Design Area")
-        
-        # Load T-shirt base image
-        if st.session_state.base_image is None:
-            try:
-                # 加载原始白色T恤图像
-                original_image = Image.open("white_shirt.png").convert("RGBA")
-                # 保存原始白色T恤图像 - 这是非常重要的！
-                st.session_state.original_base_image = original_image.copy()
-                
-                # 使用白色T恤并应用当前选择的面料纹理
-                colored_image = change_shirt_color(
-                    original_image, 
-                    "#FFFFFF",  # 固定使用白色
-                    apply_texture=True,  # 默认应用纹理
-                    fabric_type=st.session_state.fabric_type  # 使用当前选择的面料
-                )
-                st.session_state.base_image = colored_image
-                
-                # 设置选择框位置（中心点）
-                box_size = int(1024 * 0.25)
-                initial_pos = ((colored_image.width - box_size) // 2, (colored_image.height - box_size) // 2)
-                st.session_state.current_box_position = initial_pos
-                
-                # 根据当前活动标签页决定是否显示红框
-                if st.session_state.active_tab == "Design Pattern":
-                    initial_image, _ = draw_selection_box(colored_image, initial_pos)
-                else:
-                    initial_image = colored_image.copy()
-                
-                st.session_state.current_image = initial_image
-            except Exception as e:
-                st.error(f"Error loading T-shirt image: {e}")
-                st.stop()
-        
-        # 只在Design Pattern标签页激活时显示点击提示
-        if st.session_state.get('active_tab') == "Design Pattern":
-            pass
-        
-        # Display current image and get click coordinates
-        current_image = st.session_state.current_image
-        coordinates = streamlit_image_coordinates(
-            current_image,
-            key="shirt_image"
-        )
-        
-        # 只在Design Pattern标签页激活时处理点击事件
-        if coordinates and st.session_state.get('active_tab') == "Design Pattern":
-            # Update selection box at current mouse position
-            current_point = (coordinates["x"], coordinates["y"])
-            temp_image, new_pos = draw_selection_box(st.session_state.base_image, current_point)
-            st.session_state.current_image = temp_image
-            st.session_state.current_box_position = new_pos
-            st.rerun()
-            
-        # 将Final Result部分移到左侧栏中
-        if st.session_state.final_design is not None:
-            st.markdown("### Final Result")
-            
-            # 添加清空设计按钮
-            if st.button("🗑️ Clear All Designs", key="clear_designs"):
-                # 清空所有设计相关的状态变量
-                st.session_state.generated_design = None
-                # 重置最终设计为基础T恤图像
-                st.session_state.final_design = None
-                
-                # 根据当前活动标签页决定是否显示红框
-                if st.session_state.active_tab == "Design Pattern":
-                    # 设计Pattern标签下应显示红框
-                    temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
-                else:
-                    # T-shirt标签下不显示红框
-                    temp_image = st.session_state.base_image.copy()
-                    
-                # 重置当前图像
-                st.session_state.current_image = temp_image
-                st.rerun()
-            
-            st.image(st.session_state.final_design, use_container_width=True)
-            # 添加T恤规格信息
-            st.markdown(f"**Fabric:** {st.session_state.fabric_type}")
-            
-            # Provide download option
-            col1a, col1b = st.columns(2)
-            with col1a:
-                from io import BytesIO  # 确保BytesIO在此处可用
-                buf = BytesIO()
-                st.session_state.final_design.save(buf, format="PNG")
-                buf.seek(0)
-                st.download_button(
-                    label="💾 Download Custom Design",
-                    data=buf,
-                    file_name="custom_tshirt.png",
-                    mime="image/png"
-                )
-            
-            with col1b:
-                # Confirm completion button
-                if st.button("Confirm Completion"):
-                    st.session_state.page = "survey"
-                    st.rerun()
-
-    with col2:
-        st.markdown("## Design Parameters")
-        
-        # 修改选项卡布局：从三个改为两个，将T-shirt Style和Text/Logo合并
-        tab1, tab2 = st.tabs(["T-shirt & Text/Logo", "Design Pattern"])
-        
-        # 创建一个用于切换标签页的radio按钮，但隐藏显示
-        active_tab = st.radio(
-            "选择标签页",
-            ["T-shirt & Text/Logo", "Design Pattern"],
-            key="visible_tab", 
-            label_visibility="collapsed",
-            horizontal=True,
-            index=0 if st.session_state.active_tab == "T-shirt & Text/Logo" else 1
-        )
-        
-        # 检测标签页变化
-        current_tab = st.session_state.get('active_tab')
-        if active_tab != current_tab:
-            st.session_state.active_tab = active_tab
-            
-            # 根据标签页切换更新图像
-            if active_tab == "T-shirt & Text/Logo" and st.session_state.base_image is not None:
-                # 在T-shirt标签页激活时，更新当前图像为没有红框的版本
-                st.session_state.current_image = st.session_state.base_image.copy()
-                st.rerun()
-            elif active_tab == "Design Pattern" and st.session_state.base_image is not None:
-                # 在Design标签页激活时，重新显示红框
-                new_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
-                st.session_state.current_image = new_image
-                st.rerun()
-        
-        # 根据当前激活的标签页显示相应内容
-        if active_tab == "T-shirt & Text/Logo":
-            # T-shirt Customization部分
-            st.markdown("### T-shirt Customization")
-            
-            # 面料选择
-            fabric_options = ["Cotton", "Polyester", "Cotton-Polyester Blend", "Jersey", "Linen", "Bamboo"]
-            fabric_type = st.selectbox("Fabric type:", fabric_options,
-                                      index=fabric_options.index(st.session_state.fabric_type)
-                                      if st.session_state.fabric_type in fabric_options else 0)
-            
-            # 应用T恤样式按钮
-            if st.button("Apply Fabric", key="apply_style"):
-                # 更新存储的样式值
-                old_fabric = st.session_state.fabric_type
-                st.session_state.fabric_type = fabric_type
-                
-                # 无论面料类型是否改变，都应用纹理
-                if st.session_state.original_base_image is not None:
-                    try:
-                        # 应用纹理，使用固定白色
-                        new_colored_image = change_shirt_color(
-                            st.session_state.original_base_image, 
-                            "#FFFFFF",  # 固定使用白色
-                            apply_texture=True, 
-                            fabric_type=fabric_type
-                        )
-                        st.session_state.base_image = new_colored_image
-                        
-                        # 根据当前活动标签页更新图像
-                        if st.session_state.active_tab == "Design Pattern":
-                            # 在Design Pattern标签页中显示红框
-                            new_current_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
-                        else:
-                            # 在T-shirt标签页中不显示红框
-                            new_current_image = new_colored_image.copy()
-                            
-                        st.session_state.current_image = new_current_image
-                        
-                        # 如果有最终设计，也需要更新
-                        if st.session_state.final_design is not None:
-                            st.session_state.final_design = None
-                        
-                        st.rerun()
-                    except Exception as e:
-                        st.warning(f"应用面料纹理时出错: {e}")
-                
-                # 显示确认信息
-                st.success(f"T-shirt fabric updated: {fabric_type}")
-            
-            # 文字和Logo选项部分
-            st.markdown("### Add Text or Logo")
-            
-            text_type = st.radio("Select option:", ["Text", "Logo"], horizontal=True)
-            
-            if text_type == "Text":
-                # 文字选项
-                text_content = st.text_input("Enter text:", "My Brand")
-                
-                # 字体选择
-                font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]
-                font_family = st.selectbox("Font family:", font_options)
-                
-                # 文字风格
-                text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
-                
-                # 文字颜色和大小
-                text_color = st.color_picker("Text color:", "#000000")
-                text_size = st.slider("Text size:", 20, 120, 48)
-                
-                # 文字效果
-                text_effect = st.selectbox("Text effect:", ["None", "Curved", "Arched", "Wavy", "3D", "Gradient"])
-                
-                # 对齐方式
-                alignment = st.radio("Alignment:", ["Left", "Center", "Right"], horizontal=True, index=1)
-                
-                # 按钮 - 应用文字
-                if st.button("Add Text to Design", key="add_text"):
-                    if not text_content.strip():
-                        st.warning("Please enter some text!")
-                    else:
-                        # 创建带有文字的设计
-                        if st.session_state.base_image is None:
-                            st.warning("Please wait for the T-shirt image to load")
-                        else:
-                            # 创建新的设计或使用现有最终设计
-                            if st.session_state.final_design is not None:
-                                new_design = st.session_state.final_design.copy()
-                            else:
-                                new_design = st.session_state.base_image.copy()
-                            
-                            # 准备绘图对象
-                            draw = ImageDraw.Draw(new_design)
-                            
-                            # 字体映射
-                            font_mapping = {
-                                "Arial": "arial.ttf",
-                                "Times New Roman": "times.ttf",
-                                "Courier": "cour.ttf",
-                                "Verdana": "verdana.ttf",
-                                "Georgia": "georgia.ttf",
-                                "Script": "SCRIPTBL.TTF",
-                                "Impact": "impact.ttf"
-                            }
-                            
-                            # 尝试加载选择的字体
-                            try:
-                                from PIL import ImageFont
-                                # 尝试获取选择的字体
-                                font_file = font_mapping.get(font_family, "arial.ttf")
-                                
-                                # 尝试加载字体，如果失败则尝试系统字体路径
-                                try:
-                                    font = ImageFont.truetype(font_file, text_size)
-                                except:
-                                    # 尝试系统字体路径
-                                    system_font_paths = [
-                                        "/Library/Fonts/",  # macOS
-                                        "/System/Library/Fonts/",  # macOS系统
-                                        "C:/Windows/Fonts/",  # Windows
-                                        "/usr/share/fonts/truetype/",  # Linux
-                                    ]
-                                    
-                                    for path in system_font_paths:
-                                        try:
-                                            font = ImageFont.truetype(path + font_file, text_size)
-                                            break
-                                        except:
-                                            continue
-                                
-                                # 如果没有找到指定字体，尝试使用系统默认字体
-                                if font is None:
-                                    fallback_fonts = ["DejaVuSans.ttf", "FreeSans.ttf", "LiberationSans-Regular.ttf", "Arial.ttf"]
-                                    for fallback in fallback_fonts:
-                                        for path in system_font_paths:
-                                            try:
-                                                font = ImageFont.truetype(path + fallback, text_size)
-                                                if font:
-                                                    break
-                                            except:
-                                                continue
-                                        if font:
-                                            break
-                                
-                                # 如果所有尝试都失败，使用默认字体
-                                if font is None:
-                                    font = ImageFont.load_default()
-                                    st.warning("Could not load selected font. Using default font instead.")
-                            except Exception as e:
-                                st.warning(f"Font loading error: {e}")
-                                font = None
-                            
-                            # 获取选择框位置
-                            left, top = st.session_state.current_box_position
-                            box_size = int(1024 * 0.25)
-                            
-                            # 根据对齐方式计算文字位置
-                            text_bbox = draw.textbbox((0, 0), text_content, font=font)
-                            text_width = text_bbox[2] - text_bbox[0]
-                            text_height = text_bbox[3] - text_bbox[1]
-                            
-                            if alignment == "Left":
-                                text_x = left + 10
-                            elif alignment == "Right":
-                                text_x = left + box_size - text_width - 10
-                            else:  # Center
-                                text_x = left + (box_size - text_width) // 2
-                            
-                            text_y = top + (box_size - text_height) // 2
-                            
-                            # 绘制文字
-                            draw.text((text_x, text_y), text_content, fill=text_color, font=font)
-                            
-                            # 更新设计
-                            st.session_state.final_design = new_design
-                            
-                            # 同时更新current_image以保持两个显示区域的一致性
-                            st.session_state.current_image = new_design.copy()
-                            
-                            # 强制页面刷新以显示最新结果
-                            st.rerun()
-            else:  # Logo options
-                # Logo来源选择
-                logo_source = st.radio("Logo source:", ["Upload your logo", "Choose from presets"], horizontal=True)
-                
-                if logo_source == "Upload your logo":
-                    # Logo上传选项
-                    uploaded_logo = st.file_uploader("Upload your logo (PNG or JPG file):", type=["png", "jpg", "jpeg"])
-                    logo_image = None
-                    
-                    if uploaded_logo is not None:
-                        try:
-                            logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
-                        except Exception as e:
-                            st.error(f"Error loading uploaded logo: {e}")
-                else:  # Choose from presets
-                    # 获取预设logo
-                    preset_logos = get_preset_logos()
-                    
-                    if not preset_logos:
-                        st.warning("No preset logos found. Please add some images to the 'logos' folder.")
-                        logo_image = None
-                    else:
-                        # 显示预设logo选择
-                        logo_cols = st.columns(min(3, len(preset_logos)))
-                        selected_preset_logo = None
-                        
-                        for i, logo_path in enumerate(preset_logos):
-                            with logo_cols[i % 3]:
-                                logo_name = os.path.basename(logo_path)
-                                try:
-                                    logo_preview = Image.open(logo_path).convert("RGBA")
-                                    # 调整预览大小
-                                    preview_width = 100
-                                    preview_height = int(preview_width * logo_preview.height / logo_preview.width)
-                                    preview = logo_preview.resize((preview_width, preview_height))
-                                    
-                                    st.image(preview, caption=logo_name)
-                                    if st.button(f"Select {logo_name}", key=f"logo_{i}"):
-                                        selected_preset_logo = logo_path
-                                except Exception as e:
-                                    st.error(f"Error loading logo {logo_name}: {e}")
-                        
-                        # 如果选择了预设logo
-                        logo_image = None
-                        if selected_preset_logo:
-                            try:
-                                logo_image = Image.open(selected_preset_logo).convert("RGBA")
-                                st.success(f"Selected logo: {os.path.basename(selected_preset_logo)}")
-                            except Exception as e:
-                                st.error(f"Error loading selected logo: {e}")
-                
-                # Logo大小和位置
-                logo_size = st.slider("Logo size:", 10, 100, 40, format="%d%%")
-                logo_position = st.radio("Position:", ["Top Left", "Top Center", "Top Right", "Center", "Bottom Left", "Bottom Center", "Bottom Right"], index=3)
-                
-                # Logo透明度
-                logo_opacity = st.slider("Logo opacity:", 10, 100, 100, 5, format="%d%%")
-                
-                # 应用Logo按钮
-                if st.button("Apply Logo", key="apply_logo"):
-                    if logo_image is None:
-                        if logo_source == "Upload your logo":
-                            st.warning("Please upload a logo first!")
-                        else:
-                            st.warning("Please select a preset logo first!")
-                    else:
-                        # 处理Logo
-                        try:
-                            # 调整Logo大小
-                            box_size = int(1024 * 0.25)
-                            logo_width = int(box_size * logo_size / 100)
-                            logo_height = int(logo_width * logo_image.height / logo_image.width)
-                            logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
-                            
-                            # 创建新的设计或使用现有最终设计
-                            if st.session_state.final_design is not None:
-                                new_design = st.session_state.final_design.copy()
-                            else:
-                                new_design = st.session_state.base_image.copy()
-                            
-                            # 获取选择框位置
-                            left, top = st.session_state.current_box_position
-                            
-                            # 计算Logo位置
-                            if logo_position == "Top Left":
-                                logo_x, logo_y = left + 10, top + 10
-                            elif logo_position == "Top Center":
-                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + 10
-                            elif logo_position == "Top Right":
-                                logo_x, logo_y = left + box_size - logo_width - 10, top + 10
-                            elif logo_position == "Center":
-                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + (box_size - logo_height) // 2
-                            elif logo_position == "Bottom Left":
-                                logo_x, logo_y = left + 10, top + box_size - logo_height - 10
-                            elif logo_position == "Bottom Center":
-                                logo_x, logo_y = left + (box_size - logo_width) // 2, top + box_size - logo_height - 10
-                            else:  # Bottom Right
-                                logo_x, logo_y = left + box_size - logo_width - 10, top + box_size - logo_height - 10
-                            
-                            # 设置透明度
-                            if logo_opacity < 100:
-                                logo_data = logo_resized.getdata()
-                                new_data = []
-                                for item in logo_data:
-                                    r, g, b, a = item
-                                    new_a = int(a * logo_opacity / 100)
-                                    new_data.append((r, g, b, new_a))
-                                logo_resized.putdata(new_data)
-                            
-                            # 粘贴Logo到设计
-                            try:
-                                new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
-                            except Exception as e:
-                                st.warning(f"Logo paste failed: {e}")
-                            
-                            # 更新设计
-                            st.session_state.final_design = new_design
-                            
-                            # 同时更新current_image以保持两个显示区域的一致性
-                            st.session_state.current_image = new_design.copy()
-                            
-                            # 强制页面刷新以显示最新结果
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error processing logo: {e}")
-        
-        elif active_tab == "Design Pattern":
-            # User input for personalization parameters
-            theme = st.text_input("Theme or keyword (required)", "Elegant floral pattern")
-            
-            # Add style selection dropdown with more professional style options
-            style_options = [
-                "Watercolor style", "Sketch style", "Geometric shapes", "Minimalist", 
-                "Vintage style", "Pop art", "Japanese style", "Nordic design",
-                "Classical ornament", "Digital illustration", "Abstract art"
-            ]
-            style = st.selectbox("Design style", style_options, index=0)
-            
-            # Improved color selection
-            color_scheme_options = [
-                "Soft warm tones (pink, gold, light orange)",
-                "Fresh cool tones (blue, mint, white)",
-                "Nature colors (green, brown, beige)",
-                "Bright and vibrant (red, yellow, orange)",
-                "Elegant deep tones (navy, purple, dark green)",
-                "Black and white contrast",
-                "Custom colors"
-            ]
-            color_scheme = st.selectbox("Color scheme", color_scheme_options)
-            
-            # If custom colors are selected, show input field
-            if color_scheme == "Custom colors":
-                colors = st.text_input("Enter desired colors (comma separated)", "pink, gold, sky blue")
-            else:
-                # Set corresponding color values based on selected scheme
-                color_mapping = {
-                    "Soft warm tones (pink, gold, light orange)": "pink, gold, light orange, cream",
-                    "Fresh cool tones (blue, mint, white)": "sky blue, mint green, white, light gray",
-                    "Nature colors (green, brown, beige)": "forest green, brown, beige, olive",
-                    "Bright and vibrant (red, yellow, orange)": "bright red, yellow, orange, lemon yellow",
-                    "Elegant deep tones (navy, purple, dark green)": "navy blue, violet, dark green, burgundy",
-                    "Black and white contrast": "black, white, gray"
-                }
-                colors = color_mapping.get(color_scheme, "blue, green, red")
-            
-            # 高级设计选项
-            st.markdown("### Advanced Design Settings")
-            
-            # 添加复杂度和详细程度滑块
-            complexity = st.slider("Design complexity", 1, 10, 5)
-            detail_level = "low" if complexity <= 3 else "medium" if complexity <= 7 else "high"
-            
-            # 添加特殊效果选项
-            effect_options = ["None", "Distressed", "Vintage", "Metallic", "Glitter", "Gradient"]
-            special_effect = st.selectbox("Special effect:", effect_options)
-            
-            # 应用位置和大小设置
-            st.markdown("### Position & Scale")
-            position_x = st.slider("Horizontal position", -100, 100, 0)
-            position_y = st.slider("Vertical position", -100, 100, 0)
-            scale = st.slider("Design size", 25, 150, 100, 5, format="%d%%")
-            
-            # 生成AI设计按钮
-            generate_col1, generate_col2 = st.columns(2)
-            with generate_col1:
-                if st.button("🎨 Generate Design", key="generate_design"):
-                    if not theme.strip():
-                        st.warning("Please enter at least a theme or keyword!")
-                    else:
-                        # 构建高级提示文本
-                        effect_prompt = "" if special_effect == "None" else f"Apply {special_effect} effect to the design. "
-                        
-                        prompt_text = (
-                            f"Design a pattern with '{theme}' theme using {style}. "
-                            f"Use the following colors: {colors}. "
-                            f"Design complexity is {complexity}/10 with {detail_level} level of detail. "
-                            f"{effect_prompt}"
-                            f"Create a PNG format image with transparent background, suitable for printing."
-                        )
-                        
-                        with st.spinner("🔮 Generating design... please wait"):
-                            custom_design = generate_vector_image(prompt_text)
-                            
-                            if custom_design:
-                                st.session_state.generated_design = custom_design
-                                
-                                # Composite on the original image
-                                composite_image = st.session_state.base_image.copy()
-                                
-                                # Place design at current selection position with size and position modifiers
-                                left, top = st.session_state.current_box_position
-                                box_size = int(1024 * 0.25)
-                                
-                                # 应用缩放
-                                actual_size = int(box_size * scale / 100)
-                                
-                                # 应用位置偏移
-                                max_offset = box_size - actual_size
-                                actual_x = int((position_x / 100) * (max_offset / 2))
-                                actual_y = int((position_y / 100) * (max_offset / 2))
-                                
-                                # 最终位置
-                                final_left = left + (box_size - actual_size) // 2 + actual_x
-                                final_top = top + (box_size - actual_size) // 2 + actual_y
-                                
-                                # Scale generated pattern to selection area size
-                                scaled_design = custom_design.resize((actual_size, actual_size), Image.LANCZOS)
-                                
-                                try:
-                                    # Ensure transparency channel is used for pasting
-                                    composite_image.paste(scaled_design, (final_left, final_top), scaled_design)
-                                except Exception as e:
-                                    st.warning(f"Transparent channel paste failed, direct paste: {e}")
-                                    composite_image.paste(scaled_design, (final_left, final_top))
-                                
-                                # 保存最终设计但不立即刷新页面
-                                st.session_state.final_design = composite_image
-                                
-                                # 同时更新current_image以便在T恤图像上直接显示设计
-                                st.session_state.current_image = composite_image.copy()
-                                
-                                # 显示生成成功的消息
-                                st.success("Design successfully generated! Check the design area for the result.")
-                                
-                                # 强制页面刷新以显示结果
-                                st.rerun()
-                            else:
-                                st.error("Failed to generate image, please try again later.")
-    
-    # 删除原来页面底部的Final Result部分
-    if st.button("Return to Main Page"):
-        # Clear all design-related states
-        st.session_state.base_image = None
-        st.session_state.current_image = None
-        st.session_state.current_box_position = None
-        st.session_state.generated_design = None
-        st.session_state.final_design = None
-        st.session_state.original_base_image = None
-        # Only change page state, retain user info and experiment group
-        st.session_state.page = "welcome"
-        st.rerun()
-
-# 添加绘制预览的函数，直接在红框内展示设计
-def draw_design_preview(image, design, box_position, design_position, design_scale):
-    """在当前图像的红框内直接绘制设计预览"""
-    # 创建图像副本
-    img_copy = image.copy()
-    
-    # 获取红框位置和大小
+def get_selection_coordinates(point=None, image_size=None):
+    """Get coordinates and dimensions of fixed-size selection box"""
     box_size = int(1024 * 0.25)
-    left, top = box_position
     
-    # 计算设计的位置和大小
-    x_offset, y_offset = design_position
-    scale_percent = design_scale
+    if point is None and image_size is not None:
+        width, height = image_size
+        x1 = (width - box_size) // 2
+        y1 = (height - box_size) // 2
+    else:
+        x1, y1 = point
+        # Ensure selection box doesn't extend beyond image boundaries
+        if image_size:
+            width, height = image_size
+            x1 = max(0, min(x1 - box_size//2, width - box_size))
+            y1 = max(0, min(y1 - box_size//2, height - box_size))
     
-    # 计算缩放后的大小
-    scaled_size = int(box_size * scale_percent / 100)
-    
-    # 计算可移动的范围
-    max_offset = box_size - scaled_size
-    # 将-100到100范围映射到实际的像素偏移
-    actual_x_offset = int((x_offset / 100) * (max_offset / 2))
-    actual_y_offset = int((y_offset / 100) * (max_offset / 2))
-    
-    # 计算预览的左上角坐标
-    preview_left = left + (box_size - scaled_size) // 2 + actual_x_offset
-    preview_top = top + (box_size - scaled_size) // 2 + actual_y_offset
-    
-    # 确保位置在红框范围内
-    preview_left = max(left, min(preview_left, left + box_size - scaled_size))
-    preview_top = max(top, min(preview_top, top + box_size - scaled_size))
-    
-    # 缩放设计图案
-    design_scaled = design.resize((scaled_size, scaled_size), Image.LANCZOS)
-    
-    # 在预览位置粘贴设计图案（显示绿色边框）
-    # 创建一个包含设计的新图像，并添加绿色边框
-    preview_design = Image.new("RGBA", design_scaled.size, (0, 0, 0, 0))
-    draw = ImageDraw.Draw(preview_design)
-    
-    # 创建一个新副本，避免直接修改原图
-    design_with_border = design_scaled.copy()
-    draw_border = ImageDraw.Draw(design_with_border)
-    
-    # 绘制绿色边框
-    draw_border.rectangle(
-        [(0, 0), (scaled_size-1, scaled_size-1)],
-        outline=(0, 255, 0),  # 绿色
-        width=2
-    )
-    
-    try:
-        # 粘贴带边框的设计到主图像
-        img_copy.paste(design_with_border, (preview_left, preview_top), design_scaled)
-    except Exception as e:
-        st.warning(f"Transparent preview paste failed: {e}")
-        img_copy.paste(design_with_border, (preview_left, preview_top))
-    
-    return img_copy
+    return (x1, y1, box_size, box_size)
 
-# 修改更新复合图像函数
-def update_composite_image(preview_only=False):
-    """更新复合图像，显示单种设计（只使用预设设计或绘制设计）"""
-    # 创建基础图像的副本
-    composite_image = st.session_state.base_image.copy()
-    box_size = int(1024 * 0.25)
-    left, top = st.session_state.current_box_position
+def match_background_to_shirt(design_image, shirt_image):
+    """Adjust design image background color to match shirt"""
+    # Ensure images are in RGBA mode
+    design_image = design_image.convert("RGBA")
+    shirt_image = shirt_image.convert("RGBA")
     
-    # 根据设计模式决定显示哪种设计
-    if st.session_state.design_mode == "preset" and st.session_state.preset_design is not None:
-        # 只显示预设设计
-        # 获取位置偏移
-        x_offset, y_offset = getattr(st.session_state, 'preset_position', (0, 0))
-        scale_percent = getattr(st.session_state, 'preset_scale', 40)
-        
-        # 计算缩放大小 - 相对于选择框的百分比
-        scaled_size = int(box_size * scale_percent / 100)
-        
-        # 根据偏移量计算具体位置
-        # 计算可移动的范围，以确保图像不会完全移出框
-        max_offset = box_size - scaled_size
-        # 将-100到100范围映射到实际的像素偏移
-        actual_x_offset = int((x_offset / 100) * (max_offset / 2))
-        actual_y_offset = int((y_offset / 100) * (max_offset / 2))
-        
-        # 最终位置
-        paste_x = left + (box_size - scaled_size) // 2 + actual_x_offset
-        paste_y = top + (box_size - scaled_size) // 2 + actual_y_offset
-        
-        # 确保位置在合理范围内
-        paste_x = max(left, min(paste_x, left + box_size - scaled_size))
-        paste_y = max(top, min(paste_y, top + box_size - scaled_size))
-        
-        # 缩放预设图案
-        preset_scaled = st.session_state.preset_design.resize((scaled_size, scaled_size), Image.LANCZOS)
-        
-        try:
-            # 在计算的位置粘贴图像
-            composite_image.paste(preset_scaled, (paste_x, paste_y), preset_scaled)
-        except Exception as e:
-            st.warning(f"Transparent channel paste failed for preset design: {e}")
-            composite_image.paste(preset_scaled, (paste_x, paste_y))
+    # Get shirt background color (assuming top-left corner color)
+    shirt_bg_color = shirt_image.getpixel((0, 0))
     
-    elif st.session_state.design_mode == "draw" and st.session_state.drawn_design is not None:
-        # 只显示绘制的设计
-        drawn_scaled = st.session_state.drawn_design.resize((box_size, box_size), Image.LANCZOS)
-        try:
-            composite_image.paste(drawn_scaled, (left, top), drawn_scaled)
-        except Exception as e:
-            st.warning(f"Transparent channel paste failed for drawn design: {e}")
-            composite_image.paste(drawn_scaled, (left, top))
+    # Get design image data
+    datas = design_image.getdata()
+    newData = []
     
-    # 如果不是仅预览，则保存最终设计
-    if not preview_only:
-        st.session_state.final_design = composite_image
+    for item in datas:
+        # If pixel is transparent, keep it unchanged
+        if item[3] == 0:
+            newData.append(item)
+        else:
+            # Adjust non-transparent pixel background color to match shirt
+            newData.append((shirt_bg_color[0], shirt_bg_color[1], shirt_bg_color[2], item[3]))
     
-    return composite_image 
+    design_image.putdata(newData)
+    return design_image
+
+# 添加一个用于改变T恤颜色的函数
+def change_shirt_color(image, color_hex):
+    """改变T恤的颜色"""
+    # 转换十六进制颜色为RGB
+    color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+    
+    # 创建副本避免修改原图
+    colored_image = image.copy().convert("RGBA")
+    
+    # 获取图像数据
+    data = colored_image.getdata()
+    
+    # 创建新数据
+    new_data = []
+    # 白色阈值 - 调整这个值可以控制哪些像素被视为白色/浅色并被改变
+    threshold = 200
+    
+    for item in data:
+        # 判断是否是白色/浅色区域 (RGB值都很高)
+        if item[0] > threshold and item[1] > threshold and item[2] > threshold and item[3] > 0:
+            # 保持原透明度，改变颜色
+            new_color = (color_rgb[0], color_rgb[1], color_rgb[2], item[3])
+            new_data.append(new_color)
+        else:
+            # 保持其他颜色不变
+            new_data.append(item)
+    
+    # 更新图像数据
+    colored_image.putdata(new_data)
+    return colored_image
 
 def get_preset_logos():
     """获取预设logo文件夹中的所有图片"""
@@ -950,4 +309,1326 @@ def get_preset_logos():
         if file.lower().endswith(('.png', '.jpg', '.jpeg')):
             preset_logos.append(os.path.join(logos_dir, file))
     
-    return preset_logos 
+    return preset_logos
+
+# AI Customization Group design page
+def show_low_complexity_general_sales():
+    st.title("👕 AI Co-Creation Experiment Platform")
+    st.markdown("### Low Task Complexity-General Sales - Create Your Unique T-shirt Design")
+    
+    # 添加General Sales情境描述
+    st.info("""
+    **General Sales Environment**
+    
+    Welcome to our regular T-shirt customization service available in our standard online store. 
+    You are browsing our website from the comfort of your home or office, with no time pressure. 
+    Take your time to explore the design options and create a T-shirt that matches your personal style.
+    This is a typical online shopping experience where you can customize at your own pace.
+    """)
+    
+    # 任务复杂度说明
+    st.markdown("""
+    <div style="background-color:#f0f0f0; padding:10px; border-radius:5px; margin-bottom:15px">
+    <b>Basic Customization Options</b>: In this experience, you can customize your T-shirt with simple options:
+    <ul>
+        <li>Choose T-shirt color</li>
+        <li>Add text or logo elements</li>
+        <li>Generate design patterns</li>
+        <li>Position your design on the T-shirt</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 初始化T恤颜色状态变量
+    if 'shirt_color_hex' not in st.session_state:
+        st.session_state.shirt_color_hex = "#FFFFFF"  # 默认白色
+    if 'original_base_image' not in st.session_state:
+        st.session_state.original_base_image = None  # 保存原始白色T恤图像
+    if 'base_image' not in st.session_state:
+        st.session_state.base_image = None  # 确保base_image变量被初始化
+    if 'current_image' not in st.session_state:
+        st.session_state.current_image = None  # 确保current_image变量被初始化
+    if 'final_design' not in st.session_state:
+        st.session_state.final_design = None  # 确保final_design变量被初始化
+    if 'ai_suggestions' not in st.session_state:
+        st.session_state.ai_suggestions = None  # 存储AI建议
+    
+    # 重新组织布局，将预览图放在左侧，操作区放在右侧
+    st.markdown("## Design Area")
+    
+    # 创建左右两列布局
+    preview_col, controls_col = st.columns([3, 2])
+    
+    with preview_col:
+        # T恤预览区
+        st.markdown("### 设计预览")
+        
+        # Load T-shirt base image
+        if st.session_state.base_image is None:
+            try:
+                # 加载原始白色T恤图像
+                original_image_path = "white_shirt.png"
+                if not os.path.exists(original_image_path):
+                    st.error(f"T恤图像文件未找到: {original_image_path}")
+                    # 尝试其他可能的路径
+                    alternative_paths = ["./white_shirt.png", "../white_shirt.png", "images/white_shirt.png"]
+                    for alt_path in alternative_paths:
+                        if os.path.exists(alt_path):
+                            original_image_path = alt_path
+                            st.success(f"在备选路径找到T恤图像: {alt_path}")
+                            break
+                
+                # 加载图像
+                original_image = Image.open(original_image_path).convert("RGBA")
+                
+                # 保存原始白色T恤图像
+                st.session_state.original_base_image = original_image.copy()
+                
+                # 应用当前选择的颜色
+                colored_image = change_shirt_color(original_image, st.session_state.shirt_color_hex)
+                st.session_state.base_image = colored_image
+                
+                # Initialize by drawing selection box in the center
+                initial_image, initial_pos = draw_selection_box(colored_image)
+                st.session_state.current_image = initial_image
+                st.session_state.current_box_position = initial_pos
+                
+                # 设置初始最终设计为彩色T恤
+                st.session_state.final_design = colored_image.copy()
+            except Exception as e:
+                st.error(f"加载T恤图像时出错: {e}")
+                # 创建一个简单的默认T恤图像
+                try:
+                    default_img = Image.new('RGBA', (1024, 1024), color=(255, 255, 255, 255))
+                    draw = ImageDraw.Draw(default_img)
+                    draw.rectangle([(300, 200), (724, 800)], outline=(200, 200, 200), width=2)
+                    draw.text((450, 500), "T-Shirt", fill=(100, 100, 100))
+                    
+                    st.session_state.original_base_image = default_img.copy()
+                    st.session_state.base_image = default_img.copy()
+                    initial_image, initial_pos = draw_selection_box(default_img)
+                    st.session_state.current_image = initial_image
+                    st.session_state.current_box_position = initial_pos
+                    st.session_state.final_design = default_img.copy()
+                except Exception as ex:
+                    st.error(f"创建默认图像也失败: {ex}")
+                    st.stop()
+        else:
+            # 添加颜色变化检测：保存当前应用的颜色，用于检查是否发生变化
+            if 'current_applied_color' not in st.session_state:
+                st.session_state.current_applied_color = st.session_state.shirt_color_hex
+            
+            # 检查颜色是否发生变化
+            if st.session_state.current_applied_color != st.session_state.shirt_color_hex:
+                # 颜色已变化，需要重新应用
+                original_image = st.session_state.original_base_image.copy()
+                colored_image = change_shirt_color(original_image, st.session_state.shirt_color_hex)
+                st.session_state.base_image = colored_image
+                
+                # 更新当前图像和位置
+                new_image, _ = draw_selection_box(colored_image, st.session_state.current_box_position)
+                st.session_state.current_image = new_image
+                
+                # 如果有最终设计，也需要重新应用颜色
+                st.session_state.final_design = colored_image.copy()
+                
+                # 修改颜色变更时重新应用文字的代码
+                if 'applied_text' in st.session_state:
+                    text_info = st.session_state.applied_text
+                    
+                    try:
+                        # 首先尝试直接绘制方法
+                        draw = ImageDraw.Draw(st.session_state.final_design)
+                        
+                        # 导入和加载字体
+                        from PIL import ImageFont
+                        font = None
+                        
+                        # 尝试Windows系统字体
+                        try:
+                            import platform
+                            if platform.system() == 'Windows':
+                                windows_font_map = {
+                                    "Arial": "arial.ttf",
+                                    "Times New Roman": "times.ttf",
+                                    "Courier": "cour.ttf",
+                                    "Verdana": "verdana.ttf", 
+                                    "Georgia": "georgia.ttf",
+                                    "Script": "SCRIPTBL.TTF",
+                                    "Impact": "impact.ttf"
+                                }
+                                try:
+                                    font = ImageFont.truetype(windows_font_map.get(text_info["font"], "arial.ttf"), text_info["size"])
+                                except:
+                                    pass
+                        except:
+                            pass
+                        
+                        # 如果Windows系统字体加载失败，尝试常见路径
+                        if font is None:
+                            font_mapping = {
+                                "Arial": "arial.ttf",
+                                "Times New Roman": "times.ttf",
+                                "Courier": "cour.ttf",
+                                "Verdana": "verdana.ttf",
+                                "Georgia": "georgia.ttf",
+                                "Script": "SCRIPTBL.TTF", 
+                                "Impact": "impact.ttf"
+                            }
+                            
+                            font_file = font_mapping.get(text_info["font"], "arial.ttf")
+                            system_font_paths = [
+                                "/Library/Fonts/",
+                                "/System/Library/Fonts/",
+                                "C:/Windows/Fonts/",
+                                "/usr/share/fonts/truetype/",
+                            ]
+                            
+                            for path in system_font_paths:
+                                try:
+                                    font = ImageFont.truetype(path + font_file, text_info["size"])
+                                    break
+                                except:
+                                    continue
+                        
+                        # 如果仍然失败，使用默认字体
+                        if font is None:
+                            font = ImageFont.load_default()
+                        
+                        # 获取图像尺寸
+                        img_width, img_height = st.session_state.final_design.size
+                        
+                        # 使用定位信息或重新计算位置
+                        if "position" in text_info:
+                            # 使用保存的位置 
+                            text_x, text_y = text_info["position"]
+                        else:
+                            # 获取文字尺寸重新计算位置
+                            text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
+                            text_width = text_bbox[2] - text_bbox[0]
+                            text_height = text_bbox[3] - text_bbox[1]
+                            
+                            # 居中位置
+                            text_x = (img_width - text_width) // 2
+                            text_y = int(img_height * 0.4) - (text_height // 2)
+                        
+                        # 创建临时图像来绘制文字
+                        text_img = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
+                        text_draw = ImageDraw.Draw(text_img)
+                        
+                        # 应用特殊效果 - 先绘制特效
+                        if "style" in text_info:
+                            if "轮廓" in text_info["style"]:
+                                # 粗轮廓效果
+                                offset = max(3, text_info["size"] // 25)
+                                for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
+                                    text_draw.text((text_x + offset_x, text_y + offset_y), text_info["text"], fill="black", font=font)
+                            
+                            if "阴影" in text_info["style"]:
+                                # 明显阴影
+                                shadow_offset = max(5, text_info["size"] // 15)
+                                text_draw.text((text_x + shadow_offset, text_y + shadow_offset), text_info["text"], fill=(0, 0, 0, 180), font=font)
+                        
+                        # 将文字颜色从十六进制转换为RGBA
+                        text_rgb = tuple(int(text_info["color"].lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                        text_rgba = text_rgb + (255,)  # 完全不透明
+                        
+                        # 绘制主文字
+                        text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
+                        
+                        # 直接粘贴合并
+                        st.session_state.final_design.paste(text_img, (0, 0), text_img)
+                        st.session_state.current_image = st.session_state.final_design.copy()
+                        
+                    except Exception as e:
+                        st.warning(f"重新应用文字时出错: {e}")
+                        import traceback
+                        st.warning(traceback.format_exc())
+                
+                # 重新应用Logo
+                if 'applied_logo' in st.session_state and 'selected_preset_logo' in st.session_state:
+                    logo_info = st.session_state.applied_logo
+                    
+                    try:
+                        logo_path = st.session_state.selected_preset_logo
+                        logo_image = Image.open(logo_path).convert("RGBA")
+                        
+                        # 获取图像尺寸并使用更大的绘制区域
+                        img_width, img_height = st.session_state.final_design.size
+                        
+                        # 定义更大的T恤前胸区域
+                        chest_width = int(img_width * 0.95)  # 几乎整个宽度
+                        chest_height = int(img_height * 0.6)  # 更大的高度范围
+                        chest_left = (img_width - chest_width) // 2
+                        chest_top = int(img_height * 0.2)  # 更高的位置
+                        
+                        # 调整Logo大小 - 相对于T恤区域而不是小框
+                        logo_size_factor = logo_info["size"] / 100
+                        logo_width = int(chest_width * logo_size_factor * 0.5)  # 控制最大为区域的一半
+                        logo_height = int(logo_width * logo_image.height / logo_image.width)
+                        logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
+                        
+                        # 位置映射 - 现在相对于胸前设计区域
+                        position_mapping = {
+                            "左上": (chest_left + 10, chest_top + 10),
+                            "上中": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
+                            "右上": (chest_left + chest_width - logo_width - 10, chest_top + 10),
+                            "居中": (chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2),
+                            "左下": (chest_left + 10, chest_top + chest_height - logo_height - 10),
+                            "下中": (chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10),
+                            "右下": (chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10)
+                        }
+                        
+                        logo_x, logo_y = position_mapping.get(logo_info["position"], (chest_left + 10, chest_top + 10))
+                        
+                        # 设置透明度
+                        if logo_info["opacity"] < 100:
+                            logo_data = logo_resized.getdata()
+                            new_data = []
+                            for item in logo_data:
+                                r, g, b, a = item
+                                new_a = int(a * logo_info["opacity"] / 100)
+                                new_data.append((r, g, b, new_a))
+                            logo_resized.putdata(new_data)
+                        
+                        # 粘贴Logo到设计
+                        try:
+                            final_design = Image.alpha_composite(st.session_state.final_design.convert("RGBA"), logo_resized)
+                        except Exception as e:
+                            st.warning(f"Logo粘贴失败: {e}")
+                        
+                        # 更新设计
+                        st.session_state.final_design = final_design
+                        st.session_state.current_image = final_design.copy()
+                        
+                        # 保存Logo信息用于后续可能的更新
+                        st.session_state.applied_logo = {
+                            "source": logo_info["source"],
+                            "path": st.session_state.get('selected_preset_logo', None),
+                            "size": logo_info["size"],
+                            "position": logo_info["position"],
+                            "opacity": logo_info["opacity"]
+                        }
+                        
+                        st.success("Logo已应用到设计中！")
+                        st.rerun()
+                    except Exception as e:
+                        st.warning(f"重新应用Logo时出错: {e}")
+                
+                # 更新已应用的颜色状态
+                st.session_state.current_applied_color = st.session_state.shirt_color_hex
+        
+        # Display current image and get click coordinates
+        # 确保current_image存在
+        if st.session_state.current_image is not None:
+            current_image = st.session_state.current_image
+            
+            # 确保T恤图像能完整显示
+            coordinates = streamlit_image_coordinates(
+                current_image,
+                key="shirt_image",
+                width="100%"
+            )
+            
+            # 添加CSS修复图像显示问题
+            st.markdown("""
+            <style>
+            .stImage img {
+                max-width: 100%;
+                height: auto;
+                object-fit: contain;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            # Handle selection area logic - simplify to directly move red box
+            if coordinates:
+                # Update selection box at current mouse position
+                current_point = (coordinates["x"], coordinates["y"])
+                temp_image, new_pos = draw_selection_box(st.session_state.base_image, current_point)
+                st.session_state.current_image = temp_image
+                st.session_state.current_box_position = new_pos
+                st.rerun()
+        else:
+            st.warning("设计预览图尚未加载，请刷新页面重试。")
+        
+        # 显示最终设计结果（如果有）
+        if st.session_state.final_design is not None:
+            st.markdown("### 最终效果")
+            st.image(st.session_state.final_design, use_container_width=True)
+            
+            # 显示当前颜色
+            color_name = {
+                "#FFFFFF": "White",
+                "#000000": "Black",
+                "#FF0000": "Red",
+                "#00FF00": "Green",
+                "#0000FF": "Blue",
+                "#FFFF00": "Yellow",
+                "#FF00FF": "Magenta",
+                "#00FFFF": "Cyan",
+                "#C0C0C0": "Silver",
+                "#808080": "Gray"
+            }.get(st.session_state.shirt_color_hex.upper(), "Custom")
+            st.markdown(f"**颜色:** {color_name} ({st.session_state.shirt_color_hex})")
+            
+            # 显示调试信息
+            if st.checkbox("显示调试信息", value=True):
+                st.write("---")
+                st.subheader("调试信息")
+                
+                # 显示图像尺寸信息
+                if hasattr(st.session_state, 'tshirt_size'):
+                    st.write(f"T恤图像尺寸: {st.session_state.tshirt_size[0]} x {st.session_state.tshirt_size[1]} 像素")
+                
+                # 显示文字信息
+                if hasattr(st.session_state, 'text_size_info'):
+                    text_info = st.session_state.text_size_info
+                    st.write(f"字体大小: {text_info['font_size']} 像素")
+                    st.write(f"文字宽度: {text_info['text_width']} 像素")
+                    st.write(f"文字高度: {text_info['text_height']} 像素")
+                    st.write(f"文字边界框: {text_info['text_bbox']}")
+                
+                # 显示位置信息
+                if hasattr(st.session_state, 'text_position'):
+                    st.write(f"文字位置: {st.session_state.text_position}")
+                
+                # 显示设计区域信息
+                if hasattr(st.session_state, 'design_area'):
+                    design_area = st.session_state.design_area
+                    st.write(f"设计区域: 左上({design_area[0]}, {design_area[1]}), 宽高({design_area[2]}, {design_area[3]})")
+                
+                # 显示字体加载路径
+                if hasattr(st.session_state, 'loaded_font_path'):
+                    st.write(f"加载的字体路径: {st.session_state.loaded_font_path}")
+                
+                # 显示字体加载状态
+                if hasattr(st.session_state, 'using_fallback_text'):
+                    if st.session_state.using_fallback_text:
+                        st.error("字体加载失败，使用了回退渲染方法")
+                    else:
+                        st.success("字体加载成功")
+                
+                # 显示详细的字体加载信息（如果存在）
+                if hasattr(st.session_state, 'font_debug_info'):
+                    with st.expander("字体加载详细信息"):
+                        for info in st.session_state.font_debug_info:
+                            st.write(f"- {info}")
+            
+            # 添加清空设计按钮
+            if st.button("🗑️ 清空所有设计", key="clear_designs"):
+                # 清空所有设计相关的状态变量
+                st.session_state.generated_design = None
+                st.session_state.applied_text = None
+                st.session_state.applied_logo = None
+                # 重置最终设计为基础T恤图像
+                st.session_state.final_design = st.session_state.base_image.copy()
+                # 重置当前图像为带选择框的基础图像
+                temp_image, _ = draw_selection_box(st.session_state.base_image, st.session_state.current_box_position)
+                st.session_state.current_image = temp_image
+                st.rerun()
+            
+            # 下载和确认按钮
+            dl_col1, dl_col2 = st.columns(2)
+            with dl_col1:
+                buf = BytesIO()
+                st.session_state.final_design.save(buf, format="PNG")
+                buf.seek(0)
+                st.download_button(
+                    label="💾 下载设计",
+                    data=buf,
+                    file_name="custom_tshirt.png",
+                    mime="image/png"
+                )
+            
+            with dl_col2:
+                # Confirm completion button
+                if st.button("确认完成"):
+                    st.session_state.page = "survey"
+                    st.rerun()
+    
+    with controls_col:
+        # 操作区，包含AI建议和其他控制选项
+        with st.expander("🤖 AI设计建议", expanded=True):
+            # 添加用户偏好输入
+            user_preference = st.text_input("描述您喜欢的风格或用途", placeholder="例如：运动风格、商务场合、休闲日常等")
+            
+            col_pref1, col_pref2 = st.columns([1, 1])
+            with col_pref1:
+                # 添加预设风格选择
+                preset_styles = ["", "时尚休闲", "商务正式", "运动风格", "摇滚朋克", "日系动漫", "文艺复古", "美式街头"]
+                selected_preset = st.selectbox("或选择预设风格:", preset_styles)
+                if selected_preset and not user_preference:
+                    user_preference = selected_preset
+            
+            with col_pref2:
+                # 添加获取建议按钮
+                if st.button("获取个性化AI建议", key="get_ai_advice"):
+                    with st.spinner("正在生成个性化设计建议..."):
+                        suggestions = get_ai_design_suggestions(user_preference)
+                        st.session_state.ai_suggestions = suggestions
+            
+            # 显示AI建议
+            if st.session_state.ai_suggestions:
+                # 添加格式化的建议显示
+                st.markdown("""
+                <style>
+                .suggestion-container {
+                    background-color: #f8f9fa;
+                    border-left: 4px solid #4CAF50;
+                    padding: 15px;
+                    margin: 10px 0;
+                    border-radius: 0 5px 5px 0;
+                }
+                .suggestion-section {
+                    margin-bottom: 12px;
+                    font-weight: 500;
+                }
+                .suggestion-item {
+                    margin-left: 15px;
+                    margin-bottom: 8px;
+                }
+                .color-name {
+                    font-weight: 500;
+                }
+                .color-code {
+                    font-family: monospace;
+                    background-color: #f1f1f1;
+                    padding: 2px 4px;
+                    border-radius: 3px;
+                }
+                .suggested-text {
+                    cursor: pointer;
+                    color: #0066cc;
+                    transition: all 0.2s;
+                }
+                .suggested-text:hover {
+                    background-color: #e6f2ff;
+                    text-decoration: underline;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+                
+                st.markdown(st.session_state.ai_suggestions, unsafe_allow_html=True)
+                
+                # 添加应用建议的部分
+                st.markdown("---")
+                st.markdown("#### 应用AI建议")
+                
+                # 颜色建议应用
+                if 'ai_suggested_colors' not in st.session_state:
+                    # 初始提供一些默认颜色选项
+                    st.session_state.ai_suggested_colors = {
+                        "白色": "#FFFFFF", 
+                        "黑色": "#000000", 
+                        "藏青色": "#003366", 
+                        "浅灰色": "#CCCCCC", 
+                        "浅蓝色": "#ADD8E6"
+                    }
+                
+                st.markdown("##### 应用推荐颜色")
+                
+                # 创建颜色选择列表 - 动态创建
+                colors = st.session_state.ai_suggested_colors
+                color_cols = st.columns(min(3, len(colors)))
+                
+                for i, (color_name, color_hex) in enumerate(colors.items()):
+                    with color_cols[i % 3]:
+                        # 显示颜色预览
+                        st.markdown(
+                            f"""
+                            <div style="
+                                background-color: {color_hex}; 
+                                width: 100%; 
+                                height: 40px; 
+                                border-radius: 5px;
+                                border: 1px solid #ddd;
+                                margin-bottom: 5px;">
+                            </div>
+                            <div style="text-align: center; margin-bottom: 10px;">
+                                {color_name}<br>
+                                <span style="font-family: monospace; font-size: 0.9em;">{color_hex}</span>
+                            </div>
+                            """, 
+                            unsafe_allow_html=True
+                        )
+                        if st.button(f"应用{color_name}", key=f"apply_{i}"):
+                            st.session_state.shirt_color_hex = color_hex
+                            st.rerun()
+                
+                # 添加自定义颜色调整功能
+                st.markdown("##### 自定义颜色")
+                custom_color = st.color_picker("选择自定义颜色:", st.session_state.shirt_color_hex, key="custom_color_picker")
+                custom_col1, custom_col2 = st.columns([3, 1])
+                
+                with custom_col1:
+                    # 显示自定义颜色预览
+                    st.markdown(
+                        f"""
+                        <div style="
+                            background-color: {custom_color}; 
+                            width: 100%; 
+                            height: 40px; 
+                            border-radius: 5px;
+                            border: 1px solid #ddd;
+                            margin-bottom: 5px;">
+                        </div>
+                        """, 
+                        unsafe_allow_html=True
+                    )
+                
+                with custom_col2:
+                    if st.button("应用自定义颜色"):
+                        st.session_state.shirt_color_hex = custom_color
+                        st.rerun()
+                
+                # 文字建议应用
+                st.markdown("##### 应用推荐文字")
+                
+                # 显示解析的推荐文字，点击直接填充
+                if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
+                    st.markdown("**点击下方推荐文字快速应用：**")
+                    suggested_texts_container = st.container()
+                    with suggested_texts_container:
+                        text_buttons = st.columns(min(2, len(st.session_state.ai_suggested_texts)))
+                        
+                        for i, text in enumerate(st.session_state.ai_suggested_texts):
+                            with text_buttons[i % 2]:
+                                # 修改按钮实现方式，避免直接设置会话状态
+                                if st.button(f'"{text}"', key=f"text_btn_{i}"):
+                                    # 创建一个临时状态变量
+                                    st.session_state.temp_text_selection = text
+                                    st.rerun()
+                
+                # 文字选项 - 使用高复杂度方案的全部功能
+                text_col1, text_col2 = st.columns([2, 1])
+                
+                with text_col1:
+                    # 使用临时变量的值作为默认值
+                    default_input = ""
+                    if 'temp_text_selection' in st.session_state:
+                        default_input = st.session_state.temp_text_selection
+                        # 使用后清除临时状态
+                        del st.session_state.temp_text_selection
+                    elif 'ai_text_suggestion' in st.session_state:
+                        default_input = st.session_state.ai_text_suggestion
+                    
+                    text_content = st.text_input("输入或复制AI推荐的文字", default_input, key="ai_text_suggestion")
+                
+                with text_col2:
+                    text_color = st.color_picker("文字颜色:", "#000000", key="ai_text_color")
+                
+                # 字体选择 - 扩展为高复杂度方案的选项
+                font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]
+                font_family = st.selectbox("字体系列:", font_options, key="ai_font_selection")
+                
+                # 添加文字样式选项
+                text_style = st.multiselect("文字样式:", ["粗体", "斜体", "下划线", "阴影", "轮廓"], default=["粗体"])
+                
+                # 添加动态文字大小滑块 - 增加最大值
+                text_size = st.slider("文字大小:", 20, 400, 120, key="ai_text_size")
+                
+                # 添加文字效果选项
+                text_effect = st.selectbox("文字效果:", ["无", "弯曲", "拱形", "波浪", "3D", "渐变"])
+                
+                # 添加对齐方式选项
+                alignment = st.radio("对齐方式:", ["左对齐", "居中", "右对齐"], horizontal=True, index=1)
+                
+                # 修改预览部分，添加样式效果
+                if text_content:
+                    # 构建样式字符串
+                    style_str = ""
+                    if "粗体" in text_style:
+                        style_str += "font-weight: bold; "
+                    if "斜体" in text_style:
+                        style_str += "font-style: italic; "
+                    if "下划线" in text_style:
+                        style_str += "text-decoration: underline; "
+                    if "阴影" in text_style:
+                        style_str += "text-shadow: 2px 2px 4px rgba(0,0,0,0.5); "
+                    if "轮廓" in text_style:
+                        style_str += "-webkit-text-stroke: 1px #000; "
+                    
+                    # 处理对齐
+                    align_str = "center"
+                    if alignment == "左对齐":
+                        align_str = "left"
+                    elif alignment == "右对齐":
+                        align_str = "right"
+                    
+                    # 处理效果
+                    effect_str = ""
+                    if text_effect == "弯曲":
+                        effect_str = "transform: rotateX(10deg); transform-origin: center; "
+                    elif text_effect == "拱形":
+                        effect_str = "transform: perspective(100px) rotateX(10deg); "
+                    elif text_effect == "波浪":
+                        effect_str = "display: inline-block; transform: translateY(5px); animation: wave 2s ease-in-out infinite; "
+                    elif text_effect == "3D":
+                        effect_str = "text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb; "
+                    elif text_effect == "渐变":
+                        effect_str = "background: linear-gradient(45deg, #f3ec78, #af4261); -webkit-background-clip: text; -webkit-text-fill-color: transparent; "
+                    
+                    preview_size = text_size * 1.5  # 预览大小略大
+                    st.markdown(
+                        f"""
+                        <style>
+                        @keyframes wave {{
+                            0%, 100% {{ transform: translateY(0px); }}
+                            50% {{ transform: translateY(-10px); }}
+                        }}
+                        </style>
+                        <div style="
+                            padding: 10px;
+                            margin: 10px 0;
+                            border: 1px solid #ddd;
+                            border-radius: 5px;
+                            font-family: {font_family}, sans-serif;
+                            color: {text_color};
+                            text-align: {align_str};
+                            font-size: {preview_size}px;
+                            line-height: 1.2;
+                            {style_str}
+                            {effect_str}
+                        ">
+                        {text_content}
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    
+                # 修改应用文字到设计部分的代码，完全重写文字应用逻辑
+                if st.button("应用文字到设计", key="apply_ai_text"):
+                    if not text_content.strip():
+                        st.warning("请输入文字内容!")
+                    else:
+                        with st.spinner("正在应用文字设计..."):
+                            try:
+                                # 获取当前图像
+                                if st.session_state.final_design is not None:
+                                    new_design = st.session_state.final_design.copy()
+                                else:
+                                    new_design = st.session_state.base_image.copy()
+                                
+                                # 创建绘图对象
+                                draw = ImageDraw.Draw(new_design)
+                                
+                                # 导入字体
+                                from PIL import ImageFont
+                                import platform
+                                import os
+                                
+                                # 记录字体加载的详细信息
+                                font_debug_info = []
+                                font_debug_info.append(f"操作系统: {platform.system()}")
+                                font_debug_info.append(f"请求的字体: {font_family}")
+                                font_debug_info.append(f"请求的字体大小: {text_size}")
+                                
+                                # 检查Windows系统字体文件夹是否存在
+                                if platform.system() == 'Windows':
+                                    windows_font_dir = "C:/Windows/Fonts/"
+                                    font_debug_info.append(f"Windows字体文件夹存在: {os.path.exists(windows_font_dir)}")
+                                    # 检查具体字体文件是否存在
+                                    windows_font_map = {
+                                        "Arial": "arial.ttf",
+                                        "Times New Roman": "times.ttf",
+                                        "Courier": "cour.ttf",
+                                        "Verdana": "verdana.ttf", 
+                                        "Georgia": "georgia.ttf",
+                                        "Script": "SCRIPTBL.TTF",
+                                        "Impact": "impact.ttf"
+                                    }
+                                    font_file = windows_font_map.get(font_family, "arial.ttf")
+                                    font_path = windows_font_dir + font_file
+                                    font_debug_info.append(f"请求的字体文件: {font_path}")
+                                    font_debug_info.append(f"字体文件存在: {os.path.exists(font_path)}")
+                                
+                                # 先尝试使用Pillow的字体注册功能获取系统字体
+                                font = None
+                                font_truetype_found = False
+                                
+                                try:
+                                    # 先尝试一个可能的解决方案：使用绝对路径加载Arial字体
+                                    if platform.system() == 'Windows':
+                                        common_fonts = [
+                                            "C:/Windows/Fonts/arial.ttf",
+                                            "C:/Windows/Fonts/ARIAL.TTF",
+                                            "C:/Windows/Fonts/Arial.ttf",
+                                            "C:/Windows/Fonts/verdana.ttf",
+                                            "C:/Windows/Fonts/VERDANA.TTF",
+                                            "C:/Windows/Fonts/segoeui.ttf"  # Windows 10默认字体
+                                        ]
+                                        
+                                        for common_font in common_fonts:
+                                            if os.path.exists(common_font):
+                                                try:
+                                                    font = ImageFont.truetype(common_font, text_size)
+                                                    font_truetype_found = True
+                                                    font_debug_info.append(f"成功加载常见字体: {common_font}")
+                                                    st.session_state.loaded_font_path = common_font
+                                                    break
+                                                except Exception as common_err:
+                                                    font_debug_info.append(f"加载常见字体失败 {common_font}: {common_err}")
+                                except Exception as e:
+                                    font_debug_info.append(f"尝试加载常见Windows字体时出错: {e}")
+                                
+                                # 如果常见字体加载失败，尝试原有的方法
+                                if not font_truetype_found:
+                                    try:
+                                        # 对Windows系统，直接使用系统字体名称
+                                        if platform.system() == 'Windows':
+                                            # Windows系统下可以直接使用字体名称
+                                            windows_font_map = {
+                                                "Arial": "arial.ttf",
+                                                "Times New Roman": "times.ttf",
+                                                "Courier": "cour.ttf",
+                                                "Verdana": "verdana.ttf", 
+                                                "Georgia": "georgia.ttf",
+                                                "Script": "SCRIPTBL.TTF",
+                                                "Impact": "impact.ttf"
+                                            }
+                                            try:
+                                                font_file = windows_font_map.get(font_family, "arial.ttf")
+                                                font_path = "C:/Windows/Fonts/" + font_file
+                                                font_debug_info.append(f"尝试加载Windows字体: {font_path}")
+                                                font = ImageFont.truetype(font_path, text_size)
+                                                font_truetype_found = True
+                                                font_debug_info.append("Windows字体加载成功")
+                                                st.session_state.loaded_font_path = f"Windows系统字体: {font_path}"
+                                            except Exception as win_font_err:
+                                                font_debug_info.append(f"加载Windows字体失败: {win_font_err}")
+                                    except Exception as platform_err:
+                                        font_debug_info.append(f"检测操作系统失败: {platform_err}")
+                                
+                                # 如果Windows系统字体加载失败，尝试常见路径
+                                if not font_truetype_found:
+                            # 字体映射
+                            font_mapping = {
+                                "Arial": "arial.ttf",
+                                "Times New Roman": "times.ttf",
+                                "Courier": "cour.ttf",
+                                "Verdana": "verdana.ttf",
+                                "Georgia": "georgia.ttf",
+                                        "Script": "SCRIPTBL.TTF",
+                                "Impact": "impact.ttf"
+                            }
+                            
+                            # 尝试常见的系统字体路径
+                            system_font_paths = [
+                                "/Library/Fonts/",  # macOS
+                                "/System/Library/Fonts/",  # macOS系统
+                                "C:/Windows/Fonts/",  # Windows
+                                "/usr/share/fonts/truetype/",  # Linux
+                            ]
+                            
+                            # 加载字体
+                                    font_file = font_mapping.get(font_family, "arial.ttf")
+                            for path in system_font_paths:
+                                        font_path = path + font_file
+                                        try:
+                                            font_debug_info.append(f"尝试加载字体: {font_path}")
+                                            if os.path.exists(font_path):
+                                                font = ImageFont.truetype(font_path, text_size)
+                                                font_truetype_found = True
+                                                font_debug_info.append(f"字体加载成功: {font_path}")
+                                                st.session_state.loaded_font_path = font_path
+                                    break
+                                            else:
+                                                font_debug_info.append(f"字体文件不存在: {font_path}")
+                                        except Exception as font_err:
+                                            font_debug_info.append(f"加载字体错误: {font_err}")
+                                    continue
+                            
+                                    # 尝试使用PIL的默认字体
+                                if not font_truetype_found:
+                                    font_debug_info.append("所有TrueType字体加载失败，尝试使用默认字体")
+                                    try:
+                                    font = ImageFont.load_default()
+                                        font_debug_info.append("默认字体加载成功")
+                                        st.session_state.loaded_font_path = "PIL默认字体"
+                                    except Exception as default_err:
+                                        font_debug_info.append(f"加载默认字体也失败: {default_err}")
+                                        st.error("无法加载任何字体，无法应用文字。")
+                                        # 显示详细的字体加载调试信息
+                                        st.error("字体加载详细信息:")
+                                        for info in font_debug_info:
+                                            st.error(f"- {info}")
+                                    return
+                            
+                                # 保存字体加载信息
+                                st.session_state.font_debug_info = font_debug_info
+                                
+                                # 检查font是否为None
+                                if font is None:
+                                    st.error("所有字体加载方法都失败，无法渲染文字")
+                                    # 显示详细的字体加载调试信息
+                                    st.error("字体加载详细信息:")
+                                    for info in font_debug_info:
+                                        st.error(f"- {info}")
+                                    
+                                    # 尝试使用纯文本渲染作为最后的回退选项
+                                    try:
+                                        # 如果所有字体加载都失败，使用一个简单的文本图像代替
+                                        font_debug_info.append("尝试最后的回退方案：创建文本图像")
+                                        
+                                        # 创建一个新的图像，纯粹用白色背景和黑色文字
+                                        text_img_size = (img_width, img_height)
+                                        text_only_img = Image.new('RGBA', text_img_size, (255, 255, 255, 0))  # 完全透明
+                                        text_draw = ImageDraw.Draw(text_only_img)
+                                        
+                                        # 确定文字大小和位置
+                                        text_y = int(img_height * 0.4)
+                                        
+                                        # 写入文字 - 没有fancy的字体和大小，只是基本文字
+                                        # 使用多行文字表示不同大小的效果
+                                        text_colors = [(0, 0, 0, 255), (255, 0, 0, 255), (0, 0, 255, 255)]
+                                        for i, scale in enumerate([1.0, 1.5, 2.0]):
+                                            y_offset = int(text_y + i * 50)  # 不同行垂直位置
+                                            # 使用不同颜色以便区分
+                                            text_color = text_colors[i % len(text_colors)]
+                                            
+                                            # 计算文本中心位置
+                                            if alignment == "左对齐":
+                                                x_pos = int(img_width * 0.1)
+                                            elif alignment == "右对齐":
+                                                x_pos = int(img_width * 0.9)
+                                            else:  # 居中
+                                                x_pos = img_width // 2
+                                            
+                                            # 从x_pos开始写一行，让用户至少能看到一些文字
+                                            text_draw.text((x_pos, y_offset), text_content, fill=text_color)
+                                        
+                                        # 保存位置信息 - 为回退方法也添加位置保存
+                                        st.session_state.text_position = (int(img_width * 0.5), int(img_height * 0.4))
+                                        
+                                        # 将文本图像覆盖到主图像上
+                                        font_debug_info.append("使用简单文本图像作为替代渲染")
+                                        new_design.paste(text_only_img, (0, 0), text_only_img)
+                                        
+                                        # 标记使用了回退方案
+                                        st.session_state.using_fallback_text = True
+                                    except Exception as fallback_err:
+                                        font_debug_info.append(f"最后的回退方案也失败: {fallback_err}")
+                                        st.error(f"所有文字渲染方法均失败，无法应用文字: {fallback_err}")
+                                        return
+                                else:
+                                    # 正常字体加载成功的情况
+                                    st.session_state.using_fallback_text = False
+                                    # 检查字体是否有效
+                                    try:
+                                        # 测试字体是否有效 - 尝试获取文本边界框
+                                        test_bbox = draw.textbbox((0, 0), "Test", font=font)
+                                        font_debug_info.append(f"字体对象有效，测试边界框: {test_bbox}")
+                                        st.session_state.font_valid = True
+                                    except Exception as font_test_err:
+                                        font_debug_info.append(f"字体对象加载成功但似乎无效: {font_test_err}")
+                                        st.session_state.font_valid = False
+                                
+                                # 保存更新后的字体调试信息
+                                st.session_state.font_debug_info = font_debug_info
+                                
+                                # 获取图像尺寸 - 使用整个T恤图像
+                            img_width, img_height = new_design.size
+                            
+                                # 添加调试信息
+                                st.session_state.tshirt_size = (img_width, img_height)
+                                
+                                # 使用绘图方法代替文字渲染
+                                try:
+                                    # 创建一个大尺寸的透明图层用于绘制
+                                    # 尺寸设定为T恤宽度的80%，确保文字足够大
+                                    text_width_percent = 0.8  # 文字宽度占T恤宽度的比例
+                                    text_img_width = int(img_width * text_width_percent)
+                                    text_img_height = int(text_img_width * 0.4)  # 高宽比约为0.4
+                                    
+                                    # 创建透明图层
+                                    text_img = Image.new('RGBA', (text_img_width, text_img_height), (0, 0, 0, 0))
+                                    text_draw = ImageDraw.Draw(text_img)
+                                    
+                                    # 将文字颜色从十六进制转换为RGBA
+                                    text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                                    text_rgba = text_rgb + (255,)  # 完全不透明
+                                    
+                                    # 计算文字间距和位置
+                                    letter_spacing = int(text_img_width * 0.05)  # 字符间距
+                                    letter_width = int((text_img_width - letter_spacing * (len(text_content) - 1)) / len(text_content))
+                                    letter_height = int(text_img_height * 0.9)  # 字符高度占图层的90%
+                                    
+                                    # 根据对齐方式确定起始X坐标
+                                    if alignment == "左对齐":
+                                        start_x = 0
+                                    elif alignment == "右对齐":
+                                        start_x = text_img_width - (letter_width * len(text_content) + letter_spacing * (len(text_content) - 1))
+                                    else:  # 居中
+                                        start_x = (text_img_width - (letter_width * len(text_content) + letter_spacing * (len(text_content) - 1))) // 2
+                                    
+                                    # 为每个字符创建一个矩形框，模拟文字效果
+                                    current_x = start_x
+                                    for char in text_content:
+                                        # 对于空格，仅增加位置
+                                        if char == " ":
+                                            current_x += letter_width + letter_spacing
+                                            continue
+                                        
+                                        # 确定字符绘制区域
+                                        char_left = current_x
+                                        char_top = (text_img_height - letter_height) // 2
+                                        
+                                        # 绘制字符效果
+                                        # 轮廓效果
+                                        if "轮廓" in text_style:
+                                            # 绘制黑色轮廓
+                                            outline_size = max(2, letter_height // 20)
+                                            # 上轮廓
+                                            text_draw.rectangle(
+                                                (char_left, char_top, char_left + letter_width, char_top + outline_size),
+                                                fill="black"
+                                            )
+                                            # 下轮廓
+                                            text_draw.rectangle(
+                                                (char_left, char_top + letter_height - outline_size, char_left + letter_width, char_top + letter_height),
+                                                fill="black"
+                                            )
+                                            # 左轮廓
+                                            text_draw.rectangle(
+                                                (char_left, char_top, char_left + outline_size, char_top + letter_height),
+                                                fill="black"
+                                            )
+                                            # 右轮廓
+                                            text_draw.rectangle(
+                                                (char_left + letter_width - outline_size, char_top, char_left + letter_width, char_top + letter_height),
+                                                fill="black"
+                                            )
+                                        
+                                        # 阴影效果
+                                        if "阴影" in text_style:
+                                            shadow_offset = max(5, letter_height // 10)
+                                            shadow_color = (0, 0, 0, 180)
+                                            text_draw.rectangle(
+                                                (char_left + shadow_offset, char_top + shadow_offset,
+                                                 char_left + letter_width + shadow_offset, char_top + letter_height + shadow_offset),
+                                                fill=shadow_color
+                                            )
+                                        
+                                        # 绘制主字符
+                                        text_draw.rectangle(
+                                            (char_left, char_top, char_left + letter_width, char_top + letter_height),
+                                            fill=text_rgba
+                                        )
+                                        
+                                        # 更新下一个字符的位置
+                                        current_x += letter_width + letter_spacing
+                                    
+                                    # 根据设计计算文字图层的放置位置
+                                    text_x = (img_width - text_img_width) // 2
+                                    text_y = int(img_height * 0.35)  # 放在T恤上部
+                                    
+                                    # 保存位置信息
+                                    st.session_state.text_position = (text_x, text_y)
+                                    st.session_state.text_size_info = {
+                                        "font_size": text_size,
+                                        "text_bbox": [0, 0, text_img_width, text_img_height],
+                                        "text_width": text_img_width,
+                                        "text_height": text_img_height
+                                    }
+                                    
+                                    # 合成文字图层到T恤图像上
+                                    new_design.paste(text_img, (text_x, text_y), text_img)
+                                    
+                                    # 设置渲染方法标记
+                                    st.session_state.using_drawing_method = True
+                                    font_debug_info.append("使用绘图方法代替文字渲染")
+                                    
+                                except Exception as drawing_err:
+                                    font_debug_info.append(f"尝试使用绘图方法失败: {drawing_err}")
+                                    st.session_state.using_drawing_method = False
+                                    
+                                    # 如果绘图方法失败，回退到测试字体渲染方法
+                                    try:
+                                        # 测试一种完全不同的方法 - 直接在T恤图像上绘制
+                                        # 先备份一下原始图像数据
+                                        original_design = new_design.copy()
+                                        
+                                        # 直接获取文字大小
+                                        text_bbox = draw.textbbox((0, 0), text_content, font=font)
+                                text_width = text_bbox[2] - text_bbox[0]
+                                text_height = text_bbox[3] - text_bbox[1]
+                                        
+                                        # 保存文字尺寸信息用于调试
+                                        st.session_state.text_size_info = {
+                                            "font_size": text_size,
+                                            "text_bbox": text_bbox,
+                                            "text_width": text_width,
+                                            "text_height": text_height
+                                        }
+                                        
+                                        # 计算位置 - 使用更大比例确保文字显示在T恤中心位置
+                                        text_x = (img_width - text_width) // 2  # 横向居中
+                                        text_y = int(img_height * 0.4) - (text_height // 2)  # 垂直放在偏上位置
+                                        
+                                        # 保存位置信息
+                                        st.session_state.text_position = (text_x, text_y)
+                                        
+                                        # 应用特殊效果 - 先绘制轮廓和阴影，确保在文字下方
+                                        if "轮廓" in text_style:
+                                            # 绘制更粗的轮廓效果
+                                            offset = max(3, text_size // 25)  # 加大偏移以增强效果
+                                            for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
+                                                draw.text((text_x + offset_x, text_y + offset_y), text_content, fill="black", font=font)
+                                        
+                                        if "阴影" in text_style:
+                                            # 绘制更明显的阴影效果
+                                            shadow_offset = max(5, text_size // 15)  # 增大阴影偏移
+                                            # 使用更深的阴影色
+                                            draw.text((text_x + shadow_offset, text_y + shadow_offset), text_content, fill=(0, 0, 0, 180), font=font)
+                                        
+                                        # 绘制主文字 - 确保使用完全不透明的颜色
+                                        # 将文字颜色从十六进制转换为RGBA - 确保完全不透明
+                                        text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                                        text_rgba = text_rgb + (255,)  # 完全不透明
+                                        
+                                        # 绘制主文字
+                                        text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
+                                        
+                                        # 检查是否成功绘制 - 比较修改前后的图像
+                                        if original_design.tobytes() == new_design.tobytes():
+                                            st.warning("文字绘制可能未生效 - 尝试备选方法")
+                                            
+                                            # 备选方法 - 创建一个新图像层，绘制后合并
+                                            text_layer = Image.new('RGBA', new_design.size, (0, 0, 0, 0))
+                                            text_draw = ImageDraw.Draw(text_layer)
+                                            
+                                            # 绘制效果到新图层
+                                            if "轮廓" in text_style:
+                                                offset = max(3, text_size // 25)
+                                                for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
+                                                    text_draw.text((text_x + offset_x, text_y + offset_y), text_content, fill="black", font=font)
+                                            
+                                            if "阴影" in text_style:
+                                                shadow_offset = max(5, text_size // 15)
+                                                text_draw.text((text_x + shadow_offset, text_y + shadow_offset), text_content, fill=(0, 0, 0, 180), font=font)
+                                            
+                                            # 绘制主文字
+                                            text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
+                                            
+                                            # 合并图层 - 使用paste而不是alpha_composite
+                                            new_design.paste(text_layer, (0, 0), text_layer)
+                                    except Exception as direct_draw_err:
+                                        st.warning(f"直接绘制文字失败: {direct_draw_err}，尝试备选方法")
+                                        
+                                        # 完全不同的替代方法 - 使用PIL的另一种文字渲染方式
+                                        try:
+                                            # 创建一个临时图像用于文字渲染
+                                            text_img = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
+                                            text_draw = ImageDraw.Draw(text_img)
+                                            
+                                            # 计算文字位置
+                                            text_bbox = text_draw.textbbox((0, 0), text_content, font=font)
+                                            text_width = text_bbox[2] - text_bbox[0]
+                                            text_height = text_bbox[3] - text_bbox[1]
+                                            
+                                            # 保存文字尺寸信息
+                                            st.session_state.text_size_info = {
+                                                "font_size": text_size,
+                                                "text_bbox": text_bbox,
+                                                "text_width": text_width,
+                                                "text_height": text_height
+                                            }
+                                
+                                # 计算居中位置
+                                text_x = (img_width - text_width) // 2
+                                text_y = int(img_height * 0.4) - (text_height // 2)
+                                
+                                # 直接绘制到临时图像
+                                if "轮廓" in text_style:
+                                    offset = max(3, text_size // 25)
+                                    for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
+                                        text_draw.text((text_x + offset_x, text_y + offset_y), text_content, fill="black", font=font)
+                                
+                                if "阴影" in text_style:
+                                    shadow_offset = max(5, text_size // 15)
+                                    text_draw.text((text_x + shadow_offset, text_y + shadow_offset), text_content, fill=(0, 0, 0, 180), font=font)
+                                
+                                # 绘制主文字
+                                text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                                text_rgba = text_rgb + (255,)
+                                text_draw.text((text_x, text_y), text_content, fill=text_rgba, font=font)
+                                
+                                # 直接粘贴合并
+                                new_design.paste(text_img, (0, 0), text_img)
+                        except Exception as alt_err:
+                            st.error(f"备选文字渲染方法也失败: {alt_err}")
+                
+                # 添加Logo选择功能
+                st.markdown("##### 应用Logo")
+                
+                # Logo来源选择
+                logo_source = st.radio("Logo来源:", ["上传Logo", "选择预设Logo"], horizontal=True, key="ai_logo_source")
+                
+                if logo_source == "上传Logo":
+                    # Logo上传选项
+                    uploaded_logo = st.file_uploader("上传Logo图片 (PNG或JPG文件):", type=["png", "jpg", "jpeg"], key="ai_logo_upload")
+                    logo_image = None
+                    
+                    if uploaded_logo is not None:
+                        try:
+                            logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
+                            st.image(logo_image, caption="上传的Logo", width=150)
+                        except Exception as e:
+                            st.error(f"加载上传的Logo时出错: {e}")
+                else:  # 选择预设Logo
+                    # 获取预设logo
+                    preset_logos = get_preset_logos()
+                    
+                    if not preset_logos:
+                        st.warning("未找到预设Logo。请在'logos'文件夹中添加一些图片。")
+                        logo_image = None
+                    else:
+                        # 显示预设logo选择
+                        logo_cols = st.columns(min(3, len(preset_logos)))
+                        selected_preset_logo = None
+                        
+                        for i, logo_path in enumerate(preset_logos):
+                            with logo_cols[i % 3]:
+                                logo_name = os.path.basename(logo_path)
+                                try:
+                                    logo_preview = Image.open(logo_path).convert("RGBA")
+                                    # 调整预览大小
+                                    preview_width = 80
+                                    preview_height = int(preview_width * logo_preview.height / logo_preview.width)
+                                    preview = logo_preview.resize((preview_width, preview_height))
+                                    
+                                    st.image(preview, caption=logo_name)
+                                    if st.button(f"选择", key=f"ai_logo_{i}"):
+                                        st.session_state.selected_preset_logo = logo_path
+                                        st.rerun()
+                                except Exception as e:
+                                    st.error(f"加载Logo {logo_name}时出错: {e}")
+                        
+                        # 如果已选择Logo
+                        if 'selected_preset_logo' in st.session_state:
+                            try:
+                                logo_image = Image.open(st.session_state.selected_preset_logo).convert("RGBA")
+                            except Exception as e:
+                                st.error(f"加载选择的Logo时出错: {e}")
+                                logo_image = None
+                        else:
+                            logo_image = None
+                
+                # Logo大小和位置设置(只在有logo_image时显示)
+                if logo_source == "上传Logo" and uploaded_logo is not None or \
+                   logo_source == "选择预设Logo" and 'selected_preset_logo' in st.session_state:
+                    
+                    # Logo大小
+                    logo_size = st.slider("Logo大小:", 10, 100, 40, format="%d%%", key="ai_logo_size")
+                    
+                    # Logo位置
+                    logo_position = st.radio("位置:", 
+                        ["左上", "上中", "右上", "居中", "左下", "下中", "右下"], 
+                        index=3, horizontal=True, key="ai_logo_position")
+                    
+                    # Logo透明度
+                    logo_opacity = st.slider("Logo透明度:", 10, 100, 100, 5, format="%d%%", key="ai_logo_opacity")
+                    
+                    # 应用Logo按钮
+                    if st.button("应用Logo到设计", key="apply_ai_logo"):
+                        # 获取当前图像
+                        if st.session_state.final_design is not None:
+                            new_design = st.session_state.final_design.copy()
+                        else:
+                            new_design = st.session_state.base_image.copy()
+                        
+                        try:
+                            # 对应的logo_image应该已经在上面的逻辑中被设置
+                            if logo_image:
+                                # 获取图像尺寸并使用更大的绘制区域
+                                img_width, img_height = new_design.size
+                                
+                                # 定义更大的T恤前胸区域
+                                chest_width = int(img_width * 0.95)  # 几乎整个宽度
+                                chest_height = int(img_height * 0.6)  # 更大的高度范围
+                                chest_left = (img_width - chest_width) // 2
+                                chest_top = int(img_height * 0.2)  # 更高的位置
+                                
+                                # 调整Logo大小 - 相对于T恤区域而不是小框
+                                logo_size_factor = logo_size / 100
+                                logo_width = int(chest_width * logo_size_factor * 0.5)  # 控制最大为区域的一半
+                                logo_height = int(logo_width * logo_image.height / logo_image.width)
+                                logo_resized = logo_image.resize((logo_width, logo_height), Image.LANCZOS)
+                                
+                                # 位置映射 - 现在相对于胸前设计区域
+                                position_mapping = {
+                                    "左上": (chest_left + 10, chest_top + 10),
+                                    "上中": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
+                                    "右上": (chest_left + chest_width - logo_width - 10, chest_top + 10),
+                                    "居中": (chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2),
+                                    "左下": (chest_left + 10, chest_top + chest_height - logo_height - 10),
+                                    "下中": (chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10),
+                                    "右下": (chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10)
+                                }
+                                
+                                logo_x, logo_y = position_mapping.get(logo_position, (chest_left + 10, chest_top + 10))
+                                
+                                # 设置透明度
+                                if logo_opacity < 100:
+                                    logo_data = logo_resized.getdata()
+                                    new_data = []
+                                    for item in logo_data:
+                                        r, g, b, a = item
+                                        new_a = int(a * logo_opacity / 100)
+                                        new_data.append((r, g, b, new_a))
+                                    logo_resized.putdata(new_data)
+                                
+                                # 粘贴Logo到设计
+                                try:
+                                    new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
+                                except Exception as e:
+                                    st.warning(f"Logo粘贴失败: {e}")
+                                
+                                # 更新设计
+                                st.session_state.final_design = new_design
+                                st.session_state.current_image = new_design.copy()
+                                
+                                # 保存Logo信息用于后续可能的更新
+                                st.session_state.applied_logo = {
+                                    "source": logo_source,
+                                    "path": st.session_state.get('selected_preset_logo', None),
+                                    "size": logo_size,
+                                    "position": logo_position,
+                                    "opacity": logo_opacity
+                                }
+                                
+                                st.success("Logo已应用到设计中！")
+                                st.rerun()
+                            else:
+                                st.error("请先选择或上传Logo")
+                        except Exception as e:
+                            st.error(f"应用Logo时出错: {e}")
+            else:
+                # 显示欢迎信息
+                st.markdown("""
+                <div style="background-color: #f0f7ff; padding: 15px; border-radius: 10px; border-left: 5px solid #1e88e5;">
+                <h4 style="color: #1e88e5; margin-top: 0;">👋 欢迎使用AI设计助手</h4>
+                <p>描述您喜欢的风格或T恤用途，AI助手将为您提供个性化设计建议，包括：</p>
+                <ul>
+                    <li>适合您风格的T恤颜色推荐</li>
+                    <li>文字内容和字体风格建议</li>
+                    <li>Logo选择和设计元素推荐</li>
+                </ul>
+                <p>点击"获取个性化AI建议"按钮开始吧！</p>
+                </div>
+                """, unsafe_allow_html=True)
+    
+    # Return to main interface button - modified here
+    if st.button("返回主页"):
+        # Clear all design-related states
+        st.session_state.base_image = None
+        st.session_state.current_image = None
+        st.session_state.current_box_position = None
+        st.session_state.generated_design = None
+        st.session_state.final_design = None
+        st.session_state.applied_text = None
+        st.session_state.applied_logo = None
+        # Only change page state, retain user info and experiment group
+        st.session_state.page = "welcome"
+        st.rerun() 
