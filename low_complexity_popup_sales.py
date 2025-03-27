@@ -324,8 +324,10 @@ def show_low_complexity_general_sales():
     st.info("""
     **Pop-up Sales Environment**
     
-    You are visiting our temporary pop-up store in a busy shopping mall. There are other customers waiting for their turn to use this customization kiosk. 
-    The store staff has informed you that the experience is limited to 15 minutes per customer. Please design your T-shirt efficiently while enjoying this exclusive in-person customization opportunity.
+    You are visiting our temporary pop-up store in a busy shopping mall. 
+    There are other customers waiting for their turn to use this customization kiosk.
+    The store staff has informed you that the experience is limited to 15 minutes per customer. 
+    Please design your T-shirt efficiently while enjoying this exclusive in-person customization opportunity.
     """)
     
     # 任务复杂度说明
