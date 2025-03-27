@@ -820,7 +820,7 @@ def show_low_complexity_general_sales():
                             font-family: {ai_font}, sans-serif;
                             color: {text_color};
                             text-align: center;
-                            font-size: {text_size//3}px;
+                            font-size: {text_size}px;
                         ">
                         {text_suggestion}
                         </div>
@@ -867,7 +867,7 @@ def show_low_complexity_general_sales():
                             }
                             
                             # 使用字体缩放因子使字体显著更大
-                            font_scale_factor = 2.0  # 增大字体的缩放因子
+                            font_scale_factor = 4.0  # 增大字体的缩放因子
                             actual_text_size = int(text_size * font_scale_factor)
                             
                             font_file = font_mapping.get(ai_font, "arial.ttf")
@@ -891,11 +891,11 @@ def show_low_complexity_general_sales():
                         # 获取图像尺寸
                         img_width, img_height = new_design.size
                         
-                        # 定义T恤前胸区域 (占整个图像宽度的60%，高度的30%，位于中上部)
-                        chest_width = int(img_width * 0.6)
-                        chest_height = int(img_height * 0.3)
+                        # 定义T恤前胸区域 (占整个图像宽度的80%，高度的40%，位于中上部)
+                        chest_width = int(img_width * 0.8)
+                        chest_height = int(img_height * 0.4)
                         chest_left = (img_width - chest_width) // 2
-                        chest_top = int(img_height * 0.35)  # 位于图像35%的高度处
+                        chest_top = int(img_height * 0.3)  # 位于图像30%的高度处
                         
                         # 计算文字位置 - 在胸前区域居中
                         try:
