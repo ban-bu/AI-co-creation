@@ -155,7 +155,7 @@ def get_ai_design_suggestions(user_preferences=None):
                                 # 获取第一个Logo描述
                                 first_logo_desc = cleaned_descriptions[0]
                                 # 构建完整的提示词
-                                full_prompt = f"创建一个T恤Logo设计：{first_logo_desc}。要求：1. 使用简洁的设计 2. 适合T恤印花 3. 背景透明 4. 图案清晰可识别"
+                                full_prompt = f"创建一个Logo设计：{first_logo_desc}。要求：1. 使用简洁的设计 2. 适合印花 3. 背景透明 4. 图案清晰可识别"
                                 
                                 # 调用DALL-E生成图像
                                 logo_image = generate_vector_image(full_prompt)
@@ -1889,7 +1889,7 @@ def show_high_complexity_general_sales():
                                 st.error(traceback.format_exc())
                 
                 # 添加Logo选择功能
-                st.markdown("##### 应用Logo")
+                st.markdown("##### Apply Logo")
 
                 # 显示自动生成的Logo
                 if hasattr(st.session_state, 'generated_logo') and hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
@@ -1899,15 +1899,15 @@ def show_high_complexity_general_sales():
                         # 显示Logo
                         preview_width = 200
                         preview_height = int(preview_width * st.session_state.generated_logo.height / st.session_state.generated_logo.width)
-                        st.image(st.session_state.generated_logo, caption="AI自动生成的Logo", width=preview_width)
+                        st.image(st.session_state.generated_logo, caption="Logo generated automatically by AI", width=preview_width)
                     
                     with logo_auto_col2:
-                        st.success("已根据AI建议自动生成Logo")
-                        st.markdown(f"**提示词**：{st.session_state.logo_prompt}")
+                        st.success("Logo generated automatically based on AI suggestions")
+                        st.markdown(f"**Prompt**：{st.session_state.logo_prompt}")
                         
                         # 直接提供应用Logo的按钮
-                        if st.button("直接应用此Logo到设计", key="apply_auto_logo"):
-                            with st.spinner("正在应用Logo到设计..."):
+                        if st.button("Directly apply this Logo to the design", key="apply_auto_logo"):
+                            with st.spinner("Applying Logo to design..."):
                                 try:
                                     # 获取当前图像
                                     if st.session_state.final_design is not None:
@@ -1963,11 +1963,11 @@ def show_high_complexity_general_sales():
                                         "opacity": logo_opacity
                                     }
                                     
-                                    st.success("Logo已应用到设计！")
+                                    st.success("Logo applied to design successfully!")
                                     st.rerun()
                                     
                                 except Exception as e:
-                                    st.error(f"应用Logo时出错：{str(e)}")
+                                    st.error(f"Error applying Logo: {str(e)}")
                                     import traceback
                                     st.error(traceback.format_exc())
 
@@ -1981,23 +1981,23 @@ def show_high_complexity_general_sales():
                         # 使用第一个推荐的Logo描述
                         initial_logo_prompt = st.session_state.ai_suggested_logos[0]
                     
-                    logo_prompt = st.text_input("描述您想要的Logo样式", 
+                    logo_prompt = st.text_input("Describe the Logo style you want", 
                                                value=initial_logo_prompt,
-                                               placeholder="例如：简约现代的山峰Logo，使用蓝色和白色")
+                                               placeholder="For example: A simple modern mountain logo, using blue and white")
 
                 with logo_col2:
                     # 修改自动生成状态显示
                     if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
-                        st.info("您可以修改提示词重新生成Logo")
+                        st.info("You can modify the prompt to regenerate the Logo")
                     
                     if st.button("生成Logo", key="generate_logo"):
                         if not logo_prompt:
-                            st.warning("请先输入Logo描述")
+                            st.warning("Please enter a Logo description")
                         else:
-                            with st.spinner("正在生成Logo..."):
+                            with st.spinner("Generating Logo..."):
                                 try:
                                     # 构建完整的提示词
-                                    full_prompt = f"创建一个T恤Logo设计：{logo_prompt}。要求：1. 使用简洁的设计 2. 适合T恤印花 3. 背景透明 4. 图案清晰可识别"
+                                    full_prompt = f"Create a T-shirt Logo design: {logo_prompt}. Requirements: 1. Use a simple design 2. Suitable for T-shirt printing 3. Background transparent 4. Clear and recognizable图案清晰可识别"
                                     
                                     # 调用DALL-E生成图像
                                     logo_image = generate_vector_image(full_prompt)
@@ -2009,21 +2009,21 @@ def show_high_complexity_general_sales():
                                         st.session_state.logo_prompt = logo_prompt
                                         # 标记为用户手动生成的Logo
                                         st.session_state.logo_auto_generated = False
-                                        st.success("Logo生成成功！")
+                                        st.success("Logo generated successfully!")
                                         st.rerun()
                                 except Exception as e:
-                                    st.error(f"生成Logo时出错：{str(e)}")
+                                    st.error(f"Error generating Logo: {str(e)}")
 
                 # 如果有其他AI建议的Logo元素，显示切换选项
                 if hasattr(st.session_state, 'ai_suggested_logos') and len(st.session_state.ai_suggested_logos) > 1:
                     # 修改显示逻辑，即使已经生成了Logo也显示其他建议
-                    st.markdown("**AI建议的其他Logo元素:**")
+                    st.markdown("**Other Logo suggestions from AI:**")
                     for i, logo_desc in enumerate(st.session_state.ai_suggested_logos[1:], 1):
-                        if st.button(f"使用建议 {i}: {logo_desc[:50]}...", key=f"use_logo_suggestion_{i}"):
-                            with st.spinner("正在生成Logo..."):
+                        if st.button(f"Use suggestion {i}: {logo_desc[:50]}...", key=f"use_logo_suggestion_{i}"):
+                            with st.spinner("Generating Logo..."):
                                 try:
                                     # 构建完整的提示词
-                                    full_prompt = f"创建一个T恤Logo设计：{logo_desc}。要求：1. 使用简洁的设计 2. 适合T恤印花 3. 背景透明 4. 图案清晰可识别"
+                                    full_prompt = f"Create a Logo design: {logo_desc}. Requirements: 1. Use a simple design 2. Suitable for printing 3. Background transparent 4. Clear and recognizable图案清晰可识别"
                                     
                                     # 调用DALL-E生成图像
                                     logo_image = generate_vector_image(full_prompt)
@@ -2035,10 +2035,10 @@ def show_high_complexity_general_sales():
                                         st.session_state.logo_prompt = logo_desc
                                         # 标记为用户选择的Logo
                                         st.session_state.logo_auto_generated = False
-                                        st.success("Logo生成成功！")
+                                        st.success("Logo generated successfully!")
                                         st.rerun()
                                 except Exception as e:
-                                    st.error(f"生成Logo时出错：{str(e)}")
+                                    st.error(f"Error generating Logo: {str(e)}")
 
                 # 如果有生成的Logo，显示Logo设置选项
                 if hasattr(st.session_state, 'generated_logo'):
@@ -2051,26 +2051,26 @@ def show_high_complexity_general_sales():
                         # 显示生成的Logo预览
                         preview_width = 200
                         preview_height = int(preview_width * st.session_state.generated_logo.height / st.session_state.generated_logo.width)
-                        st.image(st.session_state.generated_logo, caption="生成的Logo", width=preview_width)
+                        st.image(st.session_state.generated_logo, caption="Generated Logo", width=preview_width)
                     
                     with logo_regen_col:
                         # 显示当前使用的提示词和生成方式
                         if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
-                            st.markdown(f"**当前提示词**：{st.session_state.logo_prompt if hasattr(st.session_state, 'logo_prompt') else '未指定'} (自动生成)")
+                            st.markdown(f"**Current prompt**：{st.session_state.logo_prompt if hasattr(st.session_state, 'logo_prompt') else '未指定'} (Auto generated)")
                         else:
-                            st.markdown(f"**当前提示词**：{st.session_state.logo_prompt if hasattr(st.session_state, 'logo_prompt') else '未指定'}")
+                            st.markdown(f"**Current prompt**：{st.session_state.logo_prompt if hasattr(st.session_state, 'logo_prompt') else '未指定'}")
                         
                         # 添加重新生成选项
-                        new_logo_prompt = st.text_input("输入新的Logo提示词重新生成", placeholder="描述您想要的新Logo样式", key="new_logo_prompt")
+                        new_logo_prompt = st.text_input("Enter a new Logo description to regenerate", placeholder="Describe the new Logo style you want", key="new_logo_prompt")
                         
-                        if st.button("重新生成Logo", key="regenerate_logo"):
+                        if st.button("Regenerate Logo", key="regenerate_logo"):
                             if not new_logo_prompt:
-                                st.warning("请先输入新的Logo描述")
+                                st.warning("Please enter a new Logo description")
                             else:
-                                with st.spinner("正在重新生成Logo..."):
+                                with st.spinner("Regenerating Logo..."):
                                     try:
                                         # 构建完整的提示词
-                                        full_prompt = f"创建一个T恤Logo设计：{new_logo_prompt}。要求：1. 使用简洁的设计 2. 适合T恤印花 3. 背景透明 4. 图案清晰可识别"
+                                        full_prompt = f"Create a Logo design: {new_logo_prompt}. Requirements: 1. Use a simple design 2. Suitable for printing 3. Background transparent 4. Clear and recognizable图案清晰可识别"
                                         
                                         # 调用DALL-E生成图像
                                         logo_image = generate_vector_image(full_prompt)
@@ -2082,25 +2082,25 @@ def show_high_complexity_general_sales():
                                             st.session_state.logo_prompt = new_logo_prompt
                                             # 标记为用户手动生成的Logo
                                             st.session_state.logo_auto_generated = False
-                                            st.success("Logo重新生成成功！")
+                                            st.success("Logo regenerated successfully!")
                                             st.rerun()
                                     except Exception as e:
-                                        st.error(f"重新生成Logo时出错：{str(e)}")
+                                        st.error(f"Error regenerating Logo: {str(e)}")
                     
                     # Logo大小
-                    logo_size = st.slider("Logo大小:", 10, 100, 40, format="%d%%", key="ai_logo_size")
+                    logo_size = st.slider("Logo size:", 10, 100, 40, format="%d%%", key="ai_logo_size")
                     
                     # Logo位置
-                    logo_position = st.radio("位置:", 
+                    logo_position = st.radio("Position:", 
                         ["Top-left", "Top-center", "Top-right", "Center", "Bottom-left", "Bottom-center", "Bottom-right"], 
                         index=3, horizontal=True, key="ai_logo_position")
                     
                     # Logo透明度
-                    logo_opacity = st.slider("Logo透明度:", 10, 100, 100, 5, format="%d%%", key="ai_logo_opacity")
+                    logo_opacity = st.slider("Logo opacity:", 10, 100, 100, 5, format="%d%%", key="ai_logo_opacity")
                     
                     # 应用Logo按钮
-                    if st.button("应用Logo到设计", key="apply_ai_logo"):
-                        with st.spinner("正在应用Logo到设计..."):
+                    if st.button("Apply Logo to design", key="apply_ai_logo"):
+                        with st.spinner("Applying Logo to design..."):
                             try:
                                 # 获取当前图像
                                 if st.session_state.final_design is not None:
@@ -2163,21 +2163,21 @@ def show_high_complexity_general_sales():
                                 
                                 # 添加详细调试信息
                                 success_msg = f"""
-                                Logo应用成功！
-                                提示词: {st.session_state.logo_prompt}
-                                尺寸: {logo_size}%
-                                实际宽度: {logo_width}px
-                                实际高度: {logo_height}px
-                                位置: {logo_position} ({logo_x}, {logo_y})
-                                透明度: {logo_opacity}%
-                                T恤尺寸: {img_width} x {img_height}
+                                Logo applied successfully!
+                                Prompt: {st.session_state.logo_prompt}
+                                Size: {logo_size}%
+                                Actual width: {logo_width}px
+                                Actual height: {logo_height}px
+                                Position: {logo_position} ({logo_x}, {logo_y})
+                                Opacity: {logo_opacity}%
+                                T-shirt size: {img_width} x {img_height}
                                 """
                                 
                                 st.success(success_msg)
                                 st.rerun()
                                 
                             except Exception as e:
-                                st.error(f"应用Logo时出错：{str(e)}")
+                                st.error(f"Apply Logo error: {str(e)}")
                                 import traceback
                                 st.error(traceback.format_exc())
             else:
