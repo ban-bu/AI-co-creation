@@ -179,6 +179,8 @@ if 'preset_scale' not in st.session_state:
     st.session_state.preset_scale = 40  # 默认为40%
 if 'design_mode' not in st.session_state:
     st.session_state.design_mode = "preset"  # 默认使用预设设计模式
+if 'fabric_type' not in st.session_state:
+    st.session_state.fabric_type = "cotton"  # 默认面料类型
 
 # Ensure data file exists
 initialize_experiment_data()
