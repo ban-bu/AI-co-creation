@@ -31,32 +31,32 @@ GPT4O_MINI_API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
 GPT4O_MINI_BASE_URL = "https://api.deepbricks.ai/v1/"
 
 def get_ai_design_suggestions(user_preferences=None):
-    """从GPT-4o-mini获取设计建议"""
+    """Get design suggestions from GPT-4o-mini"""
     client = OpenAI(api_key=GPT4O_MINI_API_KEY, base_url=GPT4O_MINI_BASE_URL)
     
-    # 默认提示如果没有用户偏好
+    # Default prompt if no user preferences provided
     if not user_preferences:
-        user_preferences = "时尚休闲风格的T恤设计"
+        user_preferences = "casual fashion t-shirt design"
     
-    # 构建提示词
+    # Construct the prompt
     prompt = f"""
-    作为T恤设计顾问，请为"{user_preferences}"风格提供以下设计建议：
+    As a T-shirt design consultant, please provide the following design suggestions for the "{user_preferences}" style:
 
-    1. 颜色建议：推荐3种适合的颜色，包括：
-       - 颜色名称和十六进制代码(如 蓝色 (#0000FF))
-       - 为什么这种颜色适合该风格(2-3句话解释)
+    1. Color Suggestions: Recommend 3 suitable colors, including:
+       - Color name and hex code (e.g., Blue (#0000FF))
+       - Why this color suits the style (2-3 sentences explanation)
        
-    2. 文字建议：推荐2个适合的文字/短语：
-       - 具体文字内容
-       - 推荐的字体风格
-       - 简短说明为什么适合
+    2. Text Suggestions: Recommend 2 suitable texts/phrases:
+       - Specific text content
+       - Recommended font style
+       - Brief explanation of suitability
        
-    3. Logo元素建议：推荐2种适合的设计元素：
-       - 元素描述
-       - 如何与整体风格搭配
+    3. Logo Element Suggestions: Recommend 2 suitable design elements:
+       - Element description
+       - How it complements the overall style
        
-    确保包含颜色的十六进制代码，保持内容详实但不过于冗长。
-    文字建议部分，请将每个推荐的短语/文字单独放在一行上，并使用引号包裹，例如："Just Do It"。
+    Please ensure to include hex codes for colors, keep content detailed but concise.
+    For text suggestions, place each recommended phrase/text on a separate line and wrap them in quotes, e.g., "Just Do It".
     """
     
     try:
@@ -64,7 +64,7 @@ def get_ai_design_suggestions(user_preferences=None):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "你是一个专业的T恤设计顾问，提供有用且具体的建议。包含足够细节让用户理解你的推荐理由，但避免不必要的冗长。确保为每种颜色包含十六进制代码。对于文字建议，请将推荐的短语用引号包裹并单独放在一行。"},
+                {"role": "system", "content": "You are a professional T-shirt design consultant, providing useful and specific suggestions. Include sufficient details to help users understand your recommendations, while avoiding unnecessary verbosity. Ensure to include hex codes for each color. For text suggestions, please wrap recommended phrases in quotes and place them on separate lines."},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -131,9 +131,9 @@ def get_ai_design_suggestions(user_preferences=None):
             
             return suggestion_with_style
         else:
-            return "无法获取AI建议，请稍后再试。"
+            return "can not get AI suggestions, please try again later."
     except Exception as e:
-        return f"获取AI建议时出错: {str(e)}"
+        return f"Error getting AI suggestions: {str(e)}"
 
 def generate_vector_image(prompt):
     """Generate an image based on the prompt"""
@@ -189,7 +189,7 @@ def generate_vector_image(prompt):
                             st.error(f"Error converting SVG to PNG with svglib: {svg_err}")
                             return None
                     else:
-                        st.error("无法处理SVG格式，SVG处理库未安装")
+                        st.error("can not handle SVG format, SVG processing library not installed")
                         return None
                 else:
                     return Image.open(BytesIO(image_resp.content)).convert("RGBA")
@@ -365,7 +365,7 @@ def show_low_complexity_general_sales():
     
     with preview_col:
         # T恤预览区
-        st.markdown("### 设计预览")
+        st.markdown("### Design Preview")
         
         # Load T-shirt base image
         if st.session_state.base_image is None:
@@ -391,21 +391,21 @@ def show_low_complexity_general_sales():
                 for path in possible_paths:
                     if os.path.exists(path):
                         original_image_path = path
-                        st.success(f"找到T恤图像: {path}")
+                        st.success(f"Found t-shirt image: {path}")
                         found = True
                         break
                 
                 if not found:
                     # 如果未找到，显示当前工作目录和文件列表以便调试
                     current_dir = os.getcwd()
-                    st.error(f"T恤图像未找到。当前工作目录: {current_dir}")
+                    st.error(f"T-shirt image not found. Current working directory: {current_dir}")
                     files = os.listdir(current_dir)
-                    st.error(f"目录内容: {files}")
+                    st.error(f"Directory contents: {files}")
                 
-                st.info(f"尝试加载图像: {original_image_path}")
+                st.info(f"Trying to load image: {original_image_path}")
                 # 加载图像
                 original_image = Image.open(original_image_path).convert("RGBA")
-                st.success("成功加载T恤图像!")
+                st.success("Successfully loaded t-shirt image!")
                 
                 # 保存原始白色T恤图像
                 st.session_state.original_base_image = original_image.copy()
@@ -422,7 +422,7 @@ def show_low_complexity_general_sales():
                 # 设置初始最终设计为彩色T恤
                 st.session_state.final_design = colored_image.copy()
             except Exception as e:
-                st.error(f"加载T恤图像时出错: {e}")
+                st.error(f"Error loading t-shirt image: {e}")
                 import traceback
                 st.error(traceback.format_exc())
         else:
@@ -525,9 +525,9 @@ def show_low_complexity_general_sales():
                             text_img_resized = text_img.resize((new_width, new_height), Image.LANCZOS)
                             
                             # 计算位置
-                            if text_info["alignment"] == "左对齐":
+                            if text_info["alignment"] == "left":
                                 paste_x = int(img_width * 0.2)
-                            elif text_info["alignment"] == "右对齐":
+                            elif text_info["alignment"] == "right":
                                 paste_x = int(img_width * 0.8 - text_img_resized.width)
                             else:  # 居中
                                 paste_x = (img_width - text_img_resized.width) // 2
@@ -543,11 +543,11 @@ def show_low_complexity_general_sales():
                             st.session_state.applied_text["position"] = (paste_x, paste_y)
                             
                         except Exception as e:
-                            st.warning(f"使用绘图方法重新应用文字时出错: {e}")
+                            st.warning(f"Error reapplying text using drawing method: {e}")
                             import traceback
                             st.warning(traceback.format_exc())
                     else:
-                        with st.spinner("正在应用文字设计..."):
+                        with st.spinner("Applying text design..."):
                             try:
                                 # 获取当前图像
                                 if st.session_state.final_design is not None:
@@ -584,7 +584,7 @@ def show_low_complexity_general_sales():
                                 
                                 # 初始化调试信息列表
                                 font_debug_info = []
-                                font_debug_info.append("开始应用高清文字设计")
+                                font_debug_info.append("Starting high-definition text design")
                                 
                                 # 尝试加载系统字体 - 增强字体处理部分
                                 font = None
@@ -595,7 +595,7 @@ def show_low_complexity_general_sales():
                                     
                                     # 记录系统信息以便调试
                                     system = platform.system()
-                                    font_debug_info.append(f"系统类型: {system}")
+                                    font_debug_info.append(f"System type: {system}")
                                     
                                     # 根据不同系统尝试不同的字体路径
                                     if system == 'Windows':
@@ -622,29 +622,29 @@ def show_low_complexity_general_sales():
                                     
                                     # 直接使用完整尺寸的字体大小
                                     render_size = text_info["size"]
-                                    font_debug_info.append(f"尝试加载字体，大小: {render_size}px")
+                                    font_debug_info.append(f"Trying to load font, size: {render_size}px")
                                     
                                     # 尝试加载每个字体
                                     for font_path in font_paths:
                                         if os.path.exists(font_path):
                                             try:
                                                 font = ImageFont.truetype(font_path, render_size)
-                                                font_debug_info.append(f"成功加载字体: {font_path}")
+                                                font_debug_info.append(f"Successfully loaded font: {font_path}")
                                                 break
                                             except Exception as font_err:
-                                                font_debug_info.append(f"加载字体失败: {font_path} - {str(font_err)}")
+                                                font_debug_info.append(f"load font failed: {font_path} - {str(font_err)}")
                                 except Exception as e:
-                                    font_debug_info.append(f"字体加载过程错误: {str(e)}")
+                                    font_debug_info.append(f"font loading process error: {str(e)}")
                                 
                                 # 如果系统字体加载失败，再尝试默认字体
                                 if font is None:
                                     try:
-                                        font_debug_info.append("使用PIL默认字体，但这会导致低分辨率")
+                                        font_debug_info.append("Using PIL default font, which will result in low resolution")
                                         font = ImageFont.load_default()
                                     except Exception as default_err:
-                                        font_debug_info.append(f"默认字体加载失败: {str(default_err)}")
+                                        font_debug_info.append(f"Default font loading failed: {str(default_err)}")
                                         # 如果连默认字体都失败，创建一个紧急情况文本图像
-                                        font_debug_info.append("所有字体加载失败，使用紧急方案")
+                                        font_debug_info.append("All fonts loading failed, using emergency solution")
                                 
                                 # 改进的文本渲染方法 - 直接在高分辨率画布上绘制
                                 try:
@@ -691,17 +691,17 @@ def show_low_complexity_general_sales():
                                         
                                         text_width = max_width
                                         text_height = total_height
-                                        font_debug_info.append(f"文字实际尺寸: {text_width}x{text_height}px，分为{len(lines)}行")
+                                        font_debug_info.append(f"Actual text size: {text_width}x{text_height}px, divided into {len(lines)} lines")
                                     else:
                                         # 估计尺寸
                                         text_width = len(text_info["text"]) * render_size * 0.6
                                         text_height = render_size * 1.2
-                                        font_debug_info.append(f"估计文字尺寸: {text_width}x{text_height}px")
+                                        font_debug_info.append(f"Estimated text size: {text_width}x{text_height}px")
                                     
                                     # 根据对齐方式计算X位置
-                                    if text_info["alignment"] == "左对齐":
+                                    if text_info["alignment"] == "left":
                                         text_x = int(img_width * 0.2)
-                                    elif text_info["alignment"] == "右对齐":
+                                    elif text_info["alignment"] == "right":
                                         text_x = int(img_width * 0.8 - text_width)
                                     else:  # 居中
                                         text_x = (img_width - text_width) // 2
@@ -711,7 +711,7 @@ def show_low_complexity_general_sales():
                                     
                                     # 先应用特效
                                     if "style" in text_info:
-                                        if "轮廓" in text_info["style"]:
+                                        if "outline" in text_info["style"]:
                                             # 绘制粗轮廓 - 使用更多点以获得更平滑的轮廓
                                             outline_color = "black"
                                             outline_width = max(3, render_size // 20)
@@ -724,7 +724,7 @@ def show_low_complexity_general_sales():
                                                 text_draw.text((text_x + offset_x, text_y + offset_y), 
                                                               text_info["text"], fill=outline_color, font=font)
                                         
-                                        if "阴影" in text_info["style"]:
+                                        if "shadow" in text_info["style"]:
                                             # 渐变阴影效果
                                             shadow_color = (0, 0, 0, 180)  # 半透明黑色
                                             shadow_offset = max(5, render_size // 15)
@@ -749,9 +749,9 @@ def show_low_complexity_general_sales():
                                             # 计算每行的Y位置
                                             line_y = text_y + i * line_height
                                             # 根据对齐方式重新计算每行X位置
-                                            if text_info["alignment"] == "左对齐":
+                                            if text_info["alignment"] == "left":
                                                 line_x = text_x
-                                            elif text_info["alignment"] == "右对齐":
+                                            elif text_info["alignment"] == "right":
                                                 line_bbox = text_draw.textbbox((0, 0), line, font=font)
                                                 line_width = line_bbox[2] - line_bbox[0]
                                                 line_x = text_x + (text_width - line_width)
@@ -768,8 +768,8 @@ def show_low_complexity_general_sales():
                                     
                                     # 特殊效果处理
                                     if text_info["effect"] != "无" and text_info["effect"] != "None":
-                                        font_debug_info.append(f"应用特殊效果: {text_info['effect']}")
-                                        if text_info["effect"] == "渐变":
+                                        font_debug_info.append(f"Applying special effect: {text_info['effect']}")
+                                        if text_info["effect"] == "gradient":
                                             # 简单实现渐变效果
                                             gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
                                             gradient_draw = ImageDraw.Draw(gradient_layer)
@@ -815,16 +815,16 @@ def show_low_complexity_general_sales():
                                     }
                                     
                                     # 应用成功
-                                    font_debug_info.append("高清文字渲染成功应用")
+                                    font_debug_info.append("High-definition text rendering applied successfully")
                                 
                                 except Exception as render_err:
-                                    font_debug_info.append(f"高清渲染失败: {str(render_err)}")
+                                    font_debug_info.append(f"High-definition rendering failed: {str(render_err)}")
                                     import traceback
                                     font_debug_info.append(traceback.format_exc())
                                     
                                     # 紧急备用方案 - 创建一个简单文字图像
                                     try:
-                                        font_debug_info.append("使用紧急备用渲染方法")
+                                        font_debug_info.append("Using emergency backup rendering method")
                                         # 创建一个白色底的图像
                                         emergency_img = Image.new('RGBA', (img_width//2, img_height//5), (255, 255, 255, 255))
                                         emergency_draw = ImageDraw.Draw(emergency_img)
@@ -837,9 +837,9 @@ def show_low_complexity_general_sales():
                                         paste_y = (img_height - emergency_img.height) // 2
                                         
                                         new_design.paste(emergency_img, (paste_x, paste_y))
-                                        font_debug_info.append("应用了紧急文字渲染")
+                                        font_debug_info.append("Applied emergency text rendering")
                                     except Exception as emergency_err:
-                                        font_debug_info.append(f"紧急渲染也失败: {str(emergency_err)}")
+                                        font_debug_info.append(f"Emergency rendering also failed: {str(emergency_err)}")
                                 
                                 # 保存字体加载和渲染信息
                                 st.session_state.font_debug_info = font_debug_info
@@ -863,20 +863,20 @@ def show_low_complexity_general_sales():
                                 
                                 # 添加详细调试信息
                                 success_msg = f"""
-                                文字已应用到设计中！
-                                字体: {text_info["font"]}
-                                大小: {text_info["size"]}px
-                                实际宽度: {text_width}px
-                                实际高度: {text_height}px
-                                位置: ({text_x}, {text_y})
-                                T恤尺寸: {img_width} x {img_height}
-                                渲染方法: 高清渲染
+                                Text applied to design successfully!
+                                Font: {text_info["font"]}
+                                Size: {text_info["size"]}px
+                                Actual width: {text_width}px
+                                Actual height: {text_height}px
+                                Position: ({text_x}, {text_y})
+                                T-shirt size: {img_width} x {img_height}
+                                Rendering method: High-definition rendering
                                 """
                                 
                                 st.success(success_msg)
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"应用文字时出错: {str(e)}")
+                                st.error(f"Error applying text: {str(e)}")
                                 import traceback
                                 st.error(traceback.format_exc())
                 
@@ -930,7 +930,7 @@ def show_low_complexity_general_sales():
                         try:
                             final_design = Image.alpha_composite(st.session_state.final_design.convert("RGBA"), logo_resized)
                         except Exception as e:
-                            st.warning(f"Logo粘贴失败: {e}")
+                            st.warning(f"Logo pasting failed: {e}")
                         
                         # 更新设计
                         st.session_state.final_design = final_design
@@ -945,10 +945,10 @@ def show_low_complexity_general_sales():
                             "opacity": logo_info["opacity"]
                         }
                         
-                        st.success("Logo已应用到设计中！")
+                        st.success("Logo applied to design successfully!")
                         st.rerun()
                     except Exception as e:
-                        st.warning(f"重新应用Logo时出错: {e}")
+                        st.warning(f"Error reapplying logo: {e}")
                 
                 # 更新已应用的颜色状态
                 st.session_state.current_applied_color = st.session_state.shirt_color_hex
@@ -985,11 +985,11 @@ def show_low_complexity_general_sales():
                 st.session_state.current_box_position = new_pos
                 st.rerun()
         else:
-            st.warning("设计预览图尚未加载，请刷新页面重试。")
+            st.warning("Design preview not loaded, please refresh the page and try again.")
         
         # 显示最终设计结果（如果有）
         if st.session_state.final_design is not None:
-            st.markdown("### 最终效果")
+            st.markdown("### Final result")
             st.image(st.session_state.final_design, use_container_width=True)
             
             # 显示当前颜色
@@ -1005,52 +1005,52 @@ def show_low_complexity_general_sales():
                 "#C0C0C0": "Silver",
                 "#808080": "Gray"
             }.get(st.session_state.shirt_color_hex.upper(), "Custom")
-            st.markdown(f"**颜色:** {color_name} ({st.session_state.shirt_color_hex})")
+            st.markdown(f"**Color:** {color_name} ({st.session_state.shirt_color_hex})")
             
             # 显示调试信息
-            if st.checkbox("显示调试信息", value=True):
+            if st.checkbox("Show debug information", value=True):
                 st.write("---")
-                st.subheader("调试信息")
+                st.subheader("Debug information")
                 
                 # 显示图像尺寸信息
                 if hasattr(st.session_state, 'tshirt_size'):
-                    st.write(f"T恤图像尺寸: {st.session_state.tshirt_size[0]} x {st.session_state.tshirt_size[1]} 像素")
+                    st.write(f"T-shirt image size: {st.session_state.tshirt_size[0]} x {st.session_state.tshirt_size[1]} pixels")
                 
                 # 显示文字信息
                 if hasattr(st.session_state, 'text_size_info'):
                     text_info = st.session_state.text_size_info
-                    st.write(f"字体大小: {text_info['font_size']} 像素")
-                    st.write(f"文字宽度: {text_info['text_width']} 像素")
-                    st.write(f"文字高度: {text_info['text_height']} 像素")
+                    st.write(f"Font size: {text_info['font_size']} pixels")
+                    st.write(f"Text width: {text_info['text_width']} pixels")
+                    st.write(f"Text height: {text_info['text_height']} pixels")
                 
                 # 显示位置信息
                 if hasattr(st.session_state, 'text_position'):
-                    st.write(f"文字位置: {st.session_state.text_position}")
+                    st.write(f"Text position: {st.session_state.text_position}")
                 
                 # 显示设计区域信息
                 if hasattr(st.session_state, 'design_area'):
                     design_area = st.session_state.design_area
-                    st.write(f"设计区域: 左上({design_area[0]}, {design_area[1]}), 宽高({design_area[2]}, {design_area[3]})")
+                    st.write(f"Design area: Top-left({design_area[0]}, {design_area[1]}), width({design_area[2]}, {design_area[3]})")
                 
                 # 显示字体加载路径
                 if hasattr(st.session_state, 'loaded_font_path'):
-                    st.write(f"加载的字体路径: {st.session_state.loaded_font_path}")
+                    st.write(f"Loaded font path: {st.session_state.loaded_font_path}")
                 
                 # 显示字体加载状态
                 if hasattr(st.session_state, 'using_fallback_text'):
                     if st.session_state.using_fallback_text:
-                        st.error("字体加载失败，使用了回退渲染方法")
+                        st.error("Font loading failed, using fallback rendering method")
                     else:
-                        st.success("字体加载成功")
+                        st.success("Font loaded successfully")
                 
                 # 显示详细的字体加载信息（如果存在）
                 if hasattr(st.session_state, 'font_debug_info'):
-                    with st.expander("字体加载详细信息"):
+                    with st.expander("Font loading detailed information"):
                         for info in st.session_state.font_debug_info:
                             st.write(f"- {info}")
             
             # 添加清空设计按钮
-            if st.button("🗑️ 清空所有设计", key="clear_designs"):
+            if st.button("🗑️ Clear all designs", key="clear_designs"):
                 # 清空所有设计相关的状态变量
                 st.session_state.generated_design = None
                 st.session_state.applied_text = None
@@ -1069,7 +1069,7 @@ def show_low_complexity_general_sales():
                 st.session_state.final_design.save(buf, format="PNG")
                 buf.seek(0)
                 st.download_button(
-                    label="💾 下载设计",
+                    label="💾 Download design",
                     data=buf,
                     file_name="custom_tshirt.png",
                     mime="image/png"
@@ -1077,28 +1077,28 @@ def show_low_complexity_general_sales():
             
             with dl_col2:
                 # Confirm completion button
-                if st.button("确认完成"):
+                if st.button("Confirm completion"):
                     st.session_state.page = "survey"
                     st.rerun()
     
     with controls_col:
         # 操作区，包含AI建议和其他控制选项
-        with st.expander("🤖 AI设计建议", expanded=True):
+        with st.expander("🤖 AI design suggestions", expanded=True):
             # 添加用户偏好输入
-            user_preference = st.text_input("描述您喜欢的风格或用途", placeholder="例如：运动风格、商务场合、休闲日常等")
+            user_preference = st.text_input("Describe your preferred style or usage", placeholder="For example: sports style, business场合, casual daily, etc.")
             
             col_pref1, col_pref2 = st.columns([1, 1])
             with col_pref1:
                 # 添加预设风格选择
-                preset_styles = ["", "时尚休闲", "商务正式", "运动风格", "摇滚朋克", "日系动漫", "文艺复古", "美式街头"]
-                selected_preset = st.selectbox("或选择预设风格:", preset_styles)
+                preset_styles = ["", "Fashion casual", "Business formal", "Sports style", "Rock and roll", "Japanese anime", "Artistic retro", "American street"]
+                selected_preset = st.selectbox("Or select a preset style:", preset_styles)
                 if selected_preset and not user_preference:
                     user_preference = selected_preset
             
             with col_pref2:
                 # 添加获取建议按钮
-                if st.button("获取个性化AI建议", key="get_ai_advice"):
-                    with st.spinner("正在生成个性化设计建议..."):
+                if st.button("Get personalized AI suggestions", key="get_ai_advice"):
+                    with st.spinner("Generating personalized design suggestions..."):
                         suggestions = get_ai_design_suggestions(user_preference)
                         st.session_state.ai_suggestions = suggestions
             
@@ -1147,20 +1147,20 @@ def show_low_complexity_general_sales():
                 
                 # 添加应用建议的部分
                 st.markdown("---")
-                st.markdown("#### 应用AI建议")
+                st.markdown("#### Apply AI suggestions")
                 
                 # 颜色建议应用
                 if 'ai_suggested_colors' not in st.session_state:
                     # 初始提供一些默认颜色选项
                     st.session_state.ai_suggested_colors = {
-                        "白色": "#FFFFFF", 
-                        "黑色": "#000000", 
-                        "藏青色": "#003366", 
-                        "浅灰色": "#CCCCCC", 
-                        "浅蓝色": "#ADD8E6"
+                        "white": "#FFFFFF", 
+                        "black": "#000000", 
+                        "navy blue": "#003366", 
+                        "light gray": "#CCCCCC", 
+                        "light blue": "#ADD8E6"
                     }
                 
-                st.markdown("##### 应用推荐颜色")
+                st.markdown("##### Apply recommended colors")
                 
                 # 创建颜色选择列表 - 动态创建
                 colors = st.session_state.ai_suggested_colors
@@ -1186,13 +1186,13 @@ def show_low_complexity_general_sales():
                             """, 
                             unsafe_allow_html=True
                         )
-                        if st.button(f"应用{color_name}", key=f"apply_{i}"):
+                        if st.button(f"Apply {color_name}", key=f"apply_{i}"):
                             st.session_state.shirt_color_hex = color_hex
                             st.rerun()
                 
                 # 添加自定义颜色调整功能
-                st.markdown("##### 自定义颜色")
-                custom_color = st.color_picker("选择自定义颜色:", st.session_state.shirt_color_hex, key="custom_color_picker")
+                st.markdown("##### Custom color")
+                custom_color = st.color_picker("Select a custom color:", st.session_state.shirt_color_hex, key="custom_color_picker")
                 custom_col1, custom_col2 = st.columns([3, 1])
                 
                 with custom_col1:
@@ -1212,16 +1212,16 @@ def show_low_complexity_general_sales():
                     )
                 
                 with custom_col2:
-                    if st.button("应用自定义颜色"):
+                    if st.button("Apply custom color"):
                         st.session_state.shirt_color_hex = custom_color
                         st.rerun()
                 
                 # 文字建议应用
-                st.markdown("##### 应用推荐文字")
+                st.markdown("##### Apply recommended text")
                 
                 # 显示解析的推荐文字，点击直接填充
                 if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
-                    st.markdown("**点击下方推荐文字快速应用：**")
+                    st.markdown("**Click the recommended text below to apply quickly:**")
                     suggested_texts_container = st.container()
                     with suggested_texts_container:
                         text_buttons = st.columns(min(2, len(st.session_state.ai_suggested_texts)))
@@ -1247,26 +1247,26 @@ def show_low_complexity_general_sales():
                     elif 'ai_text_suggestion' in st.session_state:
                         default_input = st.session_state.ai_text_suggestion
                     
-                    text_content = st.text_input("输入或复制AI推荐的文字", default_input, key="ai_text_suggestion")
+                    text_content = st.text_input("Input or copy the recommended text by AI", default_input, key="ai_text_suggestion")
                 
                 with text_col2:
-                    text_color = st.color_picker("文字颜色:", "#000000", key="ai_text_color")
+                    text_color = st.color_picker("Text color:", "#000000", key="ai_text_color")
                 
                 # 字体选择 - 扩展为高复杂度方案的选项
                 font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]
-                font_family = st.selectbox("字体系列:", font_options, key="ai_font_selection")
+                font_family = st.selectbox("Font series:", font_options, key="ai_font_selection")
                 
                 # 添加文字样式选项
-                text_style = st.multiselect("文字样式:", ["粗体", "斜体", "下划线", "阴影", "轮廓"], default=["粗体"])
+                text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
                 
                 # 添加动态文字大小滑块 - 增加最大值
-                text_size = st.slider("文字大小:", 20, 400, 39, key="ai_text_size")
+                text_size = st.slider("Text size:", 20, 400, 39, key="ai_text_size")
                 
                 # 添加文字效果选项
-                text_effect = st.selectbox("文字效果:", ["无", "弯曲", "拱形", "波浪", "3D", "渐变"])
+                text_effect = st.selectbox("Text effect:", ["None", "Bent", "Arch", "Wave", "3D", "Gradient"])
                 
                 # 添加对齐方式选项
-                alignment = st.radio("对齐方式:", ["左对齐", "居中", "右对齐"], horizontal=True, index=1)
+                alignment = st.radio("Alignment:", ["Left", "Center", "Right"], horizontal=True, index=1)
                 
                 # 修改预览部分，添加样式效果
                 if text_content:
@@ -1285,22 +1285,22 @@ def show_low_complexity_general_sales():
                     
                     # 处理对齐
                     align_str = "center"
-                    if alignment == "左对齐":
+                    if alignment == "Left":
                         align_str = "left"
-                    elif alignment == "右对齐":
+                    elif alignment == "Right":
                         align_str = "right"
                     
                     # 处理效果
                     effect_str = ""
-                    if text_effect == "弯曲":
+                    if text_effect == "Bent":
                         effect_str = "transform: rotateX(10deg); transform-origin: center; "
-                    elif text_effect == "拱形":
+                    elif text_effect == "Arch":
                         effect_str = "transform: perspective(100px) rotateX(10deg); "
-                    elif text_effect == "波浪":
+                    elif text_effect == "Wave":
                         effect_str = "display: inline-block; transform: translateY(5px); animation: wave 2s ease-in-out infinite; "
                     elif text_effect == "3D":
                         effect_str = "text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb; "
-                    elif text_effect == "渐变":
+                    elif text_effect == "Gradient":
                         effect_str = "background: linear-gradient(45deg, #f3ec78, #af4261); -webkit-background-clip: text; -webkit-text-fill-color: transparent; "
                     
                     preview_size = text_size * 1.5  # 预览大小略大
@@ -1332,11 +1332,11 @@ def show_low_complexity_general_sales():
                     )
                     
                 # 修改应用文字到设计部分的代码，完全重写文字应用逻辑
-                if st.button("应用文字到设计", key="apply_ai_text"):
+                if st.button("Apply text to design", key="apply_ai_text"):
                     if not text_content.strip():
-                        st.warning("请输入文字内容!")
+                        st.warning("Please input the text content!")
                     else:
-                        with st.spinner("正在应用文字设计..."):
+                        with st.spinner("Applying text design..."):
                             try:
                                 # 获取当前图像
                                 if st.session_state.final_design is not None:
@@ -1373,7 +1373,7 @@ def show_low_complexity_general_sales():
                                 
                                 # 初始化调试信息列表
                                 font_debug_info = []
-                                font_debug_info.append("开始应用高清文字设计")
+                                font_debug_info.append("Start applying high-definition text design")
                                 
                                 # 尝试加载系统字体 - 增强字体处理部分
                                 font = None
@@ -1384,7 +1384,7 @@ def show_low_complexity_general_sales():
                                     
                                     # 记录系统信息以便调试
                                     system = platform.system()
-                                    font_debug_info.append(f"系统类型: {system}")
+                                    font_debug_info.append(f"System type: {system}")
                                     
                                     # 根据不同系统尝试不同的字体路径
                                     if system == 'Windows':
@@ -1411,29 +1411,29 @@ def show_low_complexity_general_sales():
                                     
                                     # 直接使用完整尺寸的字体大小
                                     render_size = text_info["size"]
-                                    font_debug_info.append(f"尝试加载字体，大小: {render_size}px")
+                                    font_debug_info.append(f"Try to load font, size: {render_size}px")
                                     
                                     # 尝试加载每个字体
                                     for font_path in font_paths:
                                         if os.path.exists(font_path):
                                             try:
                                                 font = ImageFont.truetype(font_path, render_size)
-                                                font_debug_info.append(f"成功加载字体: {font_path}")
+                                                font_debug_info.append(f"Successfully loaded font: {font_path}")
                                                 break
                                             except Exception as font_err:
-                                                font_debug_info.append(f"加载字体失败: {font_path} - {str(font_err)}")
+                                                font_debug_info.append(f"load font failed: {font_path} - {str(font_err)}")
                                 except Exception as e:
-                                    font_debug_info.append(f"字体加载过程错误: {str(e)}")
+                                    font_debug_info.append(f"font loading process error: {str(e)}")
                                 
                                 # 如果系统字体加载失败，再尝试默认字体
                                 if font is None:
                                     try:
-                                        font_debug_info.append("使用PIL默认字体，但这会导致低分辨率")
+                                        font_debug_info.append("Using PIL default font, which will result in low resolution")
                                         font = ImageFont.load_default()
                                     except Exception as default_err:
-                                        font_debug_info.append(f"默认字体加载失败: {str(default_err)}")
+                                        font_debug_info.append(f"Default font loading failed: {str(default_err)}")
                                         # 如果连默认字体都失败，创建一个紧急情况文本图像
-                                        font_debug_info.append("所有字体加载失败，使用紧急方案")
+                                        font_debug_info.append("All fonts loading failed, using emergency solution")
                                 
                                 # 改进的文本渲染方法 - 直接在高分辨率画布上绘制
                                 try:
@@ -1480,17 +1480,17 @@ def show_low_complexity_general_sales():
                                         
                                         text_width = max_width
                                         text_height = total_height
-                                        font_debug_info.append(f"文字实际尺寸: {text_width}x{text_height}px，分为{len(lines)}行")
+                                        font_debug_info.append(f"Actual text size: {text_width}x{text_height}px, divided into {len(lines)} lines")
                                     else:
                                         # 估计尺寸
                                         text_width = len(text_info["text"]) * render_size * 0.6
                                         text_height = render_size * 1.2
-                                        font_debug_info.append(f"估计文字尺寸: {text_width}x{text_height}px")
+                                        font_debug_info.append(f"Estimated text size: {text_width}x{text_height}px")
                                     
                                     # 根据对齐方式计算X位置
-                                    if text_info["alignment"] == "左对齐":
+                                    if text_info["alignment"] == "Left":
                                         text_x = int(img_width * 0.2)
-                                    elif text_info["alignment"] == "右对齐":
+                                    elif text_info["alignment"] == "Right":
                                         text_x = int(img_width * 0.8 - text_width)
                                     else:  # 居中
                                         text_x = (img_width - text_width) // 2
@@ -1500,7 +1500,7 @@ def show_low_complexity_general_sales():
                                     
                                     # 先应用特效
                                     if "style" in text_info:
-                                        if "轮廓" in text_info["style"]:
+                                        if "outline" in text_info["style"]:
                                             # 绘制粗轮廓 - 使用更多点以获得更平滑的轮廓
                                             outline_color = "black"
                                             outline_width = max(3, render_size // 20)
@@ -1513,7 +1513,7 @@ def show_low_complexity_general_sales():
                                                 text_draw.text((text_x + offset_x, text_y + offset_y), 
                                                               text_info["text"], fill=outline_color, font=font)
                                         
-                                        if "阴影" in text_info["style"]:
+                                        if "shadow" in text_info["style"]:
                                             # 渐变阴影效果
                                             shadow_color = (0, 0, 0, 180)  # 半透明黑色
                                             shadow_offset = max(5, render_size // 15)
@@ -1538,9 +1538,9 @@ def show_low_complexity_general_sales():
                                             # 计算每行的Y位置
                                             line_y = text_y + i * line_height
                                             # 根据对齐方式重新计算每行X位置
-                                            if text_info["alignment"] == "左对齐":
+                                            if text_info["alignment"] == "Left":
                                                 line_x = text_x
-                                            elif text_info["alignment"] == "右对齐":
+                                            elif text_info["alignment"] == "Right":
                                                 line_bbox = text_draw.textbbox((0, 0), line, font=font)
                                                 line_width = line_bbox[2] - line_bbox[0]
                                                 line_x = text_x + (text_width - line_width)
@@ -1556,9 +1556,9 @@ def show_low_complexity_general_sales():
                                         text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
                                     
                                     # 特殊效果处理
-                                    if text_info["effect"] != "无" and text_info["effect"] != "None":
-                                        font_debug_info.append(f"应用特殊效果: {text_info['effect']}")
-                                        if text_info["effect"] == "渐变":
+                                    if text_info["effect"] != "none" and text_info["effect"] != "None":
+                                        font_debug_info.append(f"Applying special effect: {text_info['effect']}")
+                                        if text_info["effect"] == "Gradient":
                                             # 简单实现渐变效果
                                             gradient_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
                                             gradient_draw = ImageDraw.Draw(gradient_layer)
@@ -1604,16 +1604,16 @@ def show_low_complexity_general_sales():
                                     }
                                     
                                     # 应用成功
-                                    font_debug_info.append("高清文字渲染成功应用")
+                                    font_debug_info.append("High-definition text rendering applied successfully")
                                 
                                 except Exception as render_err:
-                                    font_debug_info.append(f"高清渲染失败: {str(render_err)}")
+                                    font_debug_info.append(f"High-definition rendering failed: {str(render_err)}")
                                     import traceback
                                     font_debug_info.append(traceback.format_exc())
                                     
                                     # 紧急备用方案 - 创建一个简单文字图像
                                     try:
-                                        font_debug_info.append("使用紧急备用渲染方法")
+                                        font_debug_info.append("Using emergency backup rendering method")
                                         # 创建一个白色底的图像
                                         emergency_img = Image.new('RGBA', (img_width//2, img_height//5), (255, 255, 255, 255))
                                         emergency_draw = ImageDraw.Draw(emergency_img)
@@ -1626,9 +1626,9 @@ def show_low_complexity_general_sales():
                                         paste_y = (img_height - emergency_img.height) // 2
                                         
                                         new_design.paste(emergency_img, (paste_x, paste_y))
-                                        font_debug_info.append("应用了紧急文字渲染")
+                                        font_debug_info.append("Applied emergency text rendering")
                                     except Exception as emergency_err:
-                                        font_debug_info.append(f"紧急渲染也失败: {str(emergency_err)}")
+                                        font_debug_info.append(f"Emergency rendering also failed: {str(emergency_err)}")
                                 
                                 # 保存字体加载和渲染信息
                                 st.session_state.font_debug_info = font_debug_info
@@ -1652,40 +1652,40 @@ def show_low_complexity_general_sales():
                                 
                                 # 添加详细调试信息
                                 success_msg = f"""
-                                文字已应用到设计中！
-                                字体: {text_info["font"]}
-                                大小: {text_info["size"]}px
-                                实际宽度: {text_width}px
-                                实际高度: {text_height}px
-                                位置: ({text_x}, {text_y})
-                                T恤尺寸: {img_width} x {img_height}
-                                渲染方法: 高清渲染
+                                Text applied to design successfully!
+                                Font: {text_info["font"]}
+                                Size: {text_info["size"]}px
+                                Actual width: {text_width}px
+                                Actual height: {text_height}px
+                                Position: ({text_x}, {text_y})
+                                T-shirt size: {img_width} x {img_height}
+                                Rendering method: High-definition rendering
                                 """
                                 
                                 st.success(success_msg)
                                 st.rerun()
                             except Exception as e:
-                                st.error(f"应用文字时出错: {str(e)}")
+                                st.error(f"Error applying text: {str(e)}")
                                 import traceback
                                 st.error(traceback.format_exc())
                 
                 # 添加Logo选择功能
-                st.markdown("##### 应用Logo")
+                st.markdown("##### Apply Logo")
                 
                 # Logo来源选择
-                logo_source = st.radio("Logo来源:", ["上传Logo", "选择预设Logo"], horizontal=True, key="ai_logo_source")
+                logo_source = st.radio("Logo source:", ["Upload Logo", "Select Preset Logo"], horizontal=True, key="ai_logo_source")
                 
-                if logo_source == "上传Logo":
+                if logo_source == "Upload Logo":
                     # Logo上传选项
-                    uploaded_logo = st.file_uploader("上传Logo图片 (PNG或JPG文件):", type=["png", "jpg", "jpeg"], key="ai_logo_upload")
+                    uploaded_logo = st.file_uploader("Upload Logo image (PNG or JPG file):", type=["png", "jpg", "jpeg"], key="ai_logo_upload")
                     logo_image = None
                     
                     if uploaded_logo is not None:
                         try:
                             logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
-                            st.image(logo_image, caption="上传的Logo", width=150)
+                            st.image(logo_image, caption="Uploaded Logo", width=150)
                         except Exception as e:
-                            st.error(f"加载上传的Logo时出错: {e}")
+                            st.error(f"Error loading uploaded logo: {e}")
                 else:  # 选择预设Logo
                     # 获取预设logo
                     try:
@@ -1694,7 +1694,7 @@ def show_low_complexity_general_sales():
                         preset_logos = get_preset_logos()
                         
                         if not preset_logos:
-                            st.warning("未找到预设Logo。请在'logos'文件夹中添加一些图片。")
+                            st.warning("No preset logos found. Please add some images to the 'logos' folder.")
                             logo_image = None
                         else:
                             # 显示预设logo选择
@@ -1716,28 +1716,28 @@ def show_low_complexity_general_sales():
                                             st.session_state.selected_preset_logo = logo_path
                                             st.rerun()
                                     except Exception as e:
-                                        st.error(f"加载Logo {logo_name}时出错: {e}")
+                                        st.error(f"Error loading logo {logo_name}: {e}")
                     except Exception as e:
-                        st.error(f"处理预设Logo时出错: {e}")
+                        st.error(f"Error processing preset logos: {e}")
                         logo_image = None
                 
                 # Logo大小和位置设置(只在有logo_image时显示)
-                if logo_source == "上传Logo" and uploaded_logo is not None or \
-                   logo_source == "选择预设Logo" and 'selected_preset_logo' in st.session_state:
+                if logo_source == "Upload Logo" and uploaded_logo is not None or \
+                   logo_source == "Select Preset Logo" and 'selected_preset_logo' in st.session_state:
                     
                     # Logo大小
                     logo_size = st.slider("Logo大小:", 10, 100, 40, format="%d%%", key="ai_logo_size")
                     
                     # Logo位置
-                    logo_position = st.radio("位置:", 
-                        ["左上", "上中", "右上", "居中", "左下", "下中", "右下"], 
+                    logo_position = st.radio("Position:", 
+                        ["Top-left", "Top-center", "Top-right", "Center", "Bottom-left", "Bottom-center", "Bottom-right"], 
                         index=3, horizontal=True, key="ai_logo_position")
                     
                     # Logo透明度
-                    logo_opacity = st.slider("Logo透明度:", 10, 100, 100, 5, format="%d%%", key="ai_logo_opacity")
+                    logo_opacity = st.slider("Logo opacity:", 10, 100, 100, 5, format="%d%%", key="ai_logo_opacity")
                     
                     # 应用Logo按钮
-                    if st.button("应用Logo到设计", key="apply_ai_logo"):
+                    if st.button("Apply Logo to design", key="apply_ai_logo"):
                         # 获取当前图像
                         if st.session_state.final_design is not None:
                             new_design = st.session_state.final_design.copy()
@@ -1764,13 +1764,13 @@ def show_low_complexity_general_sales():
                                 
                                 # 位置映射 - 现在相对于胸前设计区域
                                 position_mapping = {
-                                    "左上": (chest_left + 10, chest_top + 10),
-                                    "上中": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
-                                    "右上": (chest_left + chest_width - logo_width - 10, chest_top + 10),
-                                    "居中": (chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2),
-                                    "左下": (chest_left + 10, chest_top + chest_height - logo_height - 10),
-                                    "下中": (chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10),
-                                    "右下": (chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10)
+                                    "Top-left": (chest_left + 10, chest_top + 10),
+                                    "Top-center": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
+                                    "Top-right": (chest_left + chest_width - logo_width - 10, chest_top + 10),
+                                    "Center": (chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2),
+                                    "Bottom-left": (chest_left + 10, chest_top + chest_height - logo_height - 10),
+                                    "Bottom-center": (chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10),
+                                    "Bottom-right": (chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10)
                                 }
                                 
                                 logo_x, logo_y = position_mapping.get(logo_position, (chest_left + 10, chest_top + 10))
@@ -1789,7 +1789,7 @@ def show_low_complexity_general_sales():
                                 try:
                                     new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
                                 except Exception as e:
-                                    st.warning(f"Logo粘贴失败: {e}")
+                                    st.warning(f"Logo pasting failed: {e}")
                                 
                                 # 更新设计
                                 st.session_state.final_design = new_design
@@ -1804,29 +1804,29 @@ def show_low_complexity_general_sales():
                                     "opacity": logo_opacity
                                 }
                                 
-                                st.success("Logo已应用到设计中！")
+                                st.success("Logo applied to design successfully!")
                                 st.rerun()
                             else:
-                                st.error("请先选择或上传Logo")
+                                st.error("Please select or upload a logo first")
                         except Exception as e:
-                            st.error(f"应用Logo时出错: {e}")
+                            st.error(f"Error applying logo: {e}")
             else:
                 # 显示欢迎信息
                 st.markdown("""
                 <div style="background-color: #f0f7ff; padding: 15px; border-radius: 10px; border-left: 5px solid #1e88e5;">
-                <h4 style="color: #1e88e5; margin-top: 0;">👋 欢迎使用AI设计助手</h4>
-                <p>描述您喜欢的风格或T恤用途，AI助手将为您提供个性化设计建议，包括：</p>
+                <h4 style="color: #1e88e5; margin-top: 0;">👋 Welcome to the AI design assistant</h4>
+                <p>Describe your preferred style or T-shirt purpose, the AI assistant will provide personalized design suggestions, including:</p>
                 <ul>
-                    <li>适合您风格的T恤颜色推荐</li>
-                    <li>文字内容和字体风格建议</li>
-                    <li>Logo选择和设计元素推荐</li>
+                    <li>Recommended T-shirt colors for your style</li>
+                    <li>Text content and font style suggestions</li>
+                    <li>Logo selection and design element recommendations</li>
                 </ul>
-                <p>点击"获取个性化AI建议"按钮开始吧！</p>
+                <p>Click the "Get personalized AI suggestions" button to start!</p>
                 </div>
                 """, unsafe_allow_html=True)
     
     # Return to main interface button - modified here
-    if st.button("返回主页"):
+    if st.button("Back to main page"):
         # Clear all design-related states
         st.session_state.base_image = None
         st.session_state.current_image = None
