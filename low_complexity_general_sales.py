@@ -843,7 +843,7 @@ def show_low_complexity_general_sales():
                         # 创建绘图对象
                         draw = ImageDraw.Draw(new_design)
                         
-                        # 尝试获取字体
+                        # 显著增大字体尺寸并应用更好的字体处理逻辑
                         try:
                             from PIL import ImageFont
                             font = None
@@ -866,8 +866,10 @@ def show_low_complexity_general_sales():
                                 "Impact": "impact.ttf"
                             }
                             
-                            # 尝试加载字体 - 传入放大后的字体大小
-                            actual_text_size = text_size
+                            # 使用字体缩放因子使字体显著更大
+                            font_scale_factor = 2.0  # 增大字体的缩放因子
+                            actual_text_size = int(text_size * font_scale_factor)
+                            
                             font_file = font_mapping.get(ai_font, "arial.ttf")
                             for path in system_font_paths:
                                 try:
@@ -879,16 +881,23 @@ def show_low_complexity_general_sales():
                             # 如果无法加载字体，使用默认字体
                             if font is None:
                                 font = ImageFont.load_default()
+                                
                         except Exception as e:
                             st.warning(f"加载字体时出错: {e}")
                             font = None
-                            actual_text_size = text_size
+                            actual_text_size = int(text_size * 2.0)  # 使用相同的缩放因子
                         
-                        # 计算适当的文字位置 - 居中绘制
-                        left, top = st.session_state.current_box_position
-                        box_size = int(1024 * 0.25)
+                        # 使用整个T恤中心区域，而不是小选择框
+                        # 获取图像尺寸
+                        img_width, img_height = new_design.size
                         
-                        # 计算文字位置 - 修改为更好的居中算法
+                        # 定义T恤前胸区域 (占整个图像宽度的60%，高度的30%，位于中上部)
+                        chest_width = int(img_width * 0.6)
+                        chest_height = int(img_height * 0.3)
+                        chest_left = (img_width - chest_width) // 2
+                        chest_top = int(img_height * 0.35)  # 位于图像35%的高度处
+                        
+                        # 计算文字位置 - 在胸前区域居中
                         try:
                             if font:
                                 # 使用textbbox获取精确的文本边界框
@@ -900,11 +909,11 @@ def show_low_complexity_general_sales():
                                 text_width = len(text_suggestion) * actual_text_size * 0.5
                                 text_height = actual_text_size
                             
-                            # 计算绘制位置 - 居中对齐
-                            x_center = left + box_size // 2
-                            y_center = top + box_size // 2
-                            text_x = x_center - text_width // 2
-                            text_y = y_center - text_height // 2
+                            # 计算绘制位置 - 在胸前区域居中对齐
+                            chest_center_x = chest_left + chest_width // 2
+                            chest_center_y = chest_top + chest_height // 2
+                            text_x = chest_center_x - text_width // 2
+                            text_y = chest_center_y - text_height // 2
                             
                             # 绘制文字
                             draw.text((text_x, text_y), text_suggestion, fill=text_color, font=font)
@@ -918,7 +927,7 @@ def show_low_complexity_general_sales():
                                 "text": text_suggestion,
                                 "font": ai_font,
                                 "color": text_color,
-                                "size": actual_text_size,
+                                "size": actual_text_size,  # 保存实际使用的更大字体大小
                                 "position": (text_x, text_y)
                             }
                             
