@@ -549,6 +549,50 @@ def show_low_complexity_general_sales():
             except Exception as e:
                 st.error(f"Error loading white T-shirt image: {e}")
                 st.stop()
+        else:
+            # 添加颜色变化检测：保存当前应用的颜色，用于检查是否发生变化
+            if 'current_applied_color' not in st.session_state:
+                st.session_state.current_applied_color = st.session_state.shirt_color_hex
+            
+            # 检查颜色是否发生变化
+            if st.session_state.current_applied_color != st.session_state.shirt_color_hex:
+                # 颜色已变化，需要重新应用
+                original_image = st.session_state.original_base_image.copy()
+                colored_image = change_shirt_color(original_image, st.session_state.shirt_color_hex)
+                st.session_state.base_image = colored_image
+                
+                # 更新当前图像和位置
+                new_image, _ = draw_selection_box(colored_image, st.session_state.current_box_position)
+                st.session_state.current_image = new_image
+                
+                # 如果有最终设计，也需要重新应用颜色
+                if st.session_state.final_design is not None:
+                    # 必须重新创建最终设计
+                    if st.session_state.generated_design is not None:
+                        # 如果有生成的设计图案，需要重新合成
+                        composite_image = colored_image.copy()
+                        
+                        # 获取当前选择框位置
+                        left, top = st.session_state.current_box_position
+                        box_size = int(1024 * 0.25)
+                        
+                        # 缩放设计图案
+                        scaled_design = st.session_state.generated_design.resize((box_size, box_size), Image.LANCZOS)
+                        
+                        try:
+                            # 确保透明通道用于粘贴
+                            composite_image.paste(scaled_design, (left, top), scaled_design)
+                        except Exception as e:
+                            st.warning(f"透明通道粘贴失败，使用直接粘贴: {e}")
+                            composite_image.paste(scaled_design, (left, top))
+                        
+                        st.session_state.final_design = composite_image
+                    else:
+                        # 如果没有设计图案，最终设计就是彩色T恤
+                        st.session_state.final_design = colored_image.copy()
+                
+                # 更新已应用的颜色状态
+                st.session_state.current_applied_color = st.session_state.shirt_color_hex
         
         # Display current image and get click coordinates
         current_image = st.session_state.current_image
