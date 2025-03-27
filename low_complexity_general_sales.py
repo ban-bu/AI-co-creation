@@ -454,8 +454,8 @@ def show_low_complexity_general_sales():
                             img_width, img_height = st.session_state.final_design.size
                             
                             # 创建小图像用于绘制文字
-                            initial_text_width = min(400, img_width // 2)
-                            initial_text_height = 200
+                            initial_text_width = min(800, img_width)  # 使用更大的初始画布
+                            initial_text_height = 400  # 更大的高度
                             text_img = Image.new('RGBA', (initial_text_width, initial_text_height), (0, 0, 0, 0))
                             text_draw = ImageDraw.Draw(text_img)
                             
@@ -474,54 +474,102 @@ def show_low_complexity_general_sales():
                                 "alignment": text_info["alignment"]
                             }
                             
-                            # 尝试加载系统字体
+                            # 将文字颜色从十六进制转换为RGBA
+                            text_rgb = tuple(int(text_info["color"].lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                            text_rgba = text_rgb + (255,)  # 完全不透明
+                            
+                            # 初始化调试信息列表
+                            font_debug_info = []
+                            font_debug_info.append("开始应用高清文字设计")
+                            
+                            # 直接使用请求的字体大小，不再后期缩放
+                            font_size = text_info["size"]
                             font = None
+                            
+                            # 尝试加载系统字体
                             try:
                                 # 确保os模块可用
                                 import os
-                                # 尝试直接加载系统字体
-                                if os.path.exists("C:/Windows/Fonts/arial.ttf"):
-                                    font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 40)
-                            except Exception:
-                                pass
+                                # 尝试加载Windows常用字体
+                                common_fonts = [
+                                    "C:/Windows/Fonts/arial.ttf",
+                                    "C:/Windows/Fonts/ARIAL.TTF",
+                                    "C:/Windows/Fonts/times.ttf",
+                                    "C:/Windows/Fonts/TIMES.TTF", 
+                                    "C:/Windows/Fonts/segoeui.ttf"
+                                ]
+                                
+                                for font_path in common_fonts:
+                                    if os.path.exists(font_path):
+                                        try:
+                                            font = ImageFont.truetype(font_path, font_size)
+                                            font_debug_info.append(f"成功加载高质量字体: {font_path}, 大小: {font_size}px")
+                                            break
+                                        except Exception as e:
+                                            font_debug_info.append(f"加载字体出错: {e}")
+                            except Exception as e:
+                                font_debug_info.append(f"系统字体检查失败: {e}")
                             
-                            # 如果系统字体加载失败，使用默认字体
+                            # 如果无法加载指定字体，使用默认字体
                             if font is None:
-                                font = ImageFont.load_default()
+                                try:
+                                    # 使用默认字体，但尝试加大字号以提高清晰度
+                                    font = ImageFont.load_default()
+                                    font_debug_info.append("使用默认字体")
+                                except Exception as e:
+                                    font_debug_info.append(f"加载默认字体失败: {e}")
                             
-                            # 在小图像上绘制文字
+                            # 在画布中心绘制文字
                             small_text_x = initial_text_width // 2
                             small_text_y = initial_text_height // 2
                             
-                            # 应用效果
-                            if "style" in text_info:
-                                if "轮廓" in text_info["style"]:
-                                    offset = 2
-                                    for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
-                                        text_draw.text((small_text_x + offset_x, small_text_y + offset_y), 
-                                                      text_info["text"], fill="black", font=font, anchor="mm")
-                                
-                                if "阴影" in text_info["style"]:
-                                    shadow_offset = 4
-                                    text_draw.text((small_text_x + shadow_offset, small_text_y + shadow_offset), 
-                                                  text_info["text"], fill=(0, 0, 0, 180), font=font, anchor="mm")
+                            # 应用效果 - 改进轮廓和阴影效果以提高清晰度
+                            if "style" in text_info and "轮廓" in text_info["style"]:
+                                # 更粗的轮廓
+                                outline_thickness = max(2, font_size // 50)
+                                for dx, dy in [(outline_thickness,0), (-outline_thickness,0), (0,outline_thickness), (0,-outline_thickness)]:
+                                    text_draw.text(
+                                        (small_text_x + dx, small_text_y + dy), 
+                                        text_info["text"], 
+                                        fill="black", 
+                                        font=font, 
+                                        anchor="mm"
+                                    )
                             
-                            # 绘制主文字
-                            text_draw.text((small_text_x, small_text_y), text_info["text"], 
-                                          fill=text_info["color"], font=font, anchor="mm")
+                            if "style" in text_info and "阴影" in text_info["style"]:
+                                # 更明显的阴影
+                                shadow_offset = max(3, font_size // 30)
+                                shadow_color = (0, 0, 0, 200)  # 略微不透明的黑色
+                                text_draw.text(
+                                    (small_text_x + shadow_offset, small_text_y + shadow_offset), 
+                                    text_info["text"], 
+                                    fill=shadow_color, 
+                                    font=font, 
+                                    anchor="mm"
+                                )
                             
-                            # 裁剪图像
+                            # 绘制主文字 - 使用完全不透明的颜色提高清晰度
+                            text_draw.text(
+                                (small_text_x, small_text_y), 
+                                text_info["text"], 
+                                fill=text_rgba, 
+                                font=font, 
+                                anchor="mm"
+                            )
+                            
+                            # 裁剪图像以移除空白部分
                             bbox = text_img.getbbox()
                             if bbox:
                                 text_img = text_img.crop(bbox)
+                                font_debug_info.append(f"文字图像尺寸: {text_img.size}")
+                            else:
+                                font_debug_info.append("无法裁剪，文字可能未正确渲染")
+                                
+                            # 不再进行缩放，直接使用原始渲染的图像
+                            text_img_resized = text_img
                             
-                            # 计算放大比例
-                            scale_factor = text_info["size"] / 40
-                            new_width = max(int(text_img.width * scale_factor), 10)
-                            new_height = max(int(text_img.height * scale_factor), 10)
-                            
-                            # 放大文字图像
-                            text_img_resized = text_img.resize((new_width, new_height), Image.LANCZOS)
+                            # 确保保留清晰的边缘
+                            text_img_resized = text_img_resized.convert("RGBA")
                             
                             # 计算位置
                             if text_info["alignment"] == "左对齐":
@@ -561,8 +609,8 @@ def show_low_complexity_general_sales():
                                 st.session_state.tshirt_size = (img_width, img_height)
                                 
                                 # 创建小图像用于绘制文字
-                                initial_text_width = min(400, img_width // 2)
-                                initial_text_height = 200
+                                initial_text_width = min(800, img_width)  # 使用更大的初始画布
+                                initial_text_height = 400  # 更大的高度
                                 text_img = Image.new('RGBA', (initial_text_width, initial_text_height), (0, 0, 0, 0))
                                 text_draw = ImageDraw.Draw(text_img)
                                 
@@ -582,73 +630,103 @@ def show_low_complexity_general_sales():
                                 }
                                 
                                 # 将文字颜色从十六进制转换为RGBA
-                                text_rgb = tuple(int(text_info["color"].lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                                text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
                                 text_rgba = text_rgb + (255,)  # 完全不透明
                                 
                                 # 初始化调试信息列表
                                 font_debug_info = []
-                                font_debug_info.append("开始重新应用文字设计")
+                                font_debug_info.append("开始应用高清文字设计")
+                                
+                                # 直接使用请求的字体大小，不再后期缩放
+                                font_size = text_info["size"]
+                                font = None
                                 
                                 # 尝试加载系统字体
-                                font = None
                                 try:
                                     # 确保os模块可用
                                     import os
-                                    # 尝试直接加载系统字体
-                                    if os.path.exists("C:/Windows/Fonts/arial.ttf"):
-                                        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 40)
-                                except Exception:
-                                    pass
+                                    # 尝试加载Windows常用字体
+                                    common_fonts = [
+                                        "C:/Windows/Fonts/arial.ttf",
+                                        "C:/Windows/Fonts/ARIAL.TTF",
+                                        "C:/Windows/Fonts/times.ttf",
+                                        "C:/Windows/Fonts/TIMES.TTF", 
+                                        "C:/Windows/Fonts/segoeui.ttf"
+                                    ]
+                                    
+                                    for font_path in common_fonts:
+                                        if os.path.exists(font_path):
+                                            try:
+                                                font = ImageFont.truetype(font_path, font_size)
+                                                font_debug_info.append(f"成功加载高质量字体: {font_path}, 大小: {font_size}px")
+                                                break
+                                            except Exception as e:
+                                                font_debug_info.append(f"加载字体出错: {e}")
+                                except Exception as e:
+                                    font_debug_info.append(f"系统字体检查失败: {e}")
                                 
-                                # 如果系统字体加载失败，使用默认字体
+                                # 如果无法加载指定字体，使用默认字体
                                 if font is None:
-                                    font = ImageFont.load_default()
+                                    try:
+                                        # 使用默认字体，但尝试加大字号以提高清晰度
+                                        font = ImageFont.load_default()
+                                        font_debug_info.append("使用默认字体")
+                                    except Exception as e:
+                                        font_debug_info.append(f"加载默认字体失败: {e}")
                                 
-                                # 在小图像上绘制文字
+                                # 在画布中心绘制文字
                                 small_text_x = initial_text_width // 2
                                 small_text_y = initial_text_height // 2
                                 
-                                # 应用效果
-                                if "style" in text_info:
-                                    if "轮廓" in text_info["style"]:
-                                        offset = 2
-                                        for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
-                                            text_draw.text((small_text_x + offset_x, small_text_y + offset_y), 
-                                                          text_info["text"], fill="black", font=font, anchor="mm")
+                                # 应用效果 - 改进轮廓和阴影效果以提高清晰度
+                                if "style" in text_info and "轮廓" in text_info["style"]:
+                                    # 更粗的轮廓
+                                    outline_thickness = max(2, font_size // 50)
+                                    for dx, dy in [(outline_thickness,0), (-outline_thickness,0), (0,outline_thickness), (0,-outline_thickness)]:
+                                        text_draw.text(
+                                            (small_text_x + dx, small_text_y + dy), 
+                                            text_info["text"], 
+                                            fill="black", 
+                                            font=font, 
+                                            anchor="mm"
+                                        )
                                 
-                                if "阴影" in text_info["style"]:
-                                    shadow_offset = 4
-                                    text_draw.text((small_text_x + shadow_offset, small_text_y + shadow_offset), 
-                                                  text_info["text"], fill=(0, 0, 0, 180), font=font, anchor="mm")
+                                if "style" in text_info and "阴影" in text_info["style"]:
+                                    # 更明显的阴影
+                                    shadow_offset = max(3, font_size // 30)
+                                    shadow_color = (0, 0, 0, 200)  # 略微不透明的黑色
+                                    text_draw.text(
+                                        (small_text_x + shadow_offset, small_text_y + shadow_offset), 
+                                        text_info["text"], 
+                                        fill=shadow_color, 
+                                        font=font, 
+                                        anchor="mm"
+                                    )
                                 
-                                # 绘制主文字 - 居中绘制
-                                text_draw.text((small_text_x, small_text_y), text_info["text"], 
-                                              fill=text_info["color"], font=font, anchor="mm")
+                                # 绘制主文字 - 使用完全不透明的颜色提高清晰度
+                                text_draw.text(
+                                    (small_text_x, small_text_y), 
+                                    text_info["text"], 
+                                    fill=text_rgba, 
+                                    font=font, 
+                                    anchor="mm"
+                                )
                                 
                                 # 裁剪图像以移除空白部分
-                                # 获取非空像素的边界
                                 bbox = text_img.getbbox()
                                 if bbox:
                                     text_img = text_img.crop(bbox)
-                                    font_debug_info.append(f"裁剪后的图像大小: {text_img.size}")
+                                    font_debug_info.append(f"文字图像尺寸: {text_img.size}")
                                 else:
                                     font_debug_info.append("无法裁剪，文字可能未正确渲染")
+                                    
+                                # 不再进行缩放，直接使用原始渲染的图像
+                                text_img_resized = text_img
                                 
-                                # 计算放大比例 - 根据请求的字体大小
-                                # 使用一个比例因子将字体大小转换为图像大小
-                                scale_factor = text_info["size"] / 40  # 假设默认字体大小是40
-                                new_width = max(int(text_img.width * scale_factor), 10)
-                                new_height = max(int(text_img.height * scale_factor), 10)
+                                # 确保保留清晰的边缘
+                                text_img_resized = text_img_resized.convert("RGBA")
                                 
-                                # 放大文字图像
-                                try:
-                                    text_img_resized = text_img.resize((new_width, new_height), Image.LANCZOS)
-                                    font_debug_info.append(f"放大后的图像大小: {text_img_resized.size}")
-                                except Exception as resize_err:
-                                    font_debug_info.append(f"放大图像失败: {resize_err}")
-                                    text_img_resized = text_img
-                                
-                                # 计算文字在T恤上的位置
+                                # 计算位置
                                 if text_info["alignment"] == "左对齐":
                                     paste_x = int(img_width * 0.2)
                                 elif text_info["alignment"] == "右对齐":
@@ -656,19 +734,8 @@ def show_low_complexity_general_sales():
                                 else:  # 居中
                                     paste_x = (img_width - text_img_resized.width) // 2
                                 
-                                # 垂直位置 - 放在T恤上部
+                                # 垂直位置
                                 paste_y = int(img_height * 0.4 - text_img_resized.height // 2)
-                                
-                                # 保存位置信息
-                                st.session_state.text_position = (paste_x, paste_y)
-                                
-                                # 保存文字尺寸信息
-                                st.session_state.text_size_info = {
-                                    "font_size": text_info["size"],
-                                    "text_bbox": bbox if bbox else (0, 0, 0, 0),
-                                    "text_width": text_img_resized.width,
-                                    "text_height": text_img_resized.height
-                                }
                                 
                                 # 粘贴到T恤上
                                 try:
@@ -1188,8 +1255,8 @@ def show_low_complexity_general_sales():
                                 st.session_state.tshirt_size = (img_width, img_height)
                                 
                                 # 创建小图像用于绘制文字
-                                initial_text_width = min(400, img_width // 2)
-                                initial_text_height = 200
+                                initial_text_width = min(800, img_width)  # 使用更大的初始画布
+                                initial_text_height = 400  # 更大的高度
                                 text_img = Image.new('RGBA', (initial_text_width, initial_text_height), (0, 0, 0, 0))
                                 text_draw = ImageDraw.Draw(text_img)
                                 
@@ -1214,68 +1281,98 @@ def show_low_complexity_general_sales():
                                 
                                 # 初始化调试信息列表
                                 font_debug_info = []
-                                font_debug_info.append("开始重新应用文字设计")
+                                font_debug_info.append("开始应用高清文字设计")
+                                
+                                # 直接使用请求的字体大小，不再后期缩放
+                                font_size = text_info["size"]
+                                font = None
                                 
                                 # 尝试加载系统字体
-                                font = None
                                 try:
                                     # 确保os模块可用
                                     import os
-                                    # 尝试直接加载系统字体
-                                    if os.path.exists("C:/Windows/Fonts/arial.ttf"):
-                                        font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 40)
-                                except Exception:
-                                    pass
+                                    # 尝试加载Windows常用字体
+                                    common_fonts = [
+                                        "C:/Windows/Fonts/arial.ttf",
+                                        "C:/Windows/Fonts/ARIAL.TTF",
+                                        "C:/Windows/Fonts/times.ttf",
+                                        "C:/Windows/Fonts/TIMES.TTF", 
+                                        "C:/Windows/Fonts/segoeui.ttf"
+                                    ]
+                                    
+                                    for font_path in common_fonts:
+                                        if os.path.exists(font_path):
+                                            try:
+                                                font = ImageFont.truetype(font_path, font_size)
+                                                font_debug_info.append(f"成功加载高质量字体: {font_path}, 大小: {font_size}px")
+                                                break
+                                            except Exception as e:
+                                                font_debug_info.append(f"加载字体出错: {e}")
+                                except Exception as e:
+                                    font_debug_info.append(f"系统字体检查失败: {e}")
                                 
-                                # 如果系统字体加载失败，使用默认字体
+                                # 如果无法加载指定字体，使用默认字体
                                 if font is None:
-                                    font = ImageFont.load_default()
+                                    try:
+                                        # 使用默认字体，但尝试加大字号以提高清晰度
+                                        font = ImageFont.load_default()
+                                        font_debug_info.append("使用默认字体")
+                                    except Exception as e:
+                                        font_debug_info.append(f"加载默认字体失败: {e}")
                                 
-                                # 在小图像上绘制文字
+                                # 在画布中心绘制文字
                                 small_text_x = initial_text_width // 2
                                 small_text_y = initial_text_height // 2
                                 
-                                # 应用效果
-                                if "style" in text_info:
-                                    if "轮廓" in text_info["style"]:
-                                        offset = 2
-                                        for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
-                                            text_draw.text((small_text_x + offset_x, small_text_y + offset_y), 
-                                                          text_info["text"], fill="black", font=font, anchor="mm")
+                                # 应用效果 - 改进轮廓和阴影效果以提高清晰度
+                                if "style" in text_info and "轮廓" in text_info["style"]:
+                                    # 更粗的轮廓
+                                    outline_thickness = max(2, font_size // 50)
+                                    for dx, dy in [(outline_thickness,0), (-outline_thickness,0), (0,outline_thickness), (0,-outline_thickness)]:
+                                        text_draw.text(
+                                            (small_text_x + dx, small_text_y + dy), 
+                                            text_info["text"], 
+                                            fill="black", 
+                                            font=font, 
+                                            anchor="mm"
+                                        )
                                 
-                                if "阴影" in text_info["style"]:
-                                    shadow_offset = 4
-                                    text_draw.text((small_text_x + shadow_offset, small_text_y + shadow_offset), 
-                                                  text_info["text"], fill=(0, 0, 0, 180), font=font, anchor="mm")
+                                if "style" in text_info and "阴影" in text_info["style"]:
+                                    # 更明显的阴影
+                                    shadow_offset = max(3, font_size // 30)
+                                    shadow_color = (0, 0, 0, 200)  # 略微不透明的黑色
+                                    text_draw.text(
+                                        (small_text_x + shadow_offset, small_text_y + shadow_offset), 
+                                        text_info["text"], 
+                                        fill=shadow_color, 
+                                        font=font, 
+                                        anchor="mm"
+                                    )
                                 
-                                # 绘制主文字 - 居中绘制
-                                text_draw.text((small_text_x, small_text_y), text_info["text"], 
-                                              fill=text_info["color"], font=font, anchor="mm")
+                                # 绘制主文字 - 使用完全不透明的颜色提高清晰度
+                                text_draw.text(
+                                    (small_text_x, small_text_y), 
+                                    text_info["text"], 
+                                    fill=text_rgba, 
+                                    font=font, 
+                                    anchor="mm"
+                                )
                                 
                                 # 裁剪图像以移除空白部分
-                                # 获取非空像素的边界
                                 bbox = text_img.getbbox()
                                 if bbox:
                                     text_img = text_img.crop(bbox)
-                                    font_debug_info.append(f"裁剪后的图像大小: {text_img.size}")
+                                    font_debug_info.append(f"文字图像尺寸: {text_img.size}")
                                 else:
                                     font_debug_info.append("无法裁剪，文字可能未正确渲染")
+                                    
+                                # 不再进行缩放，直接使用原始渲染的图像
+                                text_img_resized = text_img
                                 
-                                # 计算放大比例 - 根据请求的字体大小
-                                # 使用一个比例因子将字体大小转换为图像大小
-                                scale_factor = text_info["size"] / 40  # 假设默认字体大小是40
-                                new_width = max(int(text_img.width * scale_factor), 10)
-                                new_height = max(int(text_img.height * scale_factor), 10)
+                                # 确保保留清晰的边缘
+                                text_img_resized = text_img_resized.convert("RGBA")
                                 
-                                # 放大文字图像
-                                try:
-                                    text_img_resized = text_img.resize((new_width, new_height), Image.LANCZOS)
-                                    font_debug_info.append(f"放大后的图像大小: {text_img_resized.size}")
-                                except Exception as resize_err:
-                                    font_debug_info.append(f"放大图像失败: {resize_err}")
-                                    text_img_resized = text_img
-                                
-                                # 计算文字在T恤上的位置
+                                # 计算位置
                                 if text_info["alignment"] == "左对齐":
                                     paste_x = int(img_width * 0.2)
                                 elif text_info["alignment"] == "右对齐":
@@ -1283,19 +1380,8 @@ def show_low_complexity_general_sales():
                                 else:  # 居中
                                     paste_x = (img_width - text_img_resized.width) // 2
                                 
-                                # 垂直位置 - 放在T恤上部
+                                # 垂直位置
                                 paste_y = int(img_height * 0.4 - text_img_resized.height // 2)
-                                
-                                # 保存位置信息
-                                st.session_state.text_position = (paste_x, paste_y)
-                                
-                                # 保存文字尺寸信息
-                                st.session_state.text_size_info = {
-                                    "font_size": text_info["size"],
-                                    "text_bbox": bbox if bbox else (0, 0, 0, 0),
-                                    "text_width": text_img_resized.width,
-                                    "text_height": text_img_resized.height
-                                }
                                 
                                 # 粘贴到T恤上
                                 try:
