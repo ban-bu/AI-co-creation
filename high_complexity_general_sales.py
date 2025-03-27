@@ -155,7 +155,7 @@ def get_ai_design_suggestions(user_preferences=None):
                                 # 获取第一个Logo描述
                                 first_logo_desc = cleaned_descriptions[0]
                                 # 构建完整的提示词
-                                full_prompt = f"Create a Logo design: {first_logo_desc}. Requirements: 1. Use a simple design 2. Suitable for printing 3. Background transparent 4. Clear and recognizable图案清晰可识别"
+                                full_prompt = f"创建一个T恤Logo设计：{first_logo_desc}。要求：1. 使用简洁的设计 2. 适合T恤印花 3. 背景透明 4. 图案清晰可识别"
                                 
                                 # 调用DALL-E生成图像
                                 logo_image = generate_vector_image(full_prompt)
@@ -171,9 +171,9 @@ def get_ai_design_suggestions(user_preferences=None):
                                     st.session_state.show_generated_logo = True
                                     
                                     # 在控制台打印日志以便调试
-                                    print(f"Logo generated successfully: {first_logo_desc}")
+                                    print(f"Logo自动生成成功: {first_logo_desc}")
                         except Exception as logo_gen_error:
-                            print(f"Error generating Logo: {logo_gen_error}")
+                            print(f"自动生成Logo时出错: {logo_gen_error}")
                             # 如果自动生成失败，不阻止其他功能
                     
             except Exception as e:
@@ -535,6 +535,7 @@ def show_high_complexity_general_sales():
             
             # 检查颜色是否发生变化
             if st.session_state.current_applied_color != st.session_state.shirt_color_hex:
+                print(f"检测到颜色变化: {st.session_state.current_applied_color} -> {st.session_state.shirt_color_hex}")
                 # 颜色已变化，需要重新应用
                 original_image = st.session_state.original_base_image.copy()
                 
@@ -542,11 +543,23 @@ def show_high_complexity_general_sales():
                 has_logo = hasattr(st.session_state, 'applied_logo') and st.session_state.applied_logo is not None
                 temp_logo = None
                 temp_logo_info = None
+                
+                # 更详细地检查Logo状态并保存
                 if has_logo:
+                    print("检测到已应用Logo，准备保存")
                     temp_logo_info = st.session_state.applied_logo.copy()
-                    # 如果已生成的Logo存在，保存它
-                    if hasattr(st.session_state, 'generated_logo'):
-                        temp_logo = st.session_state.generated_logo.copy()
+                    # 无论是自动生成还是用户生成，都应该保存到generated_logo中
+                    if hasattr(st.session_state, 'generated_logo') and st.session_state.generated_logo is not None:
+                        try:
+                            temp_logo = st.session_state.generated_logo.copy()
+                            print(f"成功复制Logo图像，尺寸: {temp_logo.size}")
+                        except Exception as e:
+                            print(f"复制Logo图像时出错: {e}")
+                            temp_logo = None
+                    else:
+                        print("找不到generated_logo，无法保存Logo图像")
+                else:
+                    print("未检测到已应用的Logo")
                 
                 # 应用新颜色和纹理
                 colored_image = change_shirt_color(
@@ -567,14 +580,17 @@ def show_high_complexity_general_sales():
                 # 更新已应用的颜色
                 st.session_state.current_applied_color = st.session_state.shirt_color_hex
                 
-                # 如果有Logo，重新应用Logo
+                # 如果有Logo，重新应用Logo - 确保逻辑更严谨
                 if has_logo and temp_logo is not None and temp_logo_info is not None:
                     try:
+                        print("开始重新应用Logo...")
                         # 获取Logo信息
                         logo_prompt = temp_logo_info.get("prompt", "")
                         logo_size = temp_logo_info.get("size", 40)
                         logo_position = temp_logo_info.get("position", "Center")
                         logo_opacity = temp_logo_info.get("opacity", 100)
+                        
+                        print(f"Logo参数 - 提示词: {logo_prompt}, 大小: {logo_size}%, 位置: {logo_position}, 透明度: {logo_opacity}%")
                         
                         # 获取图像尺寸
                         img_width, img_height = st.session_state.final_design.size
@@ -603,6 +619,7 @@ def show_high_complexity_general_sales():
                         }
                         
                         logo_x, logo_y = position_mapping.get(logo_position, (chest_left + 10, chest_top + 10))
+                        print(f"Logo位置: ({logo_x}, {logo_y}), 尺寸: {logo_width}x{logo_height}")
                         
                         # 设置透明度
                         if logo_opacity < 100:
@@ -613,19 +630,32 @@ def show_high_complexity_general_sales():
                                 new_a = int(a * logo_opacity / 100)
                                 new_data.append((r, g, b, new_a))
                             logo_resized.putdata(new_data)
+                            print(f"已调整Logo透明度为: {logo_opacity}%")
                         
                         # 粘贴Logo到新设计
                         st.session_state.final_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
+                        print("Logo已粘贴到新设计")
+                        
+                        # 更新当前图像
                         st.session_state.current_image = st.session_state.final_design.copy()
                         
-                        # 重新保存Logo信息
+                        # 重新保存Logo信息和图像
                         st.session_state.applied_logo = temp_logo_info
+                        st.session_state.generated_logo = temp_logo  # 确保保存回原始Logo
                         
                         print(f"Logo重新应用成功: {logo_prompt}")
                     except Exception as e:
                         print(f"重新应用Logo时出错: {e}")
                         import traceback
                         print(traceback.format_exc())
+                    else:
+                        if has_logo:
+                            if temp_logo is None:
+                                print("错误: 保存的Logo图像为空")
+                            if temp_logo_info is None:
+                                print("错误: 保存的Logo信息为空")
+                        else:
+                            print("无需重新应用Logo(未应用过)")
                 
                 # 修改颜色变更时重新应用文字的代码
                 if 'applied_text' in st.session_state:
@@ -1974,15 +2004,15 @@ def show_high_complexity_general_sales():
                         # 显示Logo
                         preview_width = 200
                         preview_height = int(preview_width * st.session_state.generated_logo.height / st.session_state.generated_logo.width)
-                        st.image(st.session_state.generated_logo, caption="Logo generated automatically by AI", width=preview_width)
+                        st.image(st.session_state.generated_logo, caption="AI自动生成的Logo", width=preview_width)
                     
                     with logo_auto_col2:
-                        st.success("Logo generated automatically based on AI suggestions")
-                        st.markdown(f"**Prompt**：{st.session_state.logo_prompt}")
+                        st.success("已根据AI建议自动生成Logo")
+                        st.markdown(f"**提示词**：{st.session_state.logo_prompt}")
                         
                         # 直接提供应用Logo的按钮
-                        if st.button("Directly apply this Logo to the design", key="apply_auto_logo"):
-                            with st.spinner("Applying Logo to design..."):
+                        if st.button("直接应用此Logo到设计", key="apply_auto_logo"):
+                            with st.spinner("正在应用Logo到设计..."):
                                 try:
                                     # 获取当前图像
                                     if st.session_state.final_design is not None:
