@@ -1727,9 +1727,9 @@ def show_high_complexity_general_sales():
                                             # 计算每行的Y位置
                                             line_y = text_y + i * line_height
                                             # 根据对齐方式重新计算每行X位置
-                                            if text_info["alignment"] == "Left":
+                                            if text_info["alignment"] == "left":
                                                 line_x = text_x
-                                            elif text_info["alignment"] == "Right":
+                                            elif text_info["alignment"] == "right":
                                                 line_bbox = text_draw.textbbox((0, 0), line, font=font)
                                                 line_width = line_bbox[2] - line_bbox[0]
                                                 line_x = text_x + (text_width - line_width)
