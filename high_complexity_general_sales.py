@@ -167,6 +167,11 @@ def get_ai_design_suggestions(user_preferences=None):
                                     st.session_state.logo_prompt = first_logo_desc
                                     # 记录logo是自动生成的
                                     st.session_state.logo_auto_generated = True
+                                    # 添加一个变量记录需要在UI中显示Logo
+                                    st.session_state.show_generated_logo = True
+                                    
+                                    # 在控制台打印日志以便调试
+                                    print(f"Logo自动生成成功: {first_logo_desc}")
                         except Exception as logo_gen_error:
                             print(f"自动生成Logo时出错: {logo_gen_error}")
                             # 如果自动生成失败，不阻止其他功能
@@ -194,6 +199,12 @@ def get_ai_design_suggestions(user_preferences=None):
             {formatted_text}
             </div>
             """
+            
+            # 打印调试信息，确认Logo是否自动生成
+            if hasattr(st.session_state, 'generated_logo'):
+                print("已成功生成Logo并保存到session_state")
+            else:
+                print("未能生成Logo或未保存到session_state")
             
             return suggestion_with_style
         else:
@@ -1880,6 +1891,86 @@ def show_high_complexity_general_sales():
                 # 添加Logo选择功能
                 st.markdown("##### 应用Logo")
 
+                # 显示自动生成的Logo
+                if hasattr(st.session_state, 'generated_logo') and hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
+                    logo_auto_col1, logo_auto_col2 = st.columns([3, 2])
+                    
+                    with logo_auto_col1:
+                        # 显示Logo
+                        preview_width = 200
+                        preview_height = int(preview_width * st.session_state.generated_logo.height / st.session_state.generated_logo.width)
+                        st.image(st.session_state.generated_logo, caption="AI自动生成的Logo", width=preview_width)
+                    
+                    with logo_auto_col2:
+                        st.success("已根据AI建议自动生成Logo")
+                        st.markdown(f"**提示词**：{st.session_state.logo_prompt}")
+                        
+                        # 直接提供应用Logo的按钮
+                        if st.button("直接应用此Logo到设计", key="apply_auto_logo"):
+                            with st.spinner("正在应用Logo到设计..."):
+                                try:
+                                    # 获取当前图像
+                                    if st.session_state.final_design is not None:
+                                        new_design = st.session_state.final_design.copy()
+                                    else:
+                                        new_design = st.session_state.base_image.copy()
+                                    
+                                    # 获取图像尺寸并使用更大的绘制区域
+                                    img_width, img_height = new_design.size
+                                    
+                                    # 定义更大的T恤前胸区域
+                                    chest_width = int(img_width * 0.95)  # 几乎整个宽度
+                                    chest_height = int(img_height * 0.6)  # 更大的高度范围
+                                    chest_left = (img_width - chest_width) // 2
+                                    chest_top = int(img_height * 0.2)  # 更高的位置
+                                    
+                                    # 使用默认设置
+                                    logo_size = 40  # 默认40%大小
+                                    logo_position = "Center"  # 默认居中
+                                    logo_opacity = 100  # 默认100%不透明
+                                    
+                                    # 调整Logo大小
+                                    logo_size_factor = logo_size / 100
+                                    logo_width = int(chest_width * logo_size_factor * 0.5)
+                                    logo_height = int(logo_width * st.session_state.generated_logo.height / st.session_state.generated_logo.width)
+                                    logo_resized = st.session_state.generated_logo.resize((logo_width, logo_height), Image.LANCZOS)
+                                    
+                                    # 位置映射
+                                    position_mapping = {
+                                        "Top-left": (chest_left + 10, chest_top + 10),
+                                        "Top-center": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
+                                        "Top-right": (chest_left + chest_width - logo_width - 10, chest_top + 10),
+                                        "Center": (chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2),
+                                        "Bottom-left": (chest_left + 10, chest_top + chest_height - logo_height - 10),
+                                        "Bottom-center": (chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10),
+                                        "Bottom-right": (chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10)
+                                    }
+                                    
+                                    logo_x, logo_y = position_mapping.get(logo_position, (chest_left + 10, chest_top + 10))
+                                    
+                                    # 粘贴Logo到设计
+                                    new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
+                                    
+                                    # 更新设计
+                                    st.session_state.final_design = new_design
+                                    st.session_state.current_image = new_design.copy()
+                                    
+                                    # 保存Logo信息
+                                    st.session_state.applied_logo = {
+                                        "prompt": st.session_state.logo_prompt,
+                                        "size": logo_size,
+                                        "position": logo_position,
+                                        "opacity": logo_opacity
+                                    }
+                                    
+                                    st.success("Logo已应用到设计！")
+                                    st.rerun()
+                                    
+                                except Exception as e:
+                                    st.error(f"应用Logo时出错：{str(e)}")
+                                    import traceback
+                                    st.error(traceback.format_exc())
+
                 # Logo生成选项
                 logo_col1, logo_col2 = st.columns([2, 1])
 
@@ -1895,9 +1986,9 @@ def show_high_complexity_general_sales():
                                                placeholder="例如：简约现代的山峰Logo，使用蓝色和白色")
 
                 with logo_col2:
-                    # 显示Logo自动生成状态
+                    # 修改自动生成状态显示
                     if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
-                        st.success("已自动生成Logo")
+                        st.info("您可以修改提示词重新生成Logo")
                     
                     if st.button("生成Logo", key="generate_logo"):
                         if not logo_prompt:
