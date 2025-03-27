@@ -296,6 +296,9 @@ def change_shirt_color(image, color_hex):
 
 def get_preset_logos():
     """获取预设logo文件夹中的所有图片"""
+    # 确保os模块在这个作用域内可用
+    import os
+    
     logos_dir = "logos"
     preset_logos = []
     
@@ -366,6 +369,9 @@ def show_low_complexity_general_sales():
         # Load T-shirt base image
         if st.session_state.base_image is None:
             try:
+                # 确保os模块在这个作用域内可用
+                import os
+                
                 # 加载原始白色T恤图像
                 original_image_path = "white_shirt.png"
                 # 检查各种可能的路径
@@ -471,6 +477,8 @@ def show_low_complexity_general_sales():
                             # 尝试加载系统字体
                             font = None
                             try:
+                                # 确保os模块可用
+                                import os
                                 # 尝试直接加载系统字体
                                 if os.path.exists("C:/Windows/Fonts/arial.ttf"):
                                     font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 40)
@@ -584,6 +592,8 @@ def show_low_complexity_general_sales():
                                 # 尝试加载系统字体
                                 font = None
                                 try:
+                                    # 确保os模块可用
+                                    import os
                                     # 尝试直接加载系统字体
                                     if os.path.exists("C:/Windows/Fonts/arial.ttf"):
                                         font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 40)
@@ -1209,6 +1219,8 @@ def show_low_complexity_general_sales():
                                 # 尝试加载系统字体
                                 font = None
                                 try:
+                                    # 确保os模块可用
+                                    import os
                                     # 尝试直接加载系统字体
                                     if os.path.exists("C:/Windows/Fonts/arial.ttf"):
                                         font = ImageFont.truetype("C:/Windows/Fonts/arial.ttf", 40)
