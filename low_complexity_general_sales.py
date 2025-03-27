@@ -54,6 +54,7 @@ def get_ai_design_suggestions(user_preferences=None):
        - 如何与整体风格搭配
        
     确保包含颜色的十六进制代码，保持内容详实但不过于冗长。
+    文字建议部分，请将每个推荐的短语/文字单独放在一行上，并使用引号包裹，例如："Just Do It"。
     """
     
     try:
@@ -61,7 +62,7 @@ def get_ai_design_suggestions(user_preferences=None):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "你是一个专业的T恤设计顾问，提供有用且具体的建议。包含足够细节让用户理解你的推荐理由，但避免不必要的冗长。确保为每种颜色包含十六进制代码。"},
+                {"role": "system", "content": "你是一个专业的T恤设计顾问，提供有用且具体的建议。包含足够细节让用户理解你的推荐理由，但避免不必要的冗长。确保为每种颜色包含十六进制代码。对于文字建议，请将推荐的短语用引号包裹并单独放在一行。"},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -86,8 +87,26 @@ def get_ai_design_suggestions(user_preferences=None):
                 # 保存到会话状态
                 if color_matches:
                     st.session_state.ai_suggested_colors = color_matches
+                    
+                # 尝试提取推荐文字
+                text_pattern = r'[""]([^""]+)[""]'
+                text_matches = re.findall(text_pattern, suggestion_text)
+                
+                # 保存推荐文字到会话状态
+                if text_matches:
+                    st.session_state.ai_suggested_texts = text_matches
+                else:
+                    # 尝试使用另一种模式匹配
+                    text_pattern2 = r'"([^"]+)"'
+                    text_matches = re.findall(text_pattern2, suggestion_text)
+                    if text_matches:
+                        st.session_state.ai_suggested_texts = text_matches
+                    else:
+                        st.session_state.ai_suggested_texts = []
+                        
             except Exception as e:
-                print(f"解析颜色代码时出错: {e}")
+                print(f"解析过程出错: {e}")
+                st.session_state.ai_suggested_texts = []
                 
             # 使用更好的排版处理文本
             # 替换标题格式
@@ -98,8 +117,27 @@ def get_ai_design_suggestions(user_preferences=None):
             formatted_text = re.sub(r'- (.*?)(?=\n- |\n[^-]|\n*$)', r'<div class="suggestion-item">• \1</div>', formatted_text)
             # 强调颜色名称和代码
             formatted_text = re.sub(r'([^\s\(\)]+)\s*\(#([0-9A-Fa-f]{6})\)', r'<span class="color-name">\1</span> <span class="color-code">(#\2)</span>', formatted_text)
+            # 强调引号内的文字并添加点击功能
+            formatted_text = re.sub(r'[""]([^""]+)[""]', r'<span class="suggested-text" onclick="selectText(\'text-\1\')">"<strong>\1</strong>"</span>', formatted_text)
+            formatted_text = re.sub(r'"([^"]+)"', r'<span class="suggested-text" onclick="selectText(\'text-\1\')">"<strong>\1</strong>"</span>', formatted_text)
             
+            # 添加JavaScript函数用于选择文本
             suggestion_with_style = f"""
+            <script>
+            function selectText(textId) {{
+                // 发送消息到Streamlit
+                const data = {{
+                    text: textId.substring(5),  // 移除'text-'前缀
+                    type: "select_text"
+                }};
+                
+                // 使用window.parent发送消息
+                window.parent.postMessage({{
+                    type: "streamlit:setComponentValue",
+                    value: data
+                }}, "*");
+            }}
+            </script>
             <div class="suggestion-container">
             {formatted_text}
             </div>
@@ -379,10 +417,49 @@ def show_low_complexity_general_sales():
                     padding: 2px 4px;
                     border-radius: 3px;
                 }
+                .suggested-text {
+                    cursor: pointer;
+                    color: #0066cc;
+                    transition: all 0.2s;
+                }
+                .suggested-text:hover {
+                    background-color: #e6f2ff;
+                    text-decoration: underline;
+                }
                 </style>
                 """, unsafe_allow_html=True)
                 
                 st.markdown(st.session_state.ai_suggestions, unsafe_allow_html=True)
+                
+                # 添加JavaScript回调处理，接收点击事件
+                components_callback = st.components.v1.html(
+                    """
+                    <script>
+                    window.addEventListener('message', function(event) {
+                        if (event.data.type === 'streamlit:setComponentValue') {
+                            const data = event.data.value;
+                            if (data && data.type === 'select_text') {
+                                window.parent.postMessage({
+                                    type: 'streamlit:setComponentValue',
+                                    value: {
+                                        selectedText: data.text,
+                                        targetKey: 'ai_text_suggestion'
+                                    }
+                                }, '*');
+                            }
+                        }
+                    });
+                    </script>
+                    """,
+                    height=0
+                )
+                
+                # 处理文本选择回调
+                if components_callback and 'selectedText' in components_callback:
+                    # 设置文本到会话状态
+                    selected_text = components_callback['selectedText']
+                    st.session_state.ai_text_suggestion = selected_text
+                    st.rerun()
                 
                 # 添加应用建议的部分
                 st.markdown("---")
@@ -431,6 +508,17 @@ def show_low_complexity_general_sales():
                 
                 # 文字建议应用
                 st.markdown("##### 应用推荐文字")
+                
+                # 显示解析的推荐文字，点击直接填充
+                if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
+                    st.markdown("**点击下方推荐文字快速应用：**")
+                    text_buttons = st.columns(min(2, len(st.session_state.ai_suggested_texts)))
+                    
+                    for i, text in enumerate(st.session_state.ai_suggested_texts):
+                        with text_buttons[i % 2]:
+                            if st.button(f'"{text}"', key=f"text_btn_{i}"):
+                                st.session_state.ai_text_suggestion = text
+                                st.rerun()
                 
                 # 改进文字应用部分的布局
                 text_col1, text_col2 = st.columns([2, 1])
