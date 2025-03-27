@@ -805,8 +805,8 @@ def show_low_complexity_general_sales():
                 font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Impact"]
                 ai_font = st.selectbox("选择字体风格:", font_options, key="ai_font_selection")
                 
-                # 增加文字大小选项，默认值调大
-                text_size = st.slider("文字大小:", 20, 160, 80, key="ai_text_size")
+                # 增加文字大小选项，大幅增加默认值和最大值
+                text_size = st.slider("文字大小:", 20, 300, 150, key="ai_text_size")
                 
                 # 预览效果
                 if text_suggestion:
@@ -820,7 +820,7 @@ def show_low_complexity_general_sales():
                             font-family: {ai_font}, sans-serif;
                             color: {text_color};
                             text-align: center;
-                            font-size: {text_size//2}px;
+                            font-size: {text_size//3}px;
                         ">
                         {text_suggestion}
                         </div>
@@ -866,11 +866,12 @@ def show_low_complexity_general_sales():
                                 "Impact": "impact.ttf"
                             }
                             
-                            # 尝试加载字体
+                            # 尝试加载字体 - 传入放大后的字体大小
+                            actual_text_size = text_size
                             font_file = font_mapping.get(ai_font, "arial.ttf")
                             for path in system_font_paths:
                                 try:
-                                    font = ImageFont.truetype(path + font_file, text_size)
+                                    font = ImageFont.truetype(path + font_file, actual_text_size)
                                     break
                                 except:
                                     continue
@@ -878,31 +879,32 @@ def show_low_complexity_general_sales():
                             # 如果无法加载字体，使用默认字体
                             if font is None:
                                 font = ImageFont.load_default()
-                                
-                            # 记录实际使用的字体大小
-                            actual_text_size = text_size
                         except Exception as e:
                             st.warning(f"加载字体时出错: {e}")
                             font = None
                             actual_text_size = text_size
                         
-                        # 在选择框中居中绘制文字
+                        # 计算适当的文字位置 - 居中绘制
                         left, top = st.session_state.current_box_position
                         box_size = int(1024 * 0.25)
                         
-                        # 计算文字位置
+                        # 计算文字位置 - 修改为更好的居中算法
                         try:
                             if font:
+                                # 使用textbbox获取精确的文本边界框
                                 text_bbox = draw.textbbox((0, 0), text_suggestion, font=font)
                                 text_width = text_bbox[2] - text_bbox[0]
                                 text_height = text_bbox[3] - text_bbox[1]
                             else:
                                 # 估计文字大小
-                                text_width = len(text_suggestion) * text_size * 0.5
-                                text_height = text_size
-                                
-                            text_x = left + (box_size - text_width) // 2
-                            text_y = top + (box_size - text_height) // 2
+                                text_width = len(text_suggestion) * actual_text_size * 0.5
+                                text_height = actual_text_size
+                            
+                            # 计算绘制位置 - 居中对齐
+                            x_center = left + box_size // 2
+                            y_center = top + box_size // 2
+                            text_x = x_center - text_width // 2
+                            text_y = y_center - text_height // 2
                             
                             # 绘制文字
                             draw.text((text_x, text_y), text_suggestion, fill=text_color, font=font)
