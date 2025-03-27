@@ -444,9 +444,13 @@ def show_high_complexity_general_sales():
     </div>
     """, unsafe_allow_html=True)
     
-    # 初始化T恤颜色状态变量
+    # 初始化T恤颜色和纹理状态变量
     if 'shirt_color_hex' not in st.session_state:
         st.session_state.shirt_color_hex = "#FFFFFF"  # 默认白色
+    if 'current_applied_color' not in st.session_state:
+        st.session_state.current_applied_color = st.session_state.shirt_color_hex  # 初始应用的颜色
+    if 'current_applied_fabric' not in st.session_state:
+        st.session_state.current_applied_fabric = st.session_state.fabric_type  # 初始应用的纹理
     if 'original_base_image' not in st.session_state:
         st.session_state.original_base_image = None  # 保存原始白色T恤图像
     if 'base_image' not in st.session_state:
@@ -533,6 +537,22 @@ def show_high_complexity_general_sales():
             if 'current_applied_color' not in st.session_state:
                 st.session_state.current_applied_color = st.session_state.shirt_color_hex
             
+            # 添加纹理变化检测：保存当前应用的纹理，用于检查是否发生变化
+            if 'current_applied_fabric' not in st.session_state:
+                st.session_state.current_applied_fabric = st.session_state.fabric_type
+            
+            # 检测设计变化（颜色或纹理变化）
+            if (st.session_state.current_applied_color != st.session_state.shirt_color_hex or 
+                st.session_state.current_applied_fabric != st.session_state.fabric_type):
+                
+                # 打印调试信息
+                print(f"检测到设计变化:")
+                print(f"- 颜色: {st.session_state.current_applied_color} -> {st.session_state.shirt_color_hex}")
+                print(f"- 纹理: {st.session_state.current_applied_fabric} -> {st.session_state.fabric_type}")
+                
+                # 颜色或纹理已变化，需要重新应用
+                original_image = st.session_state.original_base_image.copy()
+            
             # 检查颜色是否发生变化
             if st.session_state.current_applied_color != st.session_state.shirt_color_hex:
                 print(f"检测到颜色变化: {st.session_state.current_applied_color} -> {st.session_state.shirt_color_hex}")
@@ -577,8 +597,9 @@ def show_high_complexity_general_sales():
                 # 设置为当前设计
                 st.session_state.final_design = colored_image.copy()
                 
-                # 更新已应用的颜色
+                # 更新已应用的颜色和纹理
                 st.session_state.current_applied_color = st.session_state.shirt_color_hex
+                st.session_state.current_applied_fabric = st.session_state.fabric_type
                 
                 # 如果有Logo，重新应用Logo - 确保逻辑更严谨
                 if has_logo and temp_logo is not None and temp_logo_info is not None:
