@@ -250,7 +250,8 @@ def parse_design_prompt(prompt):
         "text": "",
         "color": "#FFFFFF",  # 默认白色
         "logo": None,
-        "position": "Center"  # 默认中心位置
+        "position": "Center",  # 默认中心位置
+        "text_color": "#000000"  # 默认黑色文字
     }
     
     # 尝试提取颜色信息
@@ -350,6 +351,13 @@ def parse_design_prompt(prompt):
     if not design_info["text"] and design_info.get("needs_logo", False):
         design_info["text"] = "Brand"
     
+    # 根据T恤颜色自动调整文字颜色以增加对比度
+    dark_colors = ["#000000", "#0000FF", "#800080", "#A52A2A", "#808080", "#FF0000"]
+    if design_info["color"] in dark_colors:
+        design_info["text_color"] = "#FFFFFF"  # 暗色T恤用白色文字
+    else:
+        design_info["text_color"] = "#000000"  # 亮色T恤用黑色文字
+    
     return design_info
 
 # AI Customization Group design page
@@ -374,8 +382,8 @@ def show_low_complexity_general_sales():
     <ul>
         <li>Choose T-shirt color</li>
         <li>Add text or logo elements</li>
-        <li>Generate design patterns</li>
         <li>Position your design on the T-shirt</li>
+        <li>Describe what you want and let the system create it</li>
     </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -497,29 +505,42 @@ def show_low_complexity_general_sales():
         st.markdown("## Design Parameters")
         
         # Simplified design option tabs
-        tab1, tab2 = st.tabs(["Generate Design", "Add Text/Logo"])
+        tab1, tab2 = st.tabs(["Design T-shirt", "Add Text/Logo"])
         
         with tab1:
-            st.markdown("### Design Options")
+            st.markdown("### T-shirt Design")
             
-            # 添加设计提示说明
+            # 添加一个更明显的说明，解释新的设计流程
             st.markdown("""
-            <div style="background-color:#f0f0f0; padding:10px; border-radius:5px; margin-bottom:15px">
-            <b>Design Prompt Guide</b>: 描述您想要的T恤设计，包括：
-            <ul>
-                <li>T恤颜色（如：白色、黑色、红色等）</li>
-                <li>文字内容（在引号内指定，如："Hello World"）</li>
-                <li>Logo位置（如：中心、左上、右下等）</li>
-                <li>是否需要Logo（提及"logo"或"图标"）</li>
-            </ul>
-            例如："白色T恤，中心位置添加logo，文字是'Summer Vibes'"
+            <div style="background-color:#e8f4f8; padding:15px; border-radius:10px; margin-bottom:20px; border-left:5px solid #2e86c1;">
+            <h4 style="color:#2e86c1; margin-top:0;">🆕 设计流程说明</h4>
+            <p>我们更新了设计流程，现在您可以：</p>
+            <ol>
+                <li>直接选择T恤颜色</li>
+                <li>使用设计提示描述您想要的设计，包含颜色、文字和位置</li>
+                <li>点击"应用设计"按钮查看效果</li>
+                <li>如需添加logo，可在"Add Text/Logo"选项卡中进行</li>
+            </ol>
+            <p><strong>不需要生成图像</strong> - 系统会直接根据您的描述设计T恤!</p>
             </div>
             """, unsafe_allow_html=True)
             
-            # 添加颜色选择器
-            shirt_color = st.color_picker("T-shirt color:", st.session_state.shirt_color_hex)
+            # T恤颜色选择器 - 添加更多视觉反馈
+            st.markdown("#### 1. 选择T恤颜色")
+            color_col1, color_col2 = st.columns([1, 3])
+            with color_col1:
+                # 显示当前颜色预览
+                st.markdown(
+                    f"""
+                    <div style="background-color:{st.session_state.shirt_color_hex};
+                    width:50px; height:50px; border-radius:5px; border:1px solid #ddd;"></div>
+                    """,
+                    unsafe_allow_html=True
+                )
+            with color_col2:
+                shirt_color = st.color_picker("选择颜色:", st.session_state.shirt_color_hex)
             
-            # 如果颜色发生变化，更新T恤颜色
+            # 恢复颜色处理代码
             if shirt_color != st.session_state.shirt_color_hex:
                 st.session_state.shirt_color_hex = shirt_color
                 
@@ -540,8 +561,8 @@ def show_low_complexity_general_sales():
                     
                     st.rerun()
             
-            # 添加AI辅助设计功能
-            with st.expander("🤖 AI Design Assistant", expanded=True):
+            # AI辅助设计部分 - 使其更简洁
+            with st.expander("🤖 AI设计助手", expanded=False):
                 st.markdown("""
                 <div style="background-color:#f8f9fa; padding:15px; border-radius:10px; margin-bottom:15px">
                 <h4 style="color:#4B0082;">让AI帮你设计T恤</h4>
@@ -579,7 +600,7 @@ def show_low_complexity_general_sales():
                     st.markdown("### AI生成的设计建议")
                     
                     # 使用列布局美化展示
-                    suggestions_cols = st.columns(2)  # 2列显示，每列最多显示3个设计
+                    suggestions_cols = st.columns(2)  # 2列显示
                     
                     for i, design in enumerate(st.session_state.design_suggestions):
                         with suggestions_cols[i % 2]:  # 交替放置在两列中
@@ -626,11 +647,13 @@ def show_low_complexity_general_sales():
                                     st.session_state.selected_prompt = prompt
                                     st.rerun()
             
-            # 设计提示输入
-            design_prompt = st.text_input(
-                "Design prompt (描述您想要的T恤设计):",
+            # 设计提示输入 - 更加突出显示
+            st.markdown("#### 2. 描述您的设计")
+            design_prompt = st.text_area(
+                "设计描述:",
                 value=st.session_state.get("selected_prompt", "白色T恤，中心位置添加'My Brand'文字"),
-                help="描述您想要的T恤设计，包括颜色、文字、logo等元素"
+                help="描述您想要的T恤设计，包括颜色、文字、logo等元素",
+                height=80
             )
             
             # 添加设计提示示例
@@ -647,16 +670,17 @@ def show_low_complexity_general_sales():
             
             # 如果存在选择的提示词，添加提示
             if st.session_state.selected_prompt:
-                st.info("👆 Using AI suggested design prompt. You can modify it or enter your own.")
+                st.info("👆 使用AI建议的设计提示。您可以修改或输入自己的提示。")
             
-            # 解析设计提示按钮
-            if st.button("✨ Apply Design", key="parse_design_button"):
+            # 使Apply Design按钮更加突出
+            st.markdown("#### 3. 应用您的设计")
+            if st.button("✨ 应用设计", key="parse_design_button", use_container_width=True):
                 if not design_prompt.strip():
-                    st.warning("Please enter a design prompt!")
+                    st.warning("请输入设计描述!")
                 else:
                     # 创建进度显示区
                     progress_container = st.empty()
-                    progress_container.info("🔍 Analyzing your design prompt...")
+                    progress_container.info("🔍 正在分析您的设计描述...")
                     
                     # 解析设计提示
                     design_info = parse_design_prompt(design_prompt)
@@ -666,7 +690,7 @@ def show_low_complexity_general_sales():
                         st.session_state.shirt_color_hex = design_info["color"]
                         if st.session_state.original_base_image is not None:
                             # 更新T恤颜色
-                            progress_container.info("🎨 Applying T-shirt color...")
+                            progress_container.info("🎨 应用T恤颜色...")
                             new_colored_image = change_shirt_color(st.session_state.original_base_image, design_info["color"])
                             st.session_state.base_image = new_colored_image
                             
@@ -679,7 +703,7 @@ def show_low_complexity_general_sales():
                     
                     # 如果有文字内容，添加到设计中
                     if design_info["text"]:
-                        progress_container.info("✍️ Adding text to design...")
+                        progress_container.info("✍️ 添加文字到设计...")
                         # 准备绘图对象
                         draw = ImageDraw.Draw(composite_image)
                         
@@ -725,14 +749,14 @@ def show_low_complexity_general_sales():
                                 text_x = left + (box_size - text_width) // 2
                                 text_y = top + box_size - text_height - 10
                             
-                            # 绘制文字
-                            draw.text((text_x, text_y), design_info["text"], fill="#000000", font=font)
+                            # 使用设计信息中的文字颜色
+                            draw.text((text_x, text_y), design_info["text"], fill=design_info["text_color"], font=font)
                         except Exception as e:
-                            st.warning(f"Error adding text: {e}")
+                            st.warning(f"添加文字出错: {e}")
                     
                     # 如果需要logo，添加提示
                     if design_info.get("needs_logo", False):
-                        progress_container.info("🔄 Logo suggested - please select a logo in the 'Add Text/Logo' tab")
+                        progress_container.info("🔄 检测到需要添加logo - 请在'Add Text/Logo'选项卡中选择logo")
                         
                         # 可以考虑自动切换到Logo选项卡
                         st.session_state.auto_switch_to_logo = True
@@ -744,22 +768,22 @@ def show_low_complexity_general_sales():
                     st.session_state.current_image = composite_image.copy()
                     
                     # 清除进度消息并显示成功消息
-                    progress_container.success("🎉 Design successfully applied to your T-shirt!")
+                    progress_container.success("🎉 设计已成功应用到您的T恤!")
                     
                     # 添加设计详情反馈
                     st.markdown(f"""
                     <div style="background-color:#f0f8ff; padding:10px; border-radius:5px; margin:10px 0;">
-                    <h4>Applied Design Details:</h4>
-                    <p>✅ T-shirt color: {design_info['color']}</p>
-                    <p>✅ Text content: {design_info['text'] if design_info['text'] else 'None'}</p>
-                    <p>✅ Position: {design_info['position']}</p>
-                    <p>{"✅ Logo suggestion detected - please add a logo in the next tab" if design_info.get("needs_logo", False) else "❌ No logo requested"}</p>
+                    <h4>应用的设计详情:</h4>
+                    <p>✅ T恤颜色: {design_info['color']}</p>
+                    <p>✅ 文字内容: {design_info['text'] if design_info['text'] else '无'}</p>
+                    <p>✅ 位置: {design_info['position']}</p>
+                    <p>{"✅ 检测到需要添加logo - 请在下一个选项卡中添加" if design_info.get("needs_logo", False) else "❌ 未要求添加logo"}</p>
                     </div>
                     """, unsafe_allow_html=True)
                     
                     # 如果应该自动切换到Logo选项卡
                     if design_info.get("needs_logo", False) and st.session_state.get("auto_switch_to_logo", False):
-                        st.info("💡 Tip: Switch to the 'Add Text/Logo' tab to add your logo")
+                        st.info("💡 提示: 切换到'Add Text/Logo'选项卡添加您的logo")
                     
                     # 重新加载页面以显示变化
                     st.rerun()
