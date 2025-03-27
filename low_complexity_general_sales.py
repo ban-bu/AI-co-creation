@@ -466,30 +466,30 @@ def show_low_complexity_general_sales():
                         
                         # 如果Windows系统字体加载失败，尝试常见路径
                         if font is None:
-                        font_mapping = {
-                            "Arial": "arial.ttf",
-                            "Times New Roman": "times.ttf",
-                            "Courier": "cour.ttf",
-                            "Verdana": "verdana.ttf",
-                            "Georgia": "georgia.ttf",
+                            font_mapping = {
+                                "Arial": "arial.ttf",
+                                "Times New Roman": "times.ttf",
+                                "Courier": "cour.ttf",
+                                "Verdana": "verdana.ttf",
+                                "Georgia": "georgia.ttf",
                                 "Script": "SCRIPTBL.TTF", 
-                            "Impact": "impact.ttf"
-                        }
-                        
+                                "Impact": "impact.ttf"
+                            }
+                            
                             font_file = font_mapping.get(text_info["font"], "arial.ttf")
-                        system_font_paths = [
-                            "/Library/Fonts/",
-                            "/System/Library/Fonts/",
-                            "C:/Windows/Fonts/",
-                            "/usr/share/fonts/truetype/",
-                        ]
-                        
-                        for path in system_font_paths:
-                            try:
+                            system_font_paths = [
+                                "/Library/Fonts/",
+                                "/System/Library/Fonts/",
+                                "C:/Windows/Fonts/",
+                                "/usr/share/fonts/truetype/",
+                            ]
+                            
+                            for path in system_font_paths:
+                                try:
                                     font = ImageFont.truetype(path + font_file, text_info["size"])
-                                break
-                            except:
-                                continue
+                                    break
+                                except:
+                                    continue
                         
                         # 如果仍然失败，使用默认字体
                         if font is None:
@@ -504,12 +504,12 @@ def show_low_complexity_general_sales():
                             text_x, text_y = text_info["position"]
                         else:
                             # 获取文字尺寸重新计算位置
-                        text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
-                        text_width = text_bbox[2] - text_bbox[0]
-                        text_height = text_bbox[3] - text_bbox[1]
-                        
-                        # 居中位置
-                        text_x = (img_width - text_width) // 2
+                            text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
+                            text_width = text_bbox[2] - text_bbox[0]
+                            text_height = text_bbox[3] - text_bbox[1]
+                            
+                            # 居中位置
+                            text_x = (img_width - text_width) // 2
                             text_y = int(img_height * 0.4) - (text_height // 2)
                         
                         # 创建临时图像来绘制文字
@@ -534,7 +534,7 @@ def show_low_complexity_general_sales():
                         text_rgba = text_rgb + (255,)  # 完全不透明
                         
                         # 绘制主文字
-                        text_draw.text((text_x, text_y), text_content, fill=text_rgba, font=font)
+                        text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
                         
                         # 直接粘贴合并
                         st.session_state.final_design.paste(text_img, (0, 0), text_img)
@@ -1003,18 +1003,18 @@ def show_low_complexity_general_sales():
                         st.warning("请输入文字内容!")
                     else:
                         with st.spinner("正在应用文字设计..."):
-                        try:
-                            # 获取当前图像
-                            if st.session_state.final_design is not None:
-                                new_design = st.session_state.final_design.copy()
-                            else:
-                                new_design = st.session_state.base_image.copy()
-                            
-                            # 创建绘图对象
-                            draw = ImageDraw.Draw(new_design)
-                            
-                            # 导入字体
-                            from PIL import ImageFont
+                            try:
+                                # 获取当前图像
+                                if st.session_state.final_design is not None:
+                                    new_design = st.session_state.final_design.copy()
+                                else:
+                                    new_design = st.session_state.base_image.copy()
+                                
+                                # 创建绘图对象
+                                draw = ImageDraw.Draw(new_design)
+                                
+                                # 导入字体
+                                from PIL import ImageFont
                                 import platform
                                 import os
                                 
@@ -1351,8 +1351,8 @@ def show_low_complexity_general_sales():
                                         
                                         # 直接获取文字大小
                                         text_bbox = draw.textbbox((0, 0), text_content, font=font)
-                                    text_width = text_bbox[2] - text_bbox[0]
-                                    text_height = text_bbox[3] - text_bbox[1]
+                                text_width = text_bbox[2] - text_bbox[0]
+                                text_height = text_bbox[3] - text_bbox[1]
                                         
                                         # 保存文字尺寸信息用于调试
                                         st.session_state.text_size_info = {
@@ -1388,7 +1388,7 @@ def show_low_complexity_general_sales():
                                         text_rgba = text_rgb + (255,)  # 完全不透明
                                         
                                         # 绘制主文字
-                                        draw.text((text_x, text_y), text_content, fill=text_rgba, font=font)
+                                        text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
                                         
                                         # 检查是否成功绘制 - 比较修改前后的图像
                                         if original_design.tobytes() == new_design.tobytes():
@@ -1409,7 +1409,7 @@ def show_low_complexity_general_sales():
                                                 text_draw.text((text_x + shadow_offset, text_y + shadow_offset), text_content, fill=(0, 0, 0, 180), font=font)
                                             
                                             # 绘制主文字
-                                            text_draw.text((text_x, text_y), text_content, fill=text_rgba, font=font)
+                                            text_draw.text((text_x, text_y), text_info["text"], fill=text_rgba, font=font)
                                             
                                             # 合并图层 - 使用paste而不是alpha_composite
                                             new_design.paste(text_layer, (0, 0), text_layer)
@@ -1435,8 +1435,8 @@ def show_low_complexity_general_sales():
                                                 "text_height": text_height
                                             }
                                 
-                                        # 计算居中位置
-                                        text_x = (img_width - text_width) // 2
+                                # 计算居中位置
+                                text_x = (img_width - text_width) // 2
                                                 text_y = int(img_height * 0.4) - (text_height // 2)
                                                 
                                                 # 直接绘制到临时图像
