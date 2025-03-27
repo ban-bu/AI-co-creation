@@ -438,10 +438,8 @@ def show_low_complexity_general_sales():
                     draw = ImageDraw.Draw(st.session_state.final_design)
                     
                     try:
+                        # 将字体映射和ImageFont导入移到try外部
                         from PIL import ImageFont
-                        font = None
-                        
-                        # 尝试加载字体
                         font_mapping = {
                             "Arial": "arial.ttf",
                             "Times New Roman": "times.ttf",
@@ -860,6 +858,7 @@ def show_low_complexity_general_sales():
                             # 创建绘图对象
                             draw = ImageDraw.Draw(new_design)
                             
+                            # 将字体映射和ImageFont导入移到try外部
                             # 导入字体
                             from PIL import ImageFont
                             font = None
