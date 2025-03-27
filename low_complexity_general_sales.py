@@ -432,16 +432,12 @@ def show_low_complexity_general_sales():
                 # 如果有最终设计，也需要重新应用颜色
                 st.session_state.final_design = colored_image.copy()
                 
-                # 重新应用文字
+                # 修改颜色变更时重新应用文字的代码
                 if 'applied_text' in st.session_state:
                     text_info = st.session_state.applied_text
+                    draw = ImageDraw.Draw(st.session_state.final_design)
                     
                     try:
-                        # 创建透明图层
-                        img_width, img_height = st.session_state.final_design.size
-                        text_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
-                        draw = ImageDraw.Draw(text_layer)
-                        
                         from PIL import ImageFont
                         font = None
                         
@@ -462,8 +458,8 @@ def show_low_complexity_general_sales():
                             "/usr/share/fonts/truetype/",
                         ]
                         
-                        # 使用固定大小的字体
-                        font_size = 250  # 保持与应用按钮处理部分一致
+                        # 使用固定的大像素值，与应用文字逻辑保持一致
+                        font_size = 250  # 固定使用250像素的大字体
                         
                         font_file = font_mapping.get(text_info["font"], "arial.ttf")
                         for path in system_font_paths:
@@ -476,7 +472,8 @@ def show_low_complexity_general_sales():
                         if font is None:
                             font = ImageFont.load_default()
                         
-                        # 计算文字位置
+                        # 计算文字位置 - 在中心位置
+                        img_width, img_height = st.session_state.final_design.size
                         text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
                         text_width = text_bbox[2] - text_bbox[0]
                         text_height = text_bbox[3] - text_bbox[1]
@@ -488,20 +485,15 @@ def show_low_complexity_general_sales():
                         # 将位置略微向上移动
                         text_y = int(text_y * 0.8)
                         
-                        # 在透明图层上绘制文字
+                        # 绘制文字
                         draw.text((text_x, text_y), text_info["text"], fill=text_info["color"], font=font)
                         
-                        # 将文字图层覆盖到基础设计上
-                        new_design = Image.alpha_composite(st.session_state.base_image.convert("RGBA"), text_layer)
-                        
                         # 更新当前图像
-                        st.session_state.final_design = new_design
-                        st.session_state.current_image = new_design.copy()
+                        st.session_state.current_image = st.session_state.final_design.copy()
                         
                         # 更新文字信息
                         st.session_state.applied_text["size"] = font_size
                         st.session_state.applied_text["position"] = (text_x, text_y)
-                        st.session_state.applied_text["layer"] = text_layer  # 保存文字图层以便后续可能的调整
                         
                     except Exception as e:
                         st.warning(f"重新应用文字时出错: {e}")
@@ -850,10 +842,10 @@ def show_low_complexity_general_sales():
                         unsafe_allow_html=True
                     )
                     
-                    # 更新提示信息，说明新的文字渲染方式
-                    st.info("预览文字大小仅供参考。应用到T恤上的文字将使用透明叠加层方式渲染，固定使用大尺寸(250px)以确保清晰可见。")
+                    # 修改预览信息，说明使用固定大小
+                    st.info("预览文字大小仅供参考。应用到T恤上的文字将使用固定的250像素大小，确保清晰可见。")
                 
-                # 应用按钮
+                # 修改应用文字到设计部分的代码，使用固定像素大小
                 if st.button("应用文字到设计", key="apply_ai_text"):
                     if not text_suggestion.strip():
                         st.warning("请输入文字内容!")
@@ -861,18 +853,12 @@ def show_low_complexity_general_sales():
                         try:
                             # 获取当前图像
                             if st.session_state.final_design is not None:
-                                base_design = st.session_state.final_design.copy()
+                                new_design = st.session_state.final_design.copy()
                             else:
-                                base_design = st.session_state.base_image.copy()
+                                new_design = st.session_state.base_image.copy()
                             
-                            # 获取图像尺寸
-                            img_width, img_height = base_design.size
-                            
-                            # 创建透明图层 - 这是关键改变
-                            text_layer = Image.new('RGBA', (img_width, img_height), (0, 0, 0, 0))
-                            
-                            # 在透明图层上绘制文字
-                            draw = ImageDraw.Draw(text_layer)
+                            # 创建绘图对象
+                            draw = ImageDraw.Draw(new_design)
                             
                             # 导入字体
                             from PIL import ImageFont
@@ -888,8 +874,8 @@ def show_low_complexity_general_sales():
                                 "Impact": "impact.ttf"
                             }
                             
-                            # 使用固定大小的字体，不再依赖图像尺寸的百分比
-                            font_size = 250  # 使用固定大小，确保文字足够大
+                            # 使用固定的大像素值，不再基于图像百分比
+                            font_size = 250  # 固定使用250像素的大字体
                             
                             # 记录实际使用的字体大小
                             st.session_state.actual_font_size = font_size
@@ -920,6 +906,9 @@ def show_low_complexity_general_sales():
                                     st.error("无法加载字体，请尝试其他字体。")
                                     return
                             
+                            # 获取图像尺寸
+                            img_width, img_height = new_design.size
+                            
                             # 计算文字位置
                             try:
                                 # 获取文字边界框
@@ -934,11 +923,8 @@ def show_low_complexity_general_sales():
                                 # 将位置略微向上移动
                                 text_y = int(text_y * 0.8)  # 移到中心位置稍上方
                                 
-                                # 在透明图层上绘制文字
+                                # 绘制文字
                                 draw.text((text_x, text_y), text_suggestion, fill=text_color, font=font)
-                                
-                                # 将文字图层覆盖到基础设计上
-                                new_design = Image.alpha_composite(base_design.convert("RGBA"), text_layer)
                                 
                                 # 更新设计
                                 st.session_state.final_design = new_design
@@ -950,8 +936,7 @@ def show_low_complexity_general_sales():
                                     "font": ai_font,
                                     "color": text_color,
                                     "size": font_size,
-                                    "position": (text_x, text_y),
-                                    "layer": text_layer  # 保存文字图层以便后续可能的调整
+                                    "position": (text_x, text_y)
                                 }
                                 
                                 st.success(f"文字已成功应用到设计中！字体大小: {font_size}px")
