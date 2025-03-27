@@ -2040,9 +2040,9 @@ def show_high_complexity_general_sales():
                                 except Exception as e:
                                     st.error(f"Error generating Logo: {str(e)}")
 
-                # 如果有生成的Logo，显示Logo设置选项
+                # If there is a generated Logo, display the Logo settings options
                 if hasattr(st.session_state, 'generated_logo'):
-                    st.markdown("#### Logo设置")
+                    st.markdown("#### Logo settings")
                     
                     # 显示已生成的Logo提示词和预览
                     logo_preview_col, logo_regen_col = st.columns([3, 2])
