@@ -461,6 +461,8 @@ def show_low_complexity_general_sales():
                         font_file = font_mapping.get(text_info["font"], "arial.ttf")
                         # 确保使用保存的字体大小
                         actual_size = text_info["size"]
+                        if 'last_text_size' in st.session_state and st.session_state.last_text_size > actual_size:
+                            actual_size = st.session_state.last_text_size
                         for path in system_font_paths:
                             try:
                                 font = ImageFont.truetype(path + font_file, actual_size)
@@ -615,6 +617,91 @@ def show_low_complexity_general_sales():
                 "#808080": "Gray"
             }.get(st.session_state.shirt_color_hex.upper(), "Custom")
             st.markdown(f"**颜色:** {color_name} ({st.session_state.shirt_color_hex})")
+            
+            # 添加增大文字按钮
+            if 'applied_text' in st.session_state and st.button("⬆️ 增大文字", key="enlarge_text"):
+                try:
+                    # 获取当前应用的文字信息
+                    text_info = st.session_state.applied_text
+                    # 创建新设计副本
+                    new_design = st.session_state.base_image.copy()
+                    draw = ImageDraw.Draw(new_design)
+                    
+                    # 导入字体
+                    from PIL import ImageFont
+                    font = None
+                    
+                    # 字体映射
+                    font_mapping = {
+                        "Arial": "arial.ttf",
+                        "Times New Roman": "times.ttf",
+                        "Courier": "cour.ttf",
+                        "Verdana": "verdana.ttf",
+                        "Georgia": "georgia.ttf",
+                        "Impact": "impact.ttf"
+                    }
+                    
+                    # 设置极大的字体大小 - 直接使用32倍缩放因子
+                    enlarged_size = int(50 * 32.0)  # 使用默认值50和最大缩放因子
+                    
+                    # 尝试加载字体
+                    system_font_paths = [
+                        "/Library/Fonts/",  # macOS
+                        "/System/Library/Fonts/",  # macOS系统
+                        "C:/Windows/Fonts/",  # Windows
+                        "/usr/share/fonts/truetype/",  # Linux
+                    ]
+                    
+                    font_file = font_mapping.get(text_info["font"], "arial.ttf")
+                    for path in system_font_paths:
+                        try:
+                            font = ImageFont.truetype(path + font_file, enlarged_size)
+                            break
+                        except:
+                            continue
+                    
+                    if font is None:
+                        font = ImageFont.load_default()
+                    
+                    # 获取图像尺寸
+                    img_width, img_height = new_design.size
+                    
+                    # 定义更大的T恤前胸区域
+                    chest_width = int(img_width * 0.95)
+                    chest_height = int(img_height * 0.6)
+                    chest_left = (img_width - chest_width) // 2
+                    chest_top = int(img_height * 0.2)
+                    
+                    # 计算文字位置
+                    if font:
+                        text_bbox = draw.textbbox((0, 0), text_info["text"], font=font)
+                        text_width = text_bbox[2] - text_bbox[0]
+                        text_height = text_bbox[3] - text_bbox[1]
+                    else:
+                        text_width = len(text_info["text"]) * enlarged_size * 0.5
+                        text_height = enlarged_size
+                    
+                    # 在胸前区域中心对齐
+                    chest_center_x = chest_left + chest_width // 2
+                    chest_center_y = chest_top + chest_height // 2
+                    text_x = chest_center_x - text_width // 2
+                    text_y = chest_center_y - text_height // 2
+                    
+                    # 绘制文字
+                    draw.text((text_x, text_y), text_info["text"], fill=text_info["color"], font=font)
+                    
+                    # 更新当前图像和最终设计
+                    st.session_state.final_design = new_design
+                    st.session_state.current_image = new_design.copy()
+                    
+                    # 更新应用的文字信息
+                    st.session_state.applied_text["size"] = enlarged_size
+                    st.session_state.last_text_size = enlarged_size
+                    
+                    st.success(f"文字已放大！新的字体大小: {enlarged_size}px")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"放大文字时出错: {e}")
             
             # 添加清空设计按钮
             if st.button("🗑️ 清空所有设计", key="clear_designs"):
@@ -850,7 +937,7 @@ def show_low_complexity_general_sales():
                     )
                     
                     # 修改提示信息更清晰表达
-                    st.info(f"预览文字大小不会变化。当前设置的实际应用大小为 {text_size}，渲染后约为 {text_size*16} 像素（已增大文字比例以提高可见度）")
+                    st.info(f"预览文字大小不会变化。当前设置的实际应用大小为 {text_size}，渲染后约为 {text_size*32} 像素（已增大文字比例以提高可见度）")
                 
                 # 应用按钮
                 if st.button("应用文字到设计", key="apply_ai_text"):
@@ -891,7 +978,7 @@ def show_low_complexity_general_sales():
                             }
                             
                             # 使用超大字体缩放因子
-                            font_scale_factor = 16.0  # 极大提高字体可见度，从8.0增加到16.0
+                            font_scale_factor = 32.0  # 极大提高字体可见度，从16.0增加到32.0
                             actual_text_size = int(text_size * font_scale_factor)
                             
                             # 记录实际使用的字体大小
@@ -912,7 +999,7 @@ def show_low_complexity_general_sales():
                         except Exception as e:
                             st.warning(f"加载字体时出错: {e}")
                             font = None
-                            actual_text_size = int(text_size * 16.0)  # 确保即使使用默认字体也保持较大的尺寸，从8.0增加到16.0
+                            actual_text_size = int(text_size * 32.0)  # 确保即使使用默认字体也保持较大的尺寸，从16.0增加到32.0
                             st.session_state.actual_font_size = actual_text_size
                         
                         # 使用整个T恤中心区域
