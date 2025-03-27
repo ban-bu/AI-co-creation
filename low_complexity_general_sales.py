@@ -333,105 +333,52 @@ def show_low_complexity_general_sales():
     # 任务复杂度说明
     st.markdown("""
     <div style="background-color:#f0f0f0; padding:20px; border-radius:10px; margin-bottom:20px; border-left:4px solid #2196F3">
-    <h4 style="color:#1976D2; margin-top:0">Detailed Customization Guide</h4>
-    <p>Follow these steps to create your personalized T-shirt design:</p>
+    <h4 style="color:#1976D2; margin-top:0">Basic Customization Options</h4>
+    <p>In this experience, you can customize your T-shirt with the following options:</p>
     
     <div style="margin-left:15px">
     <h5 style="color:#2196F3">1. T-shirt Color Selection</h5>
     <ul>
-        <li>Get AI color recommendations:
-            <ul>
-                <li>Enter your style preference (e.g., casual, business, sporty)</li>
-                <li>Click "Get personalized AI suggestions"</li>
-                <li>Choose from the AI-recommended colors with hex codes</li>
-            </ul>
-        </li>
-        <li>Manual color selection:
-            <ul>
-                <li>Use the color picker for custom colors</li>
-                <li>Preview colors before applying</li>
-                <li>Click "Apply custom color" to update the design</li>
-            </ul>
-        </li>
+        <li>Choose from AI-recommended colors based on your style</li>
+        <li>Select from preset color options</li>
+        <li>Use a color picker for custom colors</li>
     </ul>
     
     <h5 style="color:#2196F3">2. Text Customization</h5>
     <ul>
-        <li>Adding text:
+        <li>Add custom text or use AI-suggested phrases</li>
+        <li>Adjust text properties:
             <ul>
-                <li>Type your text or use AI-suggested phrases</li>
-                <li>Select font family from the dropdown menu</li>
-                <li>Adjust text size using the slider (20-400px)</li>
-            </ul>
-        </li>
-        <li>Text styling:
-            <ul>
-                <li>Choose text color with the color picker</li>
-                <li>Apply styles: Bold, Italic, Shadow, Outline</li>
-                <li>Select special effects: Gradient, 3D, Wave</li>
-                <li>Set alignment: Left, Center, or Right</li>
-            </ul>
-        </li>
-        <li>Applying text:
-            <ul>
-                <li>Preview your text design</li>
-                <li>Click "Apply text to design" to add to T-shirt</li>
-                <li>Adjust if needed by creating new text</li>
+                <li>Font style and size</li>
+                <li>Color and alignment</li>
+                <li>Special effects (shadow, outline, gradient)</li>
             </ul>
         </li>
     </ul>
     
     <h5 style="color:#2196F3">3. Logo Integration</h5>
     <ul>
-        <li>Logo selection:
+        <li>Upload your own logo</li>
+        <li>Choose from preset logo designs</li>
+        <li>Customize logo:
             <ul>
-                <li>Choose "Upload Logo" for custom logos</li>
-                <li>Or select "Preset Logo" from available options</li>
-                <li>Preview selected logo before applying</li>
-            </ul>
-        </li>
-        <li>Logo customization:
-            <ul>
-                <li>Adjust size (10-100% of chest area)</li>
-                <li>Set position (9 preset locations available)</li>
-                <li>Control opacity (10-100%)</li>
-            </ul>
-        </li>
-        <li>Applying logo:
-            <ul>
-                <li>Preview the logo placement</li>
-                <li>Click "Apply Logo to design" to confirm</li>
-                <li>Readjust if needed by selecting new settings</li>
+                <li>Size and position</li>
+                <li>Opacity level</li>
+                <li>Placement options</li>
             </ul>
         </li>
     </ul>
     
-    <h5 style="color:#2196F3">4. Final Steps</h5>
+    <h5 style="color:#2196F3">4. Design Positioning</h5>
     <ul>
-        <li>Review your design:
-            <ul>
-                <li>Check the final preview</li>
-                <li>Verify all elements are correctly placed</li>
-                <li>Use "Clear all designs" to start over if needed</li>
-            </ul>
-        </li>
-        <li>Save your work:
-            <ul>
-                <li>Download your design using "Download design"</li>
-                <li>Click "Confirm completion" when satisfied</li>
-            </ul>
-        </li>
+        <li>Flexible placement options for both text and logos</li>
+        <li>Multiple position presets (top, center, bottom)</li>
+        <li>Fine-tune element positioning</li>
     </ul>
     </div>
     
     <p style="margin-top:15px; color:#666">
-    <i>💡 Pro Tips:</i>
-    <ul style="color:#666">
-        <li>Start with AI suggestions for professional color combinations</li>
-        <li>Preview all changes before applying them to the design</li>
-        <li>Use the "Clear all designs" button to start fresh if needed</li>
-        <li>Save your work frequently using the download button</li>
-    </ul>
+    <i>💡 Tip: Start with AI suggestions for the best results, then customize further based on your preferences.</i>
     </p>
     </div>
     """, unsafe_allow_html=True)
