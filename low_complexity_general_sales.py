@@ -393,7 +393,7 @@ def show_low_complexity_general_sales():
                         original_image_path = path
                         st.success(f"找到T恤图像: {path}")
                         found = True
-                            break
+                        break
                 
                 if not found:
                     # 如果未找到，显示当前工作目录和文件列表以便调试
@@ -461,7 +461,7 @@ def show_low_complexity_general_sales():
                             text_draw = ImageDraw.Draw(text_img)
                             
                             # 加载字体
-                        from PIL import ImageFont
+                            from PIL import ImageFont
                             import os
                             
                             # 创建text_info对象来存储文本信息
@@ -1285,13 +1285,13 @@ def show_low_complexity_general_sales():
                         st.warning("请输入文字内容!")
                     else:
                         with st.spinner("正在应用文字设计..."):
-                        try:
-                            # 获取当前图像
-                            if st.session_state.final_design is not None:
-                                new_design = st.session_state.final_design.copy()
-                            else:
-                                new_design = st.session_state.base_image.copy()
-                            
+                            try:
+                                # 获取当前图像
+                                if st.session_state.final_design is not None:
+                                    new_design = st.session_state.final_design.copy()
+                                else:
+                                    new_design = st.session_state.base_image.copy()
+                                
                                 # 获取图像尺寸
                                 img_width, img_height = new_design.size
                                 
@@ -1305,7 +1305,7 @@ def show_low_complexity_general_sales():
                                 text_draw = ImageDraw.Draw(text_img)
                                 
                                 # 加载字体
-                            from PIL import ImageFont
+                                from PIL import ImageFont
                                 import os
                                 
                                 # 创建text_info对象来存储文本信息
