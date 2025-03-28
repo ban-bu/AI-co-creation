@@ -1710,6 +1710,9 @@ def show_high_complexity_general_sales():
                     else:
                         with st.spinner("正在应用文字设计..."):
                             try:
+                                # 导入必要的模块
+                                from PIL import ImageFont
+                                
                                 # 获取当前图像
                                 if st.session_state.final_design is not None:
                                     new_design = st.session_state.final_design.copy()
