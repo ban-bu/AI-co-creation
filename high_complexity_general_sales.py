@@ -1675,7 +1675,7 @@ def show_high_complexity_general_sales():
                     elif text_effect == "Gradient":
                         effect_str = "background: linear-gradient(45deg, #f3ec78, #af4261); -webkit-background-clip: text; -webkit-text-fill-color: transparent; "
                     
-                    preview_size = text_size * 1.5  # 预览大小略大
+                    preview_size = text_size  # 移除1.5倍的放大
                     st.markdown(
                         f"""
                         <style>
@@ -1711,14 +1711,14 @@ def show_high_complexity_general_sales():
                         with st.spinner("正在应用文字设计..."):
                             try:
                                 # 导入必要的模块
-                                from PIL import ImageFont
+                                from PIL import ImageFont, ImageDraw, Image
                                 
                                 # 获取当前图像
                                 if st.session_state.final_design is not None:
                                     new_design = st.session_state.final_design.copy()
                                 else:
                                     new_design = st.session_state.base_image.copy()
-                                
+                            
                                 # 确保图像是RGBA模式
                                 new_design = new_design.convert('RGBA')
                                 
@@ -1732,7 +1732,7 @@ def show_high_complexity_general_sales():
                                 text_y = img_height // 3  # 在上部1/3处
                                 
                                 # 设置字体大小
-                                font_size = text_size
+                                font_size = text_size * 3  # 将字体尺寸增大3倍
                                 
                                 # 尝试加载系统字体
                                 try:
