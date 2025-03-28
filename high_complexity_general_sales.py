@@ -1303,33 +1303,25 @@ def show_high_complexity_general_sales():
                 st.session_state.shirt_color_hex = "#FFFFFF"
                 st.session_state.current_applied_color = "#FFFFFF"
                 
-                # 重置纹理为默认棉质
-                st.session_state.fabric_type = "Cotton"
-                st.session_state.current_applied_fabric = "Cotton"
+                # 重置纹理为无
+                st.session_state.fabric_type = None
+                st.session_state.current_applied_fabric = None
                 
-                # 重新应用默认颜色和纹理
+                # 直接使用原始T恤图像，不应用任何纹理或颜色
                 if st.session_state.original_base_image is not None:
-                    # 使用原始白色T恤图像
+                    # 使用原始白色T恤图像的直接副本
                     original_image = st.session_state.original_base_image.copy()
                     
-                    # 应用默认颜色和纹理
-                    new_colored_image = change_shirt_color(
-                        original_image, 
-                        "#FFFFFF",  # 白色
-                        apply_texture=True, 
-                        fabric_type="Cotton"  # 默认棉质
-                    )
+                    # 更新所有相关图像为原始图像
+                    st.session_state.base_image = original_image
+                    st.session_state.final_design = original_image.copy()
                     
-                    # 更新所有相关图像
-                    st.session_state.base_image = new_colored_image
-                    st.session_state.final_design = new_colored_image.copy()
-                    
-                    # 重置当前图像为带选择框的基础图像
-                    temp_image, current_pos = draw_selection_box(new_colored_image)
+                    # 重置当前图像为带选择框的原始图像
+                    temp_image, current_pos = draw_selection_box(original_image)
                     st.session_state.current_image = temp_image
                     st.session_state.current_box_position = current_pos
                     
-                    print("已重置设计为默认白色棉质T恤")
+                    print("已重置为原始T恤图像，没有应用任何纹理")
                 else:
                     print("无法重置设计：原始图像不存在")
                 
