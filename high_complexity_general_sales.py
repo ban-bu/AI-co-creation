@@ -1241,7 +1241,7 @@ def show_high_complexity_general_sales():
                 "#C0C0C0": "Silver",
                 "#808080": "Gray"
             }.get(st.session_state.shirt_color_hex.upper(), "Custom")
-            st.markdown(f"**Color:** {color_name} ({st.session_state.shirt_color_hex})")
+            st.markdown(f"**颜色:** {color_name} ({st.session_state.shirt_color_hex})")
             
             # 显示面料信息
             fabric_type = st.session_state.fabric_type if 'fabric_type' in st.session_state else "Cotton"
@@ -1427,7 +1427,7 @@ def show_high_complexity_general_sales():
                         "light blue": "#ADD8E6"
                     }
                 
-                st.markdown("##### Apply recommended colors")
+                st.markdown("##### 应用推荐颜色")
                 
                 # 创建颜色选择列表 - 动态创建
                 colors = st.session_state.ai_suggested_colors
@@ -1453,13 +1453,13 @@ def show_high_complexity_general_sales():
                             """, 
                             unsafe_allow_html=True
                         )
-                        if st.button(f"Apply {color_name}", key=f"apply_{i}"):
+                        if st.button(f"应用{color_name}", key=f"apply_{i}"):
                             st.session_state.shirt_color_hex = color_hex
                             st.rerun()
                 
                 # 添加自定义颜色调整功能
-                st.markdown("##### Custom color")
-                custom_color = st.color_picker("Select a custom color:", st.session_state.shirt_color_hex, key="custom_color_picker")
+                st.markdown("##### 自定义颜色")
+                custom_color = st.color_picker("选择自定义颜色:", st.session_state.shirt_color_hex, key="custom_color_picker")
                 custom_col1, custom_col2 = st.columns([3, 1])
                 
                 with custom_col1:
@@ -1479,14 +1479,33 @@ def show_high_complexity_general_sales():
                     )
                 
                 with custom_col2:
-                    if st.button("Apply custom color"):
+                    if st.button("应用自定义颜色"):
                         st.session_state.shirt_color_hex = custom_color
                         st.rerun()
                 
                 # 添加面料纹理选择
-                st.markdown("##### Fabric Texture")
+                st.markdown("##### 布料纹理")
                 if 'fabric_type' not in st.session_state:
-                    st.session_state.fabric_type = "Cotton"  # 默认面料类型
+                    st.session_state.fabric_type = "棉"  # 默认面料类型为棉
+
+                # 中英文面料类型对照表
+                fabric_mapping = {
+                    "棉": "Cotton",
+                    "丝绸": "Silk",
+                    "麻": "Linen",
+                    "牛仔": "Denim",
+                    "皮革": "Leather",
+                    "羊毛": "Wool"
+                }
+
+                # 设置当前选择的面料在列表中的索引
+                chinese_fabric_options = ["棉", "丝绸", "麻", "牛仔", "皮革", "羊毛"]
+                current_fabric_cn = next((k for k, v in fabric_mapping.items() if v == st.session_state.fabric_type), "棉")
+                current_index = chinese_fabric_options.index(current_fabric_cn) if current_fabric_cn in chinese_fabric_options else 0
+
+                # 面料选择
+                fabric_type_cn = st.selectbox("选择布料类型:", chinese_fabric_options, index=current_index)
+                fabric_type = fabric_mapping.get(fabric_type_cn, "Cotton")  # 获取英文面料类型
                 
                 # 如果有AI推荐的面料，则显示它们
                 if 'ai_suggested_fabrics' in st.session_state and st.session_state.ai_suggested_fabrics:
@@ -1537,9 +1556,7 @@ def show_high_complexity_general_sales():
                 st.markdown("**All Available Fabrics:**")
                 # 面料选择
                 fabric_options = ["Cotton", "Polyester", "Cotton-Polyester Blend", "Jersey", "Linen", "Bamboo"]
-                fabric_type = st.selectbox("Fabric type:", fabric_options,
-                                        index=fabric_options.index(st.session_state.fabric_type)
-                                        if st.session_state.fabric_type in fabric_options else 0)
+                fabric_type = st.selectbox("选择布料类型:", ["棉", "丝绸", "麻", "牛仔", "皮革", "羊毛"], key="fabric_type")
                 
                 # 应用面料纹理按钮
                 texture_col1, texture_col2 = st.columns([3, 1])
@@ -1556,10 +1573,17 @@ def show_high_complexity_general_sales():
                     st.markdown(f"*{fabric_descriptions.get(fabric_type, '')}*")
                 
                 with texture_col2:
-                    if st.button("Apply Texture"):
+                    if st.button("应用纹理"):
                         # 更新存储的面料值
                         old_fabric = st.session_state.fabric_type
-                        st.session_state.fabric_type = fabric_type
+                        st.session_state.fabric_type = fabric_type  # 使用英文面料名称
+
+                        # 保存当前应用的logo信息，以便纹理变化后重新应用
+                        has_logo = hasattr(st.session_state, 'applied_logo') and st.session_state.applied_logo is not None
+                        temp_logo_info = st.session_state.applied_logo.copy() if has_logo else None
+                        
+                        print(f"临时保存Logo信息: {temp_logo_info}")
+                        print(f"正在将面料从 {old_fabric} 更改为 {fabric_type}")
                         
                         # 无论面料类型是否改变，都应用纹理
                         if st.session_state.original_base_image is not None:
@@ -1581,19 +1605,21 @@ def show_high_complexity_general_sales():
                                 if st.session_state.final_design is not None:
                                     st.session_state.final_design = new_colored_image.copy()
                                 
-                                st.rerun()
+                                # 显示确认信息
+                                st.success(f"已更新布料纹理: {fabric_type_cn}")
                             except Exception as e:
                                 st.warning(f"应用面料纹理时出错: {e}")
                         
-                        # 显示确认信息
-                        st.success(f"Fabric texture updated: {fabric_type}")
+                        # 应用新纹理并刷新页面
+                        st.session_state.current_applied_fabric = fabric_type
+                        st.rerun()
                 
                 # 文字建议应用
-                st.markdown("##### Apply recommended text")
-                
+                st.markdown("##### 应用推荐文字")
+
                 # 显示解析的推荐文字，点击直接填充
                 if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
-                    st.markdown("**Click the recommended text below to apply quickly:**")
+                    st.markdown("**点击下方推荐文字快速应用:**")
                     suggested_texts_container = st.container()
                     with suggested_texts_container:
                         text_buttons = st.columns(min(2, len(st.session_state.ai_suggested_texts)))
@@ -1619,26 +1645,26 @@ def show_high_complexity_general_sales():
                     elif 'ai_text_suggestion' in st.session_state:
                         default_input = st.session_state.ai_text_suggestion
                     
-                    text_content = st.text_input("Input or copy the recommended text by AI", default_input, key="ai_text_suggestion")
+                    text_content = st.text_input("输入或复制AI推荐的文字", default_input, key="ai_text_suggestion")
                 
                 with text_col2:
-                    text_color = st.color_picker("Text color:", "#000000", key="ai_text_color")
+                    text_color = st.color_picker("文字颜色:", "#000000", key="ai_text_color")
                 
                 # 字体选择 - 扩展为高复杂度方案的选项
                 font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]
-                font_family = st.selectbox("Font series:", font_options, key="ai_font_selection")
+                font_family = st.selectbox("字体系列:", font_options, key="ai_font_selection")
                 
                 # 添加文字样式选项
-                text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
+                text_style = st.multiselect("文字样式:", ["粗体", "斜体", "下划线", "阴影", "轮廓"], default=["粗体"])
                 
                 # 添加动态文字大小滑块 - 增加最大值
-                text_size = st.slider("Text size:", 20, 400, 39, key="ai_text_size")
+                text_size = st.slider("文字大小:", 20, 400, 39, key="ai_text_size")
                 
                 # 添加文字效果选项
-                text_effect = st.selectbox("Text effect:", ["None", "Bent", "Arch", "Wave", "3D", "Gradient"])
+                text_effect = st.selectbox("文字效果:", ["无", "弯曲", "拱形", "波浪", "3D", "渐变"])
                 
                 # 添加对齐方式选项
-                alignment = st.radio("Alignment:", ["Left", "Center", "Right"], horizontal=True, index=1)
+                alignment = st.radio("对齐方式:", ["左对齐", "居中", "右对齐"], horizontal=True, index=1)
                 
                 # 修改预览部分，添加样式效果
                 if text_content:
@@ -1657,22 +1683,22 @@ def show_high_complexity_general_sales():
                     
                     # 处理对齐
                     align_str = "center"
-                    if alignment == "Left":
+                    if alignment == "左对齐":
                         align_str = "left"
-                    elif alignment == "Right":
+                    elif alignment == "右对齐":
                         align_str = "right"
                     
                     # 处理效果
                     effect_str = ""
-                    if text_effect == "Bent":
+                    if text_effect == "弯曲":
                         effect_str = "transform: rotateX(10deg); transform-origin: center; "
-                    elif text_effect == "Arch":
+                    elif text_effect == "拱形":
                         effect_str = "transform: perspective(100px) rotateX(10deg); "
-                    elif text_effect == "Wave":
+                    elif text_effect == "波浪":
                         effect_str = "display: inline-block; transform: translateY(5px); animation: wave 2s ease-in-out infinite; "
                     elif text_effect == "3D":
                         effect_str = "text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb; "
-                    elif text_effect == "Gradient":
+                    elif text_effect == "渐变":
                         effect_str = "background: linear-gradient(45deg, #f3ec78, #af4261); -webkit-background-clip: text; -webkit-text-fill-color: transparent; "
                     
                     preview_size = text_size * 1.5  # 预览大小略大
@@ -1704,11 +1730,11 @@ def show_high_complexity_general_sales():
                     )
                     
                 # 修改应用文字到设计部分的代码，完全重写文字应用逻辑
-                if st.button("Apply text to design", key="apply_ai_text"):
+                if st.button("应用文字到T恤设计", key="apply_ai_text"):
                     if not text_content.strip():
-                        st.warning("Please input the text content!")
+                        st.warning("请输入文字内容!")
                     else:
-                        with st.spinner("Applying text design..."):
+                        with st.spinner("正在应用文字设计..."):
                             try:
                                 # 获取当前图像
                                 if st.session_state.final_design is not None:
@@ -1745,7 +1771,7 @@ def show_high_complexity_general_sales():
                                 
                                 # 初始化调试信息列表
                                 font_debug_info = []
-                                font_debug_info.append("Start applying high-definition text design")
+                                font_debug_info.append("开始应用高清文字设计")
                                 
                                 # 尝试加载系统字体 - 增强字体处理部分
                                 font = None
@@ -1756,7 +1782,7 @@ def show_high_complexity_general_sales():
                                     
                                     # 记录系统信息以便调试
                                     system = platform.system()
-                                    font_debug_info.append(f"System type: {system}")
+                                    font_debug_info.append(f"系统类型: {system}")
                                     
                                     # 根据不同系统尝试不同的字体路径
                                     if system == 'Windows':
@@ -1783,29 +1809,29 @@ def show_high_complexity_general_sales():
                                     
                                     # 直接使用完整尺寸的字体大小
                                     render_size = text_info["size"]
-                                    font_debug_info.append(f"Try to load font, size: {render_size}px")
+                                    font_debug_info.append(f"尝试加载字体, 大小: {render_size}px")
                                     
                                     # 尝试加载每个字体
                                     for font_path in font_paths:
                                         if os.path.exists(font_path):
                                             try:
                                                 font = ImageFont.truetype(font_path, render_size)
-                                                font_debug_info.append(f"Successfully loaded font: {font_path}")
+                                                font_debug_info.append(f"成功加载字体: {font_path}")
                                                 break
                                             except Exception as font_err:
-                                                font_debug_info.append(f"load font failed: {font_path} - {str(font_err)}")
+                                                font_debug_info.append(f"加载字体失败: {font_path} - {str(font_err)}")
                                 except Exception as e:
-                                    font_debug_info.append(f"font loading process error: {str(e)}")
+                                    font_debug_info.append(f"字体加载过程出错: {str(e)}")
                                 
                                 # 如果系统字体加载失败，再尝试默认字体
                                 if font is None:
                                     try:
-                                        font_debug_info.append("Using PIL default font, which will result in low resolution")
+                                        font_debug_info.append("使用PIL默认字体，这会导致低分辨率效果")
                                         font = ImageFont.load_default()
                                     except Exception as default_err:
-                                        font_debug_info.append(f"Default font loading failed: {str(default_err)}")
+                                        font_debug_info.append(f"默认字体加载失败: {str(default_err)}")
                                         # 如果连默认字体都失败，创建一个紧急情况文本图像
-                                        font_debug_info.append("All fonts loading failed, using emergency solution")
+                                        font_debug_info.append("所有字体加载都失败，使用紧急解决方案")
                                 
                                 # 改进的文本渲染方法 - 直接在高分辨率画布上绘制
                                 try:
@@ -1852,12 +1878,12 @@ def show_high_complexity_general_sales():
                                         
                                         text_width = max_width
                                         text_height = total_height
-                                        font_debug_info.append(f"Actual text size: {text_width}x{text_height}px, divided into {len(lines)} lines")
+                                        font_debug_info.append(f"实际文本尺寸: {text_width}x{text_height}px, 分为 {len(lines)} 行")
                                     else:
                                         # 估计尺寸
                                         text_width = len(text_info["text"]) * render_size * 0.6
                                         text_height = render_size * 1.2
-                                        font_debug_info.append(f"Estimated text size: {text_width}x{text_height}px")
+                                        font_debug_info.append(f"估计文本尺寸: {text_width}x{text_height}px")
                                     
                                     # 根据对齐方式计算X位置
                                     if text_info["alignment"] == "Left":
@@ -2059,7 +2085,7 @@ def show_high_complexity_general_sales():
                         st.markdown(f"**提示词**：{st.session_state.logo_prompt}")
                         
                         # 直接提供应用Logo的按钮
-                        if st.button("直接应用此Logo到设计", key="apply_auto_logo"):
+                        if st.button("应用Logo到设计", key="apply_ai_logo"):
                             with st.spinner("正在应用Logo到设计..."):
                                 try:
                                     # 获取当前图像
