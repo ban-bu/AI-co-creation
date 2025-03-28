@@ -1290,7 +1290,7 @@ def show_high_complexity_general_sales():
                             st.write(f"- {info}")
             
             # 添加清空设计按钮
-            if st.button("🗑️ 清除所有设计", key="clear_designs"):
+            if st.button("🗑️ Clear all designs", key="clear_designs"):
                 # 清空所有设计相关的状态变量
                 st.session_state.generated_design = None
                 st.session_state.applied_text = None
@@ -2052,15 +2052,15 @@ def show_high_complexity_general_sales():
                         # 显示Logo
                         preview_width = 200
                         preview_height = int(preview_width * st.session_state.generated_logo.height / st.session_state.generated_logo.width)
-                        st.image(st.session_state.generated_logo, caption="AI自动生成的Logo", width=preview_width)
+                        st.image(st.session_state.generated_logo, caption="AI generated Logo", width=preview_width)
                     
                     with logo_auto_col2:
-                        st.success("已根据AI建议自动生成Logo")
-                        st.markdown(f"**提示词**：{st.session_state.logo_prompt}")
+                        st.success("Logo generated automatically based on AI suggestions")
+                        st.markdown(f"**Prompt**：{st.session_state.logo_prompt}")
                         
                         # 直接提供应用Logo的按钮
-                        if st.button("直接应用此Logo到设计", key="apply_auto_logo"):
-                            with st.spinner("正在应用Logo到设计..."):
+                        if st.button("Apply this Logo to design directly", key="apply_auto_logo"):
+                            with st.spinner("Applying Logo to design..."):
                                 try:
                                     # 获取当前图像
                                     if st.session_state.final_design is not None:
@@ -2143,7 +2143,7 @@ def show_high_complexity_general_sales():
                     # if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
                     #    st.info("您可以修改提示词重新生成Logo")
                     
-                    if st.button("生成Logo", key="generate_logo"):
+                    if st.button("Generate Logo", key="generate_logo"):
                         if not logo_prompt:
                             st.warning("Please enter a Logo description")
                         else:
