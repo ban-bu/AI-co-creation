@@ -1290,7 +1290,7 @@ def show_high_complexity_general_sales():
                             st.write(f"- {info}")
             
             # 添加清空设计按钮
-            if st.button("🗑️ Clear all designs", key="clear_designs"):
+            if st.button("🗑️ 清除所有设计", key="clear_designs"):
                 # 清空所有设计相关的状态变量
                 st.session_state.generated_design = None
                 st.session_state.applied_text = None
@@ -1309,22 +1309,32 @@ def show_high_complexity_general_sales():
                 
                 # 重新应用默认颜色和纹理
                 if st.session_state.original_base_image is not None:
+                    # 使用原始白色T恤图像
+                    original_image = st.session_state.original_base_image.copy()
+                    
                     # 应用默认颜色和纹理
                     new_colored_image = change_shirt_color(
-                        st.session_state.original_base_image, 
+                        original_image, 
                         "#FFFFFF",  # 白色
                         apply_texture=True, 
                         fabric_type="Cotton"  # 默认棉质
                     )
+                    
+                    # 更新所有相关图像
                     st.session_state.base_image = new_colored_image
                     st.session_state.final_design = new_colored_image.copy()
                     
                     # 重置当前图像为带选择框的基础图像
-                    temp_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                    temp_image, current_pos = draw_selection_box(new_colored_image)
                     st.session_state.current_image = temp_image
+                    st.session_state.current_box_position = current_pos
                     
-                    print("Have reset the design to the default white cotton t-shirt")
+                    print("已重置设计为默认白色棉质T恤")
+                else:
+                    print("无法重置设计：原始图像不存在")
                 
+                # 强制刷新界面
+                st.success("已清除所有设计并恢复原始T恤")
                 st.rerun()
             
             # 下载和确认按钮
