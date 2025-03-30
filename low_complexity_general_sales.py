@@ -343,11 +343,8 @@ def show_low_complexity_general_sales():
     <h5 style="color:#2196F3">2. Text Customization</h5>
     <p>Add personalized text with customizable font styles, sizes, colors, and special effects like shadows, outlines, or gradients to create eye-catching designs.</p>
     
-    <h5 style="color:#2196F3">3. Logo Integration</h5>
-    <p>Enhance your design by uploading your own logo or selecting from our preset collection, with options to adjust size, position, and transparency.</p>
-    
-    <h5 style="color:#2196F3">4. Design Positioning</h5>
-    <p>Fine-tune the placement of your text and logo elements using intuitive positioning controls and preset alignment options for perfect composition.</p>
+    <h5 style="color:#2196F3">3. Design Positioning</h5>
+    <p>Fine-tune the placement of your text elements using intuitive positioning controls and preset alignment options for perfect composition.</p>
     </div>
     
     <p style="margin-top:15px; color:#666">
@@ -1862,7 +1859,7 @@ def show_low_complexity_general_sales():
         st.session_state.generated_design = None
         st.session_state.final_design = None
         st.session_state.applied_text = None
-        st.session_state.applied_logo = None
+        # 移除 applied_logo 的引用
         # Only change page state, retain user info and experiment group
         st.session_state.page = "welcome"
         st.rerun() 
