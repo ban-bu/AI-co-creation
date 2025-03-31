@@ -1883,14 +1883,40 @@ def show_high_complexity_general_sales():
     
     # Return to main interface button - modified here
     if st.button("Back to main page"):
-        # Clear all design-related states
-        st.session_state.base_image = None
-        st.session_state.current_image = None
-        st.session_state.current_box_position = None
-        st.session_state.generated_design = None
-        st.session_state.final_design = None
-        st.session_state.applied_text = None
-        st.session_state.applied_logo = None
-        # Only change page state, retain user info and experiment group
+        # 清空所有设计相关的状态
+        keys_to_clear = [
+            # 基本图像状态
+            'base_image', 'current_image', 'current_box_position', 
+            'original_base_image', 'final_design',
+            
+            # 颜色和面料相关
+            'shirt_color_hex', 'current_applied_color', 'fabric_type',
+            'current_applied_fabric', 'ai_suggested_colors', 'ai_suggested_fabrics',
+            
+            # AI建议相关
+            'ai_suggestions', 'ai_suggested_texts', 'ai_suggested_logos',
+            
+            # 文字相关
+            'applied_text', 'current_text_info', 'ai_text_suggestion',
+            'temp_text_selection', 'text_position', 'text_size_info',
+            
+            # Logo相关
+            'applied_logo', 'generated_logo', 'logo_auto_generated',
+            'show_generated_logo', 'logo_prompt', 'selected_preset_logo',
+            
+            # 调试信息
+            'font_debug_info', 'tshirt_size', 'design_area',
+            'loaded_font_path', 'using_fallback_text'
+        ]
+        
+        # 循环清除所有状态
+        for key in keys_to_clear:
+            if key in st.session_state:
+                del st.session_state[key]
+        
+        # 保留用户信息和实验组，但清除当前页面状态
         st.session_state.page = "welcome"
-        st.rerun() 
+        
+        # 添加成功提示
+        st.success("所有设计已清除，正在返回主页...")
+        st.rerun()
