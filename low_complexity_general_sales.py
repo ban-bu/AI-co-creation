@@ -798,8 +798,9 @@ def show_low_complexity_general_sales():
                                         st.session_state.text_position = (text_x, text_y)
                                         st.session_state.text_size_info = {
                                             "font_size": render_size,
-                                            "text_width": text_width,
-                                            "text_height": text_height
+                                            "text_width": original_text_width,
+                                            "text_height": original_text_height,
+                                            "scale_factor": scale_factor
                                         }
                                         
                                         # 应用成功
@@ -854,8 +855,8 @@ def show_low_complexity_general_sales():
                                     Text applied to design successfully!
                                     Font: {text_info["font"]}
                                     Size: {text_info["size"]}px
-                                    Actual width: {text_width}px
-                                    Actual height: {text_height}px
+                                    Actual width: {original_text_width}px
+                                    Actual height: {original_text_height}px
                                     Position: ({text_x}, {text_y})
                                     T-shirt size: {img_width} x {img_height}
                                     Rendering method: High-definition rendering
@@ -1525,8 +1526,9 @@ def show_low_complexity_general_sales():
                                 st.session_state.text_position = (text_x, text_y)
                                 st.session_state.text_size_info = {
                                     "font_size": render_size,
-                                    "text_width": text_width,
-                                    "text_height": text_height
+                                    "text_width": original_text_width,
+                                    "text_height": original_text_height,
+                                    "scale_factor": scale_factor
                                 }
                                 
                                 # 应用成功
@@ -1553,7 +1555,17 @@ def show_low_complexity_general_sales():
                                 st.session_state.font_debug_info = font_debug_info
                                 
                                 # 显示成功消息
-                                st.success("Text applied to design successfully!")
+                                success_msg = f"""
+                                Text applied to design successfully!
+                                Font: {font_family}
+                                Size: {render_size}px
+                                Actual width: {original_text_width}px
+                                Actual height: {original_text_height}px
+                                Position: ({text_x}, {text_y})
+                                T-shirt size: {img_width} x {img_height}
+                                Rendering method: High-definition rendering
+                                """
+                                st.success(success_msg)
                                 st.rerun()
                             else:
                                 st.error("Failed to load any font. Cannot apply text.")
