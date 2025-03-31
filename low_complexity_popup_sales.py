@@ -30,6 +30,9 @@ BASE_URL = "https://api.deepbricks.ai/v1/"
 GPT4O_MINI_API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
 GPT4O_MINI_BASE_URL = "https://api.deepbricks.ai/v1/"
 
+# 从app.py导入SVG转换函数
+from app import convert_svg_to_png
+
 def get_ai_design_suggestions(user_preferences=None):
     """Get design suggestions from GPT-4o-mini"""
     client = OpenAI(api_key=GPT4O_MINI_API_KEY, base_url=GPT4O_MINI_BASE_URL)
@@ -157,40 +160,8 @@ def generate_vector_image(prompt):
             if image_resp.status_code == 200:
                 content_type = image_resp.headers.get("Content-Type", "")
                 if "svg" in content_type.lower():
-                    # 判断SVG处理库是否可用
-                    if CAIROSVG_AVAILABLE:
-                        try:
-                            png_data = cairosvg.svg2png(bytestring=image_resp.content)
-                            return Image.open(BytesIO(png_data)).convert("RGBA")
-                        except Exception as conv_err:
-                            st.error(f"Error converting SVG to PNG with cairosvg: {conv_err}")
-                            # 尝试使用备选方案
-                            if SVGLIB_AVAILABLE:
-                                try:
-                                    svg_data = BytesIO(image_resp.content)
-                                    drawing = svg2rlg(svg_data)
-                                    png_data = BytesIO()
-                                    renderPM.drawToFile(drawing, png_data, fmt="PNG")
-                                    png_data.seek(0)
-                                    return Image.open(png_data).convert("RGBA")
-                                except Exception as svg_err:
-                                    st.error(f"Error converting SVG to PNG with svglib: {svg_err}")
-                            return None
-                    elif SVGLIB_AVAILABLE:
-                        # 使用svglib作为备选
-                        try:
-                            svg_data = BytesIO(image_resp.content)
-                            drawing = svg2rlg(svg_data)
-                            png_data = BytesIO()
-                            renderPM.drawToFile(drawing, png_data, fmt="PNG")
-                            png_data.seek(0)
-                            return Image.open(png_data).convert("RGBA")
-                        except Exception as svg_err:
-                            st.error(f"Error converting SVG to PNG with svglib: {svg_err}")
-                            return None
-                    else:
-                        st.error("can not handle SVG format, SVG processing library not installed")
-                        return None
+                    # 使用集中的SVG处理函数
+                    return convert_svg_to_png(image_resp.content)
                 else:
                     return Image.open(BytesIO(image_resp.content)).convert("RGBA")
             else:

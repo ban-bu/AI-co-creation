@@ -6,6 +6,9 @@ import cairosvg
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
 
+# 从app.py导入SVG转换函数
+from app import convert_svg_to_png
+
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
 BASE_URL = "https://api.deepbricks.ai/v1/"
@@ -32,12 +35,8 @@ def generate_vector_image(prompt):
             if image_resp.status_code == 200:
                 content_type = image_resp.headers.get("Content-Type", "")
                 if "svg" in content_type.lower():
-                    try:
-                        png_data = cairosvg.svg2png(bytestring=image_resp.content)
-                        return Image.open(BytesIO(png_data)).convert("RGBA")
-                    except Exception as conv_err:
-                        st.error(f"Error converting SVG to PNG: {conv_err}")
-                        return None
+                    # 使用集中的SVG处理函数
+                    return convert_svg_to_png(image_resp.content)
                 else:
                     return Image.open(BytesIO(image_resp.content)).convert("RGBA")
             else:
