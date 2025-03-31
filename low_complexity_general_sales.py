@@ -45,14 +45,15 @@ def get_ai_design_suggestions(user_preferences=None):
     prompt = f"""
     Provide T-shirt design elements for "{user_preferences}" style:
 
-    1. Colors: 3 suitable colors with hex codes
-       Format: Color name (#HEXCODE)
-       
-    2. Text: 2 suitable short phrases
-       Format: "Text content"
-       
-    Keep it minimal - just color names with hex codes and text phrases in quotes.
-    No explanations needed.
+    1. Colors (3 only):
+    Format exactly like this: Color name (#HEXCODE)
+    Example: Blue (#0000FF)
+
+    2. Text (2 only):
+    Format exactly like this: "Text phrase"
+    Example: "Just Do It"
+
+    IMPORTANT: Only provide the colors and text phrases. No explanations, no numbering, no titles, no extra descriptions.
     """
     
     try:
@@ -60,7 +61,7 @@ def get_ai_design_suggestions(user_preferences=None):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a T-shirt design assistant. Provide only color names with hex codes and text suggestions in quotes. No explanations or additional text. Format colors as 'Color name (#HEXCODE)' and texts as '\"Text phrase\"' each on a new line."},
+                {"role": "system", "content": "You are a minimal T-shirt design assistant. Reply with ONLY color names with hex codes and text suggestions in quotes. FORMAT MUST BE: Color name (#HEXCODE) for colors and \"Text phrase\" for text. DO NOT add any other text, explanations, numbering, titles or formatting."},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -69,12 +70,13 @@ def get_ai_design_suggestions(user_preferences=None):
         if response.choices and len(response.choices) > 0:
             suggestion_text = response.choices[0].message.content
             
-            # 尝试解析颜色代码
+            # 简化处理逻辑，直接解析原始文本
             try:
-                # 提取颜色代码的简单方法
+                # 存储颜色和文本建议
                 color_matches = {}
+                text_matches = []
                 
-                # 查找形如 "颜色名 (#XXXXXX)" 的模式
+                # 解析颜色 - 查找形如 "Color name (#XXXXXX)" 的模式
                 color_pattern = r'([^\s\(\)]+)\s*\(#([0-9A-Fa-f]{6})\)'
                 matches = re.findall(color_pattern, suggestion_text)
                 
@@ -85,49 +87,29 @@ def get_ai_design_suggestions(user_preferences=None):
                 if color_matches:
                     st.session_state.ai_suggested_colors = color_matches
                     
-                # 尝试提取推荐文字
+                # 解析文本建议 - 寻找引号包围的文本
                 text_pattern = r'[""]([^""]+)[""]'
                 text_matches = re.findall(text_pattern, suggestion_text)
                 
-                # 保存推荐文字到会话状态
+                # 如果没找到，尝试普通引号
+                if not text_matches:
+                    text_pattern2 = r'"([^"]+)"'
+                    text_matches = re.findall(text_pattern2, suggestion_text)
+                
+                # 保存文本建议
                 if text_matches:
                     st.session_state.ai_suggested_texts = text_matches
                 else:
-                    # 尝试使用另一种模式匹配
-                    text_pattern2 = r'"([^"]+)"'
-                    text_matches = re.findall(text_pattern2, suggestion_text)
-                    if text_matches:
-                        st.session_state.ai_suggested_texts = text_matches
-                    else:
-                        st.session_state.ai_suggested_texts = []
-                        
+                    st.session_state.ai_suggested_texts = []
+                
             except Exception as e:
                 print(f"解析过程出错: {e}")
                 st.session_state.ai_suggested_texts = []
-                
-            # 使用更好的排版处理文本
-            # 替换标题格式
-            formatted_text = suggestion_text
-            # 处理序号段落
-            formatted_text = re.sub(r'(\d\. .*?)(?=\n\d\. |\n*$)', r'<div class="suggestion-section">\1</div>', formatted_text)
-            # 处理子项目符号
-            formatted_text = re.sub(r'- (.*?)(?=\n- |\n[^-]|\n*$)', r'<div class="suggestion-item">• \1</div>', formatted_text)
-            # 强调颜色名称和代码
-            formatted_text = re.sub(r'([^\s\(\)]+)\s*\(#([0-9A-Fa-f]{6})\)', r'<span class="color-name">\1</span> <span class="color-code">(#\2)</span>', formatted_text)
             
-            # 不再使用JavaScript回调，而是简单地加粗文本
-            formatted_text = re.sub(r'[""]([^""]+)[""]', r'"<strong>\1</strong>"', formatted_text)
-            formatted_text = re.sub(r'"([^"]+)"', r'"<strong>\1</strong>"', formatted_text)
-            
-            suggestion_with_style = f"""
-            <div class="suggestion-container">
-            {formatted_text}
-            </div>
-            """
-            
-            return suggestion_with_style
+            # 返回原始文本，不做任何HTML格式化
+            return suggestion_text
         else:
-            return "can not get AI suggestions, please try again later."
+            return "Can not get AI suggestions, please try again later."
     except Exception as e:
         return f"Error getting AI suggestions: {str(e)}"
 
@@ -1007,20 +989,25 @@ def show_low_complexity_general_sales():
                 # 简化建议显示样式
                 st.markdown("""
                 <style>
-                .simple-suggestion {
-                    background-color: #f8f9fa;
-                    padding: 15px;
-                    margin: 10px 0;
-                    border-radius: 5px;
+                .ai-suggestion-header {
+                    font-weight: 600;
+                    margin-bottom: 8px;
+                    padding: 5px 10px;
+                    background-color: #e9f7fe;
+                    border-left: 3px solid #1e88e5;
+                    border-radius: 3px;
                 }
                 .color-item {
-                    margin-bottom: 8px;
                     display: flex;
                     align-items: center;
+                    margin-bottom: 10px;
+                    padding: 8px;
+                    border-radius: 5px;
+                    background-color: #f8f9fa;
                 }
                 .color-box {
-                    width: 20px;
-                    height: 20px;
+                    width: 30px;
+                    height: 30px;
                     margin-right: 10px;
                     border: 1px solid #ddd;
                     border-radius: 3px;
@@ -1028,98 +1015,59 @@ def show_low_complexity_general_sales():
                 .text-item {
                     margin-bottom: 8px;
                     cursor: pointer;
-                    padding: 5px;
+                    padding: 10px;
+                    background-color: #f8f9fa;
+                    border-radius: 5px;
+                    font-weight: 500;
                 }
                 .text-item:hover {
-                    background-color: #f0f0f0;
+                    background-color: #e9ecef;
                 }
                 </style>
                 """, unsafe_allow_html=True)
                 
-                # 解析并显示AI建议内容
-                suggestion_lines = st.session_state.ai_suggestions.strip().split('\n')
-                
                 # 创建容器显示简化内容
                 with st.container():
                     # 颜色部分处理
-                    st.markdown("#### Color Options:", unsafe_allow_html=True)
-                    color_html = "<div class='simple-suggestion'>"
+                    st.markdown("<div class='ai-suggestion-header'>🤖 AI Recommended Colors</div>", unsafe_allow_html=True)
+                    st.markdown("*These colors are suggested by AI based on your style preferences*")
                     
-                    for line in suggestion_lines:
-                        # 查找颜色格式: "Color name (#HEXCODE)"
-                        if '(#' in line and ')' in line:
-                            try:
-                                color_name = line.split('(#')[0].strip()
-                                hex_code = '#' + line.split('(#')[1].split(')')[0].strip()
-                                # 添加颜色块和名称
-                                color_html += f"""
-                                <div class='color-item'>
-                                    <div class='color-box' style='background-color: {hex_code};'></div>
-                                    <span>{color_name} ({hex_code})</span>
-                                </div>
-                                """
-                                # 自动保存到AI建议颜色
-                                if 'ai_suggested_colors' not in st.session_state:
-                                    st.session_state.ai_suggested_colors = {}
-                                st.session_state.ai_suggested_colors[color_name] = hex_code
-                            except:
-                                pass
-                    
-                    color_html += "</div>"
-                    st.markdown(color_html, unsafe_allow_html=True)
+                    # 直接使用st.session_state.ai_suggested_colors
+                    if 'ai_suggested_colors' in st.session_state and st.session_state.ai_suggested_colors:
+                        for color_name, hex_code in st.session_state.ai_suggested_colors.items():
+                            col1, col2, col3 = st.columns([1, 4, 3])
+                            with col1:
+                                st.markdown(f"""
+                                <div class="color-box" style="background-color: {hex_code};"></div>
+                                """, unsafe_allow_html=True)
+                            with col2:
+                                st.write(f"{color_name}")
+                            with col3:
+                                if st.button(f"Try Color", key=f"ai_color_{hex_code}"):
+                                    st.session_state.shirt_color_hex = hex_code
+                                    st.rerun()
+                    else:
+                        st.info("No color suggestions available")
                     
                     # 文本部分处理
-                    st.markdown("#### Text Options:", unsafe_allow_html=True)
-                    text_html = "<div class='simple-suggestion'>"
+                    st.markdown("<div class='ai-suggestion-header'>🤖 AI Recommended Texts</div>", unsafe_allow_html=True)
+                    st.markdown("*Click 'Use' to apply these AI-suggested text phrases to your design*")
                     
-                    for line in suggestion_lines:
-                        # 查找引号包围的文本
-                        import re
-                        matches = re.findall(r'"([^"]*)"', line)
-                        for match in matches:
-                            if match.strip():
-                                # 为每个文本添加点击功能
-                                text_id = f"text_{hash(match)}"
-                                text_html += f"""
-                                <div class='text-item' id='{text_id}' onclick="
-                                    const value = this.innerText.trim();
-                                    // 查找并更新文本输入框
-                                    const inputs = parent.document.querySelectorAll('input[type=text]');
-                                    for (let input of inputs) {{
-                                        if (input.placeholder === 'Enter or copy AI recommended text') {{
-                                            input.value = value;
-                                            input.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                                            break;
-                                        }}
-                                    }}
-                                ">{match}</div>
-                                """
-            
-                    text_html += "</div>"
-                    st.markdown(text_html, unsafe_allow_html=True)
-                    
-                    # 添加JavaScript以支持点击文本
-                    st.markdown("""
-                    <script>
-                        // 支持文本点击选择功能
-                        setTimeout(function() {
-                            const textItems = document.querySelectorAll('.text-item');
-                            textItems.forEach(item => {
-                                item.addEventListener('click', function() {
-                                    const value = this.innerText.trim();
-                                    // 尝试设置session状态 (通过自定义事件)
-                                    const event = new CustomEvent('streamlit:setComponentValue', {
-                                        detail: {
-                                            value: value,
-                                            dataType: 'text'
-                                        }
-                                    });
-                                    window.dispatchEvent(event);
-                                });
-                            });
-                        }, 500);
-                    </script>
-                    """, unsafe_allow_html=True)
+                    # 直接使用st.session_state.ai_suggested_texts
+                    if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
+                        for i, text in enumerate(st.session_state.ai_suggested_texts):
+                            if text.strip():
+                                col1, col2 = st.columns([5, 1])
+                                with col1:
+                                    st.markdown(f"""
+                                    <div class="text-item">{text}</div>
+                                    """, unsafe_allow_html=True)
+                                with col2:
+                                    if st.button("Use", key=f"use_text_{i}"):
+                                        st.session_state.temp_text_selection = text
+                                        st.rerun()
+                    else:
+                        st.info("No text suggestions available")
             else:
                 # 显示欢迎信息
                 st.markdown("""
@@ -1136,24 +1084,27 @@ def show_low_complexity_general_sales():
         
         # 颜色与面料部分 - 独立出来，确保始终显示
         with st.expander("🎨 Color Selection", expanded=True):
-            # 颜色选择部分
-            if 'ai_suggested_colors' not in st.session_state:
-                # 初始提供一些默认颜色选项
-                st.session_state.ai_suggested_colors = {
-                    "White": "#FFFFFF", 
-                    "Black": "#000000", 
-                    "Navy Blue": "#003366", 
-                    "Light Gray": "#CCCCCC", 
-                    "Light Blue": "#ADD8E6"
-                }
-            
+            # 颜色选择部分 - 使用固定预设颜色，不与AI建议联动
             st.markdown("##### Select Color")
             
-            # 创建颜色选择列表 - 动态创建
-            colors = st.session_state.ai_suggested_colors
-            color_cols = st.columns(min(3, len(colors)))
+            # 创建固定的预设颜色选项
+            preset_colors = {
+                "White": "#FFFFFF", 
+                "Black": "#000000", 
+                "Navy Blue": "#003366", 
+                "Red": "#FF0000",
+                "Green": "#008000",
+                "Blue": "#0000FF",
+                "Yellow": "#FFFF00",
+                "Purple": "#800080",
+                "Light Gray": "#CCCCCC", 
+                "Light Blue": "#ADD8E6"
+            }
             
-            for i, (color_name, color_hex) in enumerate(colors.items()):
+            # 显示预设颜色选择列表
+            color_cols = st.columns(min(3, len(preset_colors)))
+            
+            for i, (color_name, color_hex) in enumerate(preset_colors.items()):
                 with color_cols[i % 3]:
                     # 显示颜色预览
                     st.markdown(
@@ -1173,7 +1124,7 @@ def show_low_complexity_general_sales():
                         """, 
                         unsafe_allow_html=True
                     )
-                    if st.button(f"Apply {color_name}", key=f"apply_{i}"):
+                    if st.button(f"Apply {color_name}", key=f"preset_{i}"):
                         st.session_state.shirt_color_hex = color_hex
                         st.rerun()
             
