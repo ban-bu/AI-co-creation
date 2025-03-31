@@ -78,16 +78,16 @@ def get_ai_design_suggestions(user_preferences=None):
                 
                 # 解析颜色 - 查找形如 "Color name (#XXXXXX)" 的模式
                 color_pattern = r'([^\s\(\)]+)\s*\(#([0-9A-Fa-f]{6})\)'
-                matches = re.findall(color_pattern, suggestion_text)
+                color_matches = re.findall(color_pattern, suggestion_text)
                 
-                if matches:
-                    color_matches = {name.strip(): f"#{code}" for name, code in matches}
-                    
-                # 保存到会话状态
+                # 格式化颜色结果并保存到会话状态
                 if color_matches:
-                    st.session_state.ai_suggested_colors = color_matches
-                    
-                # 解析文本建议 - 寻找引号包围的文本
+                    color_dict = {name.strip(): f"#{code}" for name, code in color_matches}
+                    st.session_state.ai_suggested_colors = color_dict
+                else:
+                    st.session_state.ai_suggested_colors = {}
+                
+                # 解析文本建议 - 先尝试查找智能引号包围的文本
                 text_pattern = r'[""]([^""]+)[""]'
                 text_matches = re.findall(text_pattern, suggestion_text)
                 
@@ -96,17 +96,38 @@ def get_ai_design_suggestions(user_preferences=None):
                     text_pattern2 = r'"([^"]+)"'
                     text_matches = re.findall(text_pattern2, suggestion_text)
                 
-                # 保存文本建议
-                    if text_matches:
-                        st.session_state.ai_suggested_texts = text_matches
-                    else:
-                        st.session_state.ai_suggested_texts = []
-                        
+                # 如果仍然没找到，尝试更宽松的匹配 - 寻找冒号后的内容或破折号后的内容
+                if not text_matches:
+                    # 尝试识别常见的文本模式，如"Text: Some phrase"或"Text - Some phrase"
+                    text_pattern3 = r'(?:Text|Phrase|Slogan|Quote|Saying)(?:\s*[:：-]\s*)[""]?([^"\r\n]+?)[""]?(?:\s*$|\s*[\.,;])'
+                    text_matches = re.findall(text_pattern3, suggestion_text, re.IGNORECASE | re.MULTILINE)
+                
+                # 最后，如果所有方法都失败，尝试按行拆分并找出看起来像文本建议的行
+                if not text_matches:
+                    lines = suggestion_text.split('\n')
+                    for line in lines:
+                        # 排除颜色行（通常包含#和十六进制代码）
+                        if '#' not in line and len(line.strip()) > 5 and not line.strip().startswith('Color'):
+                            # 清理行中可能的前缀，如"1. "，"- "，"* "等
+                            cleaned_line = re.sub(r'^\s*[\d\.\-\*]+\s*', '', line.strip())
+                            if cleaned_line:
+                                text_matches.append(cleaned_line)
+                
+                # 保存文本建议到会话状态
+                st.session_state.ai_suggested_texts = text_matches if text_matches else []
+                
+                # 打印调试信息
+                print(f"Parsed colors: {st.session_state.ai_suggested_colors}")
+                print(f"Parsed texts: {st.session_state.ai_suggested_texts}")
+                
             except Exception as e:
                 print(f"解析过程出错: {e}")
+                import traceback
+                print(traceback.format_exc())
+                st.session_state.ai_suggested_colors = {}
                 st.session_state.ai_suggested_texts = []
-                
-            # 返回原始文本，不做任何HTML格式化
+            
+            # 返回原始文本
             return suggestion_text
         else:
             return "Can not get AI suggestions, please try again later."
@@ -1026,6 +1047,10 @@ def show_low_complexity_general_sales():
                 </style>
                 """, unsafe_allow_html=True)
                 
+                # 显示原始AI响应，用于调试
+                if st.checkbox("Show raw AI response", value=False):
+                    st.code(st.session_state.ai_suggestions)
+                
                 # 创建容器显示简化内容
                 with st.container():
                     # 颜色部分处理
@@ -1053,8 +1078,15 @@ def show_low_complexity_general_sales():
                     st.markdown("<div class='ai-suggestion-header'>🤖 AI Recommended Texts</div>", unsafe_allow_html=True)
                     st.markdown("*Click 'Use' to apply these AI-suggested text phrases to your design*")
                     
+                    # 调试：显示会话状态中的文本建议
+                    if st.checkbox("Debug text suggestions", value=False):
+                        st.write("Session state AI suggested texts:", st.session_state.get('ai_suggested_texts', 'Not found'))
+                    
                     # 直接使用st.session_state.ai_suggested_texts
                     if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
+                        # 显示文本建议数量
+                        st.info(f"Found {len(st.session_state.ai_suggested_texts)} text suggestions")
+                        
                         for i, text in enumerate(st.session_state.ai_suggested_texts):
                             if text.strip():
                                 col1, col2 = st.columns([5, 1])
@@ -1067,7 +1099,13 @@ def show_low_complexity_general_sales():
                                         st.session_state.temp_text_selection = text
                                         st.rerun()
                     else:
-                        st.info("No text suggestions available")
+                        # 显示没有文本建议的原因
+                        if 'ai_suggested_texts' not in st.session_state:
+                            st.warning("No text suggestions available (session state key missing)")
+                        elif not st.session_state.ai_suggested_texts:
+                            st.warning("No text suggestions available (empty list)")
+                        else:
+                            st.info("No text suggestions available")
             else:
                 # 显示欢迎信息
                 st.markdown("""
