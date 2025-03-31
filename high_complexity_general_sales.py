@@ -35,34 +35,49 @@ GPT4O_MINI_BASE_URL = "https://api.deepbricks.ai/v1/"
 # 从svg_utils导入SVG转换函数
 from svg_utils import convert_svg_to_png
 
-def get_ai_design_suggestions(user_preferences=None):
-    """Get design suggestions from GPT-4o-mini"""
+def get_ai_design_suggestions(user_preferences=None, age_group=None, gender=None, interests=None, occasion=None):
+    """Get design suggestions from GPT-4o-mini with more personalized features"""
     client = OpenAI(api_key=GPT4O_MINI_API_KEY, base_url=GPT4O_MINI_BASE_URL)
     
     # Default prompt if no user preferences provided
     if not user_preferences:
         user_preferences = "casual fashion t-shirt design"
     
+    # 构建更详细的个性化提示，包含年龄、性别、兴趣和场合
+    personal_info = ""
+    if age_group:
+        personal_info += f"Age group: {age_group}. "
+    if gender:
+        personal_info += f"Gender: {gender}. "
+    if interests:
+        personal_info += f"Interests: {interests}. "
+    if occasion:
+        personal_info += f"Occasion: {occasion}. "
+    
     # Construct the prompt
     prompt = f"""
-    As a T-shirt design consultant, please provide the following design suggestions for the "{user_preferences}" style:
+    As a T-shirt design consultant, please provide personalized design suggestions for a "{user_preferences}" style T-shirt.
+    
+    Personal characteristics of the customer: {personal_info}
+    
+    Please provide the following design suggestions:
 
     1. Color Suggestions: Recommend 3 suitable colors, including:
        - Color name and hex code (e.g., Blue (#0000FF))
-       - Why this color suits the style (2-3 sentences explanation)
+       - Why this color suits the style and personal characteristics (2-3 sentences explanation)
        
     2. Fabric Texture Suggestions: Recommend 2 suitable fabric types, including:
        - Specific fabric name (Cotton, Polyester, Cotton-Polyester Blend, Jersey, Linen, or Bamboo)
-       - Brief explanation on why this fabric suits the style
+       - Brief explanation on why this fabric suits the style and personal needs
        
-    3. Text Suggestions: Recommend 2 suitable texts/phrases:
+    3. Text Suggestions: Recommend 2 suitable texts/phrases that resonate with the personal characteristics:
        - Specific text content
        - Recommended font style
-       - Brief explanation of suitability
+       - Brief explanation of suitability for the individual
        
-    4. Logo Element Suggestions: Recommend 2 suitable design elements:
+    4. Logo Element Suggestions: Recommend 2 suitable design elements that reflect the personal style:
        - Element description
-       - How it complements the overall style
+       - How it complements the overall style and personal identity
        
     Please ensure to include hex codes for colors, keep content detailed but concise.
     For text suggestions, place each recommended phrase/text on a separate line and wrap them in quotes, e.g., "Just Do It".
@@ -1345,6 +1360,27 @@ def show_high_complexity_general_sales():
             # 添加用户偏好输入
             user_preference = st.text_input("Describe your preferred style or usage", placeholder="For example: sports style, business场合, casual daily, etc.")
             
+            # 添加更详细的个人特征输入
+            st.markdown("#### Personal characteristics")
+            col_per1, col_per2 = st.columns(2)
+            
+            with col_per1:
+                # 添加年龄段选择
+                age_options = ["", "Under 18", "18-24", "25-34", "35-44", "45-54", "55+"]
+                age_group = st.selectbox("Age group:", age_options)
+                
+                # 添加兴趣爱好输入
+                interests = st.text_input("Your interests or hobbies:", placeholder="E.g., sports, music, art, gaming...")
+            
+            with col_per2:
+                # 添加性别选择
+                gender_options = ["", "Male", "Female", "Non-binary", "Prefer not to say"]
+                gender = st.selectbox("Gender:", gender_options)
+                
+                # 添加场合选择
+                occasion_options = ["", "Daily casual", "Work/Business", "Sports/Exercise", "Party/Club", "Travel", "Special event"]
+                occasion = st.selectbox("Occasion for wearing:", occasion_options)
+            
             col_pref1, col_pref2 = st.columns([1, 1])
             with col_pref1:
                 # 添加预设风格选择
@@ -1357,7 +1393,13 @@ def show_high_complexity_general_sales():
                 # 添加获取建议按钮
                 if st.button("Get personalized AI suggestions", key="get_ai_advice"):
                     with st.spinner("Generating personalized design suggestions..."):
-                        suggestions = get_ai_design_suggestions(user_preference)
+                        suggestions = get_ai_design_suggestions(
+                            user_preferences=user_preference,
+                            age_group=age_group,
+                            gender=gender,
+                            interests=interests,
+                            occasion=occasion
+                        )
                         st.session_state.ai_suggestions = suggestions
             
             # 显示AI建议
