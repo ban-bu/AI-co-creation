@@ -1756,15 +1756,15 @@ def show_high_complexity_general_sales():
             if text_content:
                 # 构建样式字符串
                 style_str = ""
-                if "粗体" in text_style:
+                if "Bold" in text_style:
                     style_str += "font-weight: bold; "
-                if "斜体" in text_style:
+                if "Italic" in text_style:
                     style_str += "font-style: italic; "
-                if "下划线" in text_style:
+                if "Underline" in text_style:
                     style_str += "text-decoration: underline; "
-                if "阴影" in text_style:
+                if "Shadow" in text_style:
                     style_str += "text-shadow: 2px 2px 4px rgba(0,0,0,0.5); "
-                if "轮廓" in text_style:
+                if "Outline" in text_style:
                     style_str += "-webkit-text-stroke: 1px #000; "
                 
                 # 处理对齐
@@ -1879,36 +1879,52 @@ def show_high_complexity_general_sales():
                                     font = ImageFont.truetype(st.session_state.loaded_font_path, render_size)
                                     font_debug_info.append(f"Loaded font: {st.session_state.loaded_font_path}")
                                 else:
-                                    # 尝试加载系统字体
+                                    # 根据不同系统尝试不同的字体路径
+                                    if system == 'Windows':
+                                        # Windows系统字体路径
+                                        font_paths = [
+                                            "C:/Windows/Fonts/arial.ttf",
+                                            "C:/Windows/Fonts/ARIAL.TTF",
+                                            "C:/Windows/Fonts/calibri.ttf",
+                                            "C:/Windows/Fonts/simsun.ttc",  # 中文宋体
+                                            "C:/Windows/Fonts/msyh.ttc",    # 微软雅黑
+                                        ]
+                                    elif system == 'Darwin':  # macOS
+                                        font_paths = [
+                                            "/Library/Fonts/Arial.ttf",
+                                            "/System/Library/Fonts/Helvetica.ttc",
+                                            "/System/Library/Fonts/PingFang.ttc"  # 苹方字体
+                                        ]
+                                    else:  # Linux或其他
+                                        font_paths = [
+                                            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                                            "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+                                            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+                                        ]
+                                    
+                                    # 尝试加载每个字体
                                     font_loaded = False
-                                    if system == 'Linux':
-                                        try:
-                                            font_paths = [
-                                                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                                                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-                                                "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
-                                                "/usr/share/fonts/ubuntu/Ubuntu-R.ttf"
-                                            ]
-                                            for path in font_paths:
-                                                try:
-                                                    if os.path.exists(path):
-                                                        font = ImageFont.truetype(path, render_size)
-                                                        font_debug_info.append(f"Loaded Linux system font: {path}")
-                                                        font_loaded = True
-                                                        break
-                                                except Exception as font_err:
-                                                    font_debug_info.append(f"Failed to load Linux font {path}: {str(font_err)}")
-                                        except Exception as e:
-                                            font_debug_info.append(f"Error searching Linux fonts: {str(e)}")
+                                    for font_path in font_paths:
+                                        if os.path.exists(font_path):
+                                            try:
+                                                font = ImageFont.truetype(font_path, render_size)
+                                                st.session_state.loaded_font_path = font_path
+                                                font_debug_info.append(f"Successfully loaded font: {font_path}")
+                                                font_loaded = True
+                                                break
+                                            except Exception as font_err:
+                                                font_debug_info.append(f"Failed to load font {font_path}: {str(font_err)}")
                                     
                                     # 如果系统字体未加载，使用默认字体
                                     if not font_loaded:
                                         font = ImageFont.load_default()
-                                        font_debug_info.append("Using default font")
+                                        font_debug_info.append("Using PIL default font")
+                                        st.session_state.using_fallback_text = True
                             except Exception as font_err:
                                 font_debug_info.append(f"Font loading error: {str(font_err)}")
                                 font = ImageFont.load_default()
-                                
+                                st.session_state.using_fallback_text = True
+                            
                             # 记录最终使用的字体类型
                             font_debug_info.append(f"Final font type: {type(font).__name__}")
                             
@@ -2167,17 +2183,17 @@ def show_high_complexity_general_sales():
                             Text applied to design successfully!
                             Font: {font_family} ({type(font).__name__})
                             Size: {text_size}px
-                            Character width estimate: {avg_char_width:.1f}px per character
                             Actual width: {original_text_width}px
                             Actual height: {original_text_height}px
                             Position: ({text_x}, {text_y})
                             T-shirt size: {img_width} x {img_height}
-                            Lines: {len(lines)}
                             Rendering method: High-definition rendering (2x scale)
                             """
                             
                             st.success(success_msg)
-                            st.rerun()
+                            
+                            # 保存完整的字体加载和渲染信息
+                            st.session_state.font_debug_info = font_debug_info
                         except Exception as e:
                             st.error(f"Error applying text: {str(e)}")
                             import traceback
