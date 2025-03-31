@@ -551,6 +551,27 @@ def show_high_complexity_general_sales():
                 temp_logo = None
                 temp_logo_info = None
                 
+                # 保存文本图层和信息 (新增)
+                has_text = 'applied_text' in st.session_state and st.session_state.applied_text is not None
+                text_layer_backup = None
+                text_info_backup = None
+                
+                if has_text:
+                    print("检测到已应用文本，准备备份文本图层")
+                    try:
+                        # 保存文本信息
+                        text_info_backup = st.session_state.applied_text.copy() if isinstance(st.session_state.applied_text, dict) else None
+                        
+                        # 如果有text_layer，保存它的副本
+                        if 'text_layer' in st.session_state and st.session_state.text_layer is not None:
+                            try:
+                                text_layer_backup = st.session_state.text_layer.copy()
+                                print(f"成功备份文本图层")
+                            except Exception as e:
+                                print(f"备份文本图层时出错: {e}")
+                    except Exception as e:
+                        print(f"备份文本信息时出错: {e}")
+                
                 # 更详细地检查Logo状态并保存
                 if has_logo:
                     print("检测到已应用Logo，准备保存")
@@ -675,6 +696,42 @@ def show_high_complexity_general_sales():
                                 print("错误: 保存的Logo信息为空")
                         else:
                             print("无需重新应用Logo(未应用过)")
+                
+                # 如果有文本，直接使用备份的文本图层重新应用 (新增逻辑)
+                if has_text and text_layer_backup is not None and text_info_backup is not None:
+                    try:
+                        print("使用备份的文本图层重新应用文本...")
+                        
+                        # 获取当前图像
+                        new_design = st.session_state.final_design.copy()
+                        
+                        # 获取图像尺寸
+                        img_width, img_height = new_design.size
+                        
+                        # 获取原始文本位置
+                        text_x = text_info_backup.get("position", (img_width//2, img_height//3))[0]
+                        text_y = text_info_backup.get("position", (img_width//2, img_height//3))[1]
+                        
+                        # 直接应用备份的文本图层到新设计
+                        new_design.paste(text_layer_backup, (0, 0), text_layer_backup)
+                        print("成功应用备份的文本图层")
+                        
+                        # 更新设计和预览
+                        st.session_state.final_design = new_design
+                        st.session_state.current_image = new_design.copy()
+                        
+                        # 保存文本图层以便未来使用
+                        st.session_state.text_layer = text_layer_backup
+                        
+                        print("成功使用备份重新应用文字")
+                    except Exception as e:
+                        print(f"使用备份重新应用文字时出错: {e}")
+                        import traceback
+                        print(traceback.format_exc())
+                        
+                        # 备份方法失败，尝试使用原始方法重新渲染
+                        print("尝试使用原始渲染方法应用文字...")
+                        # 原始文本渲染继续进行
                 
                 # 修改颜色变更时重新应用文字的代码
                 if 'applied_text' in st.session_state:
@@ -803,6 +860,27 @@ def show_high_complexity_general_sales():
                                 original_text_width = max_width
                                 original_text_height = total_height
                                 font_debug_info.append(f"Original text dimensions: {original_text_width}x{original_text_height}px")
+                                
+                                # 添加文本宽度估算检查 - 防止文字变小
+                                # 估算每个字符的平均宽度
+                                avg_char_width = render_size * 0.7  # 大多数字体字符宽度约为字体大小的70%
+                                
+                                # 找到最长的一行
+                                longest_line = max(lines, key=len) if lines else text_info["text"]
+                                # 估算的最小宽度
+                                estimated_min_width = len(longest_line) * avg_char_width * 0.8  # 给予20%的容错空间
+                                
+                                # 如果计算出的宽度异常小（小于估算宽度的80%），使用估算宽度
+                                if original_text_width < estimated_min_width:
+                                    font_debug_info.append(f"Width calculation issue detected: calculated={original_text_width}px, estimated={estimated_min_width}px")
+                                    original_text_width = estimated_min_width
+                                    font_debug_info.append(f"Using estimated width: {original_text_width}px")
+                                
+                                # 如果宽度仍然过小，设置一个最小值
+                                min_absolute_width = render_size * 4  # 至少4个字符宽度
+                                if original_text_width < min_absolute_width:
+                                    font_debug_info.append(f"Width too small, using minimum width: {min_absolute_width}px")
+                                    original_text_width = min_absolute_width
                                 
                                 # 放大系数，使文字更清晰
                                 scale_factor = 2.0  # 增加到2倍以提高清晰度
@@ -950,8 +1028,15 @@ def show_high_complexity_general_sales():
                                     "scale_factor": scale_factor
                                 }
                                 
+                                # 保存文本图层的副本用于颜色变化时恢复
+                                try:
+                                    st.session_state.text_layer = text_layer.copy()
+                                    font_debug_info.append("Text layer backup saved for color change restoration")
+                                except Exception as e:
+                                    font_debug_info.append(f"Failed to save text layer backup: {str(e)}")
+                                
                                 # 应用成功
-                                font_debug_info.append("Text rendering applied successfully after color change")
+                                font_debug_info.append("Text rendering applied successfully")
                                 
                                 # 更新设计和预览
                                 st.session_state.final_design = new_design
@@ -1713,6 +1798,27 @@ def show_high_complexity_general_sales():
                                 original_text_height = total_height
                                 font_debug_info.append(f"Original text dimensions: {original_text_width}x{original_text_height}px")
                                 
+                                # 添加文本宽度估算检查 - 防止文字变小
+                                # 估算每个字符的平均宽度
+                                avg_char_width = render_size * 0.7  # 大多数字体字符宽度约为字体大小的70%
+                                
+                                # 找到最长的一行
+                                longest_line = max(lines, key=len) if lines else text_content
+                                # 估算的最小宽度
+                                estimated_min_width = len(longest_line) * avg_char_width * 0.8  # 给予20%的容错空间
+                                
+                                # 如果计算出的宽度异常小（小于估算宽度的80%），使用估算宽度
+                                if original_text_width < estimated_min_width:
+                                    font_debug_info.append(f"Width calculation issue detected: calculated={original_text_width}px, estimated={estimated_min_width}px")
+                                    original_text_width = estimated_min_width
+                                    font_debug_info.append(f"Using estimated width: {original_text_width}px")
+                                
+                                # 如果宽度仍然过小，设置一个最小值
+                                min_absolute_width = render_size * 4  # 至少4个字符宽度
+                                if original_text_width < min_absolute_width:
+                                    font_debug_info.append(f"Width too small, using minimum width: {min_absolute_width}px")
+                                    original_text_width = min_absolute_width
+                                
                                 # 放大系数，使文字更清晰
                                 scale_factor = 2.0  # 增加到2倍以提高清晰度
                                 
@@ -1741,10 +1847,13 @@ def show_high_complexity_general_sales():
                                 hr_text_width = max_width * 2
                                 hr_text_height = total_height * 2
                                 
+                                # 获取对齐方式并转换为小写
+                                alignment = text_info["alignment"].lower() if isinstance(text_info["alignment"], str) else "center"
+                                
                                 # 根据对齐方式计算X位置
-                                if alignment.lower() == "left":
+                                if alignment == "left":
                                     text_x = int(img_width * 0.2)
-                                elif alignment.lower() == "right":
+                                elif alignment == "right":
                                     text_x = int(img_width * 0.8 - original_text_width)
                                 else:  # 居中
                                     text_x = (img_width - original_text_width) // 2
@@ -1759,7 +1868,7 @@ def show_high_complexity_general_sales():
                                 font_debug_info.append(f"HR text position: ({hr_text_x}, {hr_text_y})")
                                 
                                 # 先应用特效 - 在高分辨率画布上
-                                if "Outline" in text_style:
+                                if "Outline" in text_info["style"]:
                                     # 增强轮廓效果
                                     outline_color = "black"
                                     outline_width = max(8, hr_font_size // 10)  # 加粗轮廓宽度
@@ -1773,11 +1882,11 @@ def show_high_complexity_general_sales():
                                         # 处理多行文本
                                         for i, line in enumerate(lines):
                                             line_y = hr_text_y + i * hr_line_height
-                                            if alignment.lower() == "center":
+                                            if alignment == "center":
                                                 line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                                 line_width = line_bbox[2] - line_bbox[0]
                                                 line_x = hr_text_x + (hr_text_width - line_width) // 2
-                                            elif alignment.lower() == "right":
+                                            elif alignment == "right":
                                                 line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                                 line_width = line_bbox[2] - line_bbox[0]
                                                 line_x = hr_text_x + (hr_text_width - line_width)
@@ -1787,7 +1896,7 @@ def show_high_complexity_general_sales():
                                             hr_draw.text((line_x + offset_x, line_y + offset_y), 
                                                       line, fill=outline_color, font=hr_font)
                                 
-                                if "Shadow" in text_style:
+                                if "Shadow" in text_info["style"]:
                                     # 增强阴影效果
                                     shadow_color = (0, 0, 0, 150)  # 半透明黑色
                                     shadow_offset = max(15, hr_font_size // 8)  # 增加阴影偏移距离
@@ -1795,11 +1904,11 @@ def show_high_complexity_general_sales():
                                     # 处理多行文本
                                     for i, line in enumerate(lines):
                                         line_y = hr_text_y + i * hr_line_height
-                                        if alignment.lower() == "center":
+                                        if alignment == "center":
                                             line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                             line_width = line_bbox[2] - line_bbox[0]
                                             line_x = hr_text_x + (hr_text_width - line_width) // 2
-                                        elif alignment.lower() == "right":
+                                        elif alignment == "right":
                                             line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                             line_width = line_bbox[2] - line_bbox[0]
                                             line_x = hr_text_x + (hr_text_width - line_width)
@@ -1822,11 +1931,11 @@ def show_high_complexity_general_sales():
                                 # 绘制主文字 - 在高分辨率画布上
                                 for i, line in enumerate(lines):
                                     line_y = hr_text_y + i * hr_line_height
-                                    if alignment.lower() == "center":
+                                    if alignment == "center":
                                         line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                         line_width = line_bbox[2] - line_bbox[0]
                                         line_x = hr_text_x + (hr_text_width - line_width) // 2
-                                    elif alignment.lower() == "right":
+                                    elif alignment == "right":
                                         line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                         line_width = line_bbox[2] - line_bbox[0]
                                         line_x = hr_text_x + (hr_text_width - line_width)
@@ -1855,6 +1964,13 @@ def show_high_complexity_general_sales():
                                     "text_height": original_text_height,
                                     "scale_factor": scale_factor
                                 }
+                                
+                                # 保存文本图层的副本用于颜色变化时恢复
+                                try:
+                                    st.session_state.text_layer = text_layer.copy()
+                                    font_debug_info.append("Text layer backup saved for color change restoration")
+                                except Exception as e:
+                                    font_debug_info.append(f"Failed to save text layer backup: {str(e)}")
                                 
                                 # 应用成功
                                 font_debug_info.append("Text rendering applied successfully")
