@@ -276,7 +276,38 @@ def apply_fabric_texture(image, fabric_type, intensity=0.5):
     intensity - 纹理强度，默认值调整为0.5
     """
     try:
-        return generate_fabric_texture(image, fabric_type, intensity)
+        # 确保输入图像为RGBA模式
+        if image.mode != "RGBA":
+            image = image.convert("RGBA")
+        
+        # 创建一个透明度掩码，只对非透明区域应用纹理
+        width, height = image.size
+        alpha_mask = Image.new("L", (width, height), 0)
+        
+        # 设置透明度掩码 - 只在非透明区域应用纹理
+        for y in range(height):
+            for x in range(width):
+                pixel = image.getpixel((x, y))
+                if len(pixel) == 4 and pixel[3] > 0:  # 非完全透明区域
+                    alpha_mask.putpixel((x, y), 255)
+        
+        # 生成纹理
+        textured_image = generate_fabric_texture(image, fabric_type, intensity)
+        
+        # 创建最终图像
+        final_image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        
+        # 使用alpha掩码组合原图与纹理图
+        for y in range(height):
+            for x in range(width):
+                orig_pixel = image.getpixel((x, y))
+                if orig_pixel[3] == 0:  # 完全透明区域保持不变
+                    final_image.putpixel((x, y), (0, 0, 0, 0))
+                else:  # 非透明区域使用纹理图像
+                    textured_pixel = textured_image.getpixel((x, y))
+                    final_image.putpixel((x, y), textured_pixel)
+        
+        return final_image
     except Exception as e:
         st.error(f"应用纹理时出错: {e}")
         return image  # 如果出错，返回原始图像

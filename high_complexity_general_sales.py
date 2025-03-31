@@ -625,8 +625,19 @@ def show_high_complexity_general_sales():
                             print(f"已调整Logo透明度为: {logo_opacity}%")
                         
                         # 粘贴Logo到新设计
-                        st.session_state.final_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
-                        print("Logo已粘贴到新设计")
+                        try:
+                            # 确保图像处于RGBA模式以支持透明度
+                            final_design_rgba = st.session_state.final_design.convert("RGBA")
+                            
+                            # 创建临时图像，用于粘贴logo
+                            temp_image = Image.new("RGBA", final_design_rgba.size, (0, 0, 0, 0))
+                            temp_image.paste(logo_resized, (logo_x, logo_y), logo_resized)
+                            
+                            # 使用alpha_composite合成图像
+                            final_design = Image.alpha_composite(final_design_rgba, temp_image)
+                            st.session_state.final_design = final_design
+                        except Exception as e:
+                            st.warning(f"Logo pasting failed: {e}")
                         
                         # 更新当前图像
                         st.session_state.current_image = st.session_state.final_design.copy()
@@ -1135,7 +1146,16 @@ def show_high_complexity_general_sales():
                         
                         # 粘贴Logo到设计
                         try:
-                            final_design = Image.alpha_composite(st.session_state.final_design.convert("RGBA"), logo_resized)
+                            # 确保图像处于RGBA模式以支持透明度
+                            final_design_rgba = st.session_state.final_design.convert("RGBA")
+                            
+                            # 创建临时图像，用于粘贴logo
+                            temp_image = Image.new("RGBA", final_design_rgba.size, (0, 0, 0, 0))
+                            temp_image.paste(logo_resized, (logo_x, logo_y), logo_resized)
+                            
+                            # 使用alpha_composite合成图像
+                            final_design = Image.alpha_composite(final_design_rgba, temp_image)
+                            st.session_state.final_design = final_design
                         except Exception as e:
                             st.warning(f"Logo pasting failed: {e}")
                         
