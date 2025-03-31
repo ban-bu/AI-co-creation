@@ -28,8 +28,8 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
         "Cotton-Polyester Blend": 0.5  # 混纺中等
     }.get(fabric_type, intensity)
     
-    # 使用调整后的强度
-    actual_intensity = fabric_intensity
+    # 使用更低的强度系数，确保不会完全覆盖底色
+    actual_intensity = fabric_intensity * 0.4  # 降低纹理强度
     
     # 检测T恤颜色的深浅
     # 取样20个随机点并计算平均亮度
@@ -62,25 +62,26 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
     
     # 根据T恤颜色调整纹理颜色
     # 深色T恤使用浅色纹理，浅色T恤使用深色纹理
+    # 大幅降低alpha通道值以减少对底色的覆盖
     if is_dark_shirt:
-        # 深色T恤的纹理颜色 - 使用浅色
+        # 深色T恤的纹理颜色 - 使用浅色，降低不透明度
         texture_colors = {
-            "Cotton": (220, 220, 220, int(120 * actual_intensity)),  # 浅灰白色
-            "Polyester": (230, 230, 230, int(100 * actual_intensity)),  # 更亮的浅灰色
-            "Linen": (235, 230, 220, int(130 * actual_intensity)),  # 米白色
-            "Jersey": (210, 210, 210, int(140 * actual_intensity)),  # 浅灰色
-            "Bamboo": (225, 225, 215, int(120 * actual_intensity)),  # 浅米色
-            "default": (220, 220, 220, int(110 * actual_intensity))   # 默认浅色
+            "Cotton": (220, 220, 220, int(60 * actual_intensity)),  # 降低alpha值
+            "Polyester": (230, 230, 230, int(50 * actual_intensity)),  # 降低alpha值
+            "Linen": (235, 230, 220, int(65 * actual_intensity)),  # 降低alpha值
+            "Jersey": (210, 210, 210, int(70 * actual_intensity)),  # 降低alpha值
+            "Bamboo": (225, 225, 215, int(60 * actual_intensity)),  # 降低alpha值
+            "default": (220, 220, 220, int(55 * actual_intensity))   # 降低alpha值
         }
     else:
-        # 浅色T恤的纹理颜色 - 使用深色
+        # 浅色T恤的纹理颜色 - 使用深色，降低不透明度
         texture_colors = {
-            "Cotton": (150, 150, 150, int(100 * actual_intensity)),  # 灰色
-            "Polyester": (140, 140, 140, int(80 * actual_intensity)),  # 深灰色
-            "Linen": (160, 155, 145, int(110 * actual_intensity)),  # 灰褐色
-            "Jersey": (140, 140, 140, int(120 * actual_intensity)),  # 深灰色
-            "Bamboo": (180, 180, 170, int(100 * actual_intensity)),  # 灰绿色
-            "default": (160, 160, 160, int(90 * actual_intensity))   # 默认灰色
+            "Cotton": (150, 150, 150, int(50 * actual_intensity)),  # 降低alpha值
+            "Polyester": (140, 140, 140, int(40 * actual_intensity)),  # 降低alpha值
+            "Linen": (160, 155, 145, int(55 * actual_intensity)),  # 降低alpha值
+            "Jersey": (140, 140, 140, int(60 * actual_intensity)),  # 降低alpha值
+            "Bamboo": (180, 180, 170, int(50 * actual_intensity)),  # 降低alpha值
+            "default": (160, 160, 160, int(45 * actual_intensity))   # 降低alpha值
         }
     
     # 获取当前面料的纹理颜色
@@ -227,57 +228,22 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
     # 为了更好的视觉效果，稍微模糊面料掩码以平滑过渡
     fabric_mask = fabric_mask.filter(ImageFilter.GaussianBlur(radius=1))
     
-    # 将第一层纹理应用到面料区域
-    result.paste(texture, (0, 0), fabric_mask)
+    # 修改纹理应用方式 - 使用混合模式而非直接替换
+    # 创建一个临时数组来存储原始图像颜色
+    original_data = np.array(result)
     
-    # 为深色T恤创建强调纹理
-    if is_dark_shirt:
-        # 创建增强对比度的纹理副本
-        enhanced_texture = texture.copy()
-        texture_data = enhanced_texture.getdata()
-        enhanced_data = []
-        
-        # 增强深色T恤的纹理亮度和对比度
-        for item in texture_data:
-            r, g, b, a = item
-            # 增加亮度
-            new_r = min(255, int(r * 1.3))
-            new_g = min(255, int(g * 1.3))
-            new_b = min(255, int(b * 1.3))
-            # 增加透明度
-            new_a = int(a * 1.2)
-            enhanced_data.append((new_r, new_g, new_b, new_a))
-        
-        enhanced_texture.putdata(enhanced_data)
-        
-        # 再次应用增强的纹理
-        result.paste(enhanced_texture, (0, 0), fabric_mask)
+    # 创建一个临时图像进行纹理应用
+    temp_result = result.copy()
+    temp_result.paste(texture, (0, 0), fabric_mask)
+    texture_data = np.array(temp_result)
     
-    # 创建纹理的暗部效果，增强立体感
-    shadow_texture = Image.new("RGBA", texture.size, (0, 0, 0, 0))
-    shadow_data = []
+    # 计算混合后的图像数据 - 保留大部分原始颜色
+    blend_factor = 0.8  # 保留80%的原始颜色，20%的纹理效果
+    final_image_data = (original_data.astype(float) * blend_factor + 
+                        texture_data.astype(float) * (1 - blend_factor)).astype(np.uint8)
     
-    # 调整纹理的暗部，减少透明度
-    texture_data = texture.getdata()
-    for item in texture_data:
-        r, g, b, a = item
-        # 降低亮度和透明度
-        shadow_data.append((r//2, g//2, b//2, a//3))
-    
-    shadow_texture.putdata(shadow_data)
-    
-    # 创建暗部的掩码 - 与面料掩码类似但强度较低
-    shadow_mask = Image.new("L", fabric_mask.size, 0)
-    shadow_mask_data = fabric_mask.getdata()
-    new_mask_data = []
-    
-    for item in shadow_mask_data:
-        new_mask_data.append(item // 2)  # 减少强度
-    
-    shadow_mask.putdata(new_mask_data)
-    
-    # 应用暗部纹理以增加深度
-    result.paste(shadow_texture, (0, 0), shadow_mask)
+    # 创建最终图像
+    result = Image.fromarray(final_image_data)
     
     # 确保边缘保持完全不变
     # 获取原始图像的边缘部分
