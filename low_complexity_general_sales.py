@@ -284,6 +284,7 @@ def get_preset_logos():
 
 # AI Customization Group design page
 def show_low_complexity_general_sales():
+    """主页面功能：显示低复杂度定制销售页面"""
     st.title("👕 AI Co-Creation Experiment Platform")
     st.markdown("### Low Task Complexity-General Sales - Create Your Unique T-shirt Design")
     
@@ -972,120 +973,143 @@ def show_low_complexity_general_sales():
                             
                             # 文本渲染逻辑
                             if font:
-                                # 处理文本换行 - 当文本太长时
-                                max_text_width = int(img_width * 0.7)  # 最大文本宽度为T恤宽度的70%
-                                lines = []
-                                words = text_content.split()
-                                current_line = words[0] if words else ""
-                                
-                                # 逐词检查并换行
-                                for word in words[1:]:
-                                    test_line = current_line + " " + word
-                                    # 检查添加这个词后的宽度
-                                    test_bbox = text_draw.textbbox((0, 0), test_line, font=font)
-                                    test_width = test_bbox[2] - test_bbox[0]
-                                    
-                                    if test_width <= max_text_width:
-                                        current_line = test_line
-                                    else:
-                                        lines.append(current_line)
-                                        current_line = word
-                                
-                                # 添加最后一行
-                                lines.append(current_line)
-                                
-                                # 计算总高度和最大宽度
-                                line_height = render_size * 1.2  # 行高略大于字体大小
-                                total_height = len(lines) * line_height
-                                max_width = 0
-                                
-                                for line in lines:
-                                    line_bbox = text_draw.textbbox((0, 0), line, font=font)
-                                    line_width = line_bbox[2] - line_bbox[0]
-                                    max_width = max(max_width, line_width)
-                                
-                                # 原始文本尺寸
-                                original_text_width = max_width
-                                original_text_height = total_height
-                                font_debug_info.append(f"Original text dimensions: {original_text_width}x{original_text_height}px")
-                                
-                                # 添加文本宽度估算检查 - 防止文字变小
-                                # 估算每个字符的平均宽度
-                                avg_char_width = render_size * 0.7  # 大多数字体字符宽度约为字体大小的70%
-                                
-                                # 找到最长的一行
-                                longest_line = max(lines, key=len) if lines else text_info["text"]
-                                # 估算的最小宽度
-                                estimated_min_width = len(longest_line) * avg_char_width * 0.8  # 给予20%的容错空间
-                                
-                                # 如果计算出的宽度异常小（小于估算宽度的80%），使用估算宽度
-                                if original_text_width < estimated_min_width:
-                                    font_debug_info.append(f"Width calculation issue detected: calculated={original_text_width}px, estimated={estimated_min_width}px")
-                                    original_text_width = estimated_min_width
-                                    font_debug_info.append(f"Using estimated width: {original_text_width}px")
-                                
-                                # 如果宽度仍然过小，设置一个最小值
-                                min_absolute_width = render_size * 4  # 至少4个字符宽度
-                                if original_text_width < min_absolute_width:
-                                    font_debug_info.append(f"Width too small, using minimum width: {min_absolute_width}px")
-                                    original_text_width = min_absolute_width
-                                
-                                # 放大系数，使文字更清晰
-                                scale_factor = 2.0  # 增加到2倍以提高清晰度
-                                
-                                # 创建高分辨率图层用于渲染文字
-                                hr_width = img_width * 2
-                                hr_height = img_height * 2
-                                hr_layer = Image.new('RGBA', (hr_width, hr_height), (0, 0, 0, 0))
-                                hr_draw = ImageDraw.Draw(hr_layer)
-                                
-                                # 尝试创建高分辨率字体
-                                hr_font = None
                                 try:
-                                    hr_font_size = render_size * 2
-                                    if st.session_state.loaded_font_path:
-                                        hr_font = ImageFont.truetype(st.session_state.loaded_font_path, hr_font_size)
-                                        font_debug_info.append(f"Created high-res font: {hr_font_size}px")
-                                except Exception as hr_font_err:
-                                    font_debug_info.append(f"Failed to create high-res font: {str(hr_font_err)}")
-                                
-                                if hr_font is None:
-                                    hr_font = font
-                                    font_debug_info.append("Using original font for high-res rendering")
-                                
-                                # 高分辨率尺寸
-                                hr_line_height = line_height * 2
-                                hr_text_width = max_width * 2
-                                hr_text_height = total_height * 2
-                                
-                                # 根据对齐方式计算X位置
-                                if alignment.lower() == "left":
-                                    text_x = int(img_width * 0.2)
-                                elif alignment.lower() == "right":
-                                    text_x = int(img_width * 0.8 - original_text_width)
-                                else:  # 居中
-                                    text_x = (img_width - original_text_width) // 2
-                                
-                                # 垂直位置 - 上移以更好地展示在T恤上
-                                text_y = int(img_height * 0.3 - original_text_height // 2)
-                                
-                                # 高分辨率位置
-                                hr_text_x = text_x * 2
-                                hr_text_y = text_y * 2
-                                
-                                font_debug_info.append(f"HR text position: ({hr_text_x}, {hr_text_y})")
-                                
-                                # 先应用特效 - 在高分辨率画布上
-                                if "Outline" in text_style:
-                                    # 增强轮廓效果
-                                    outline_color = "black"
-                                    outline_width = max(8, hr_font_size // 10)  # 加粗轮廓宽度
+                                    # 处理文本换行 - 当文本太长时
+                                    max_text_width = int(img_width * 0.7)  # 最大文本宽度为T恤宽度的70%
+                                    lines = []
+                                    words = text_content.split()
+                                    current_line = words[0] if words else ""
                                     
-                                    # 多方向轮廓，让描边更均匀
-                                    for angle in range(0, 360, 30):  # 每30度一个点，更平滑
-                                        rad = math.radians(angle)
-                                        offset_x = int(outline_width * math.cos(rad))
-                                        offset_y = int(outline_width * math.sin(rad))
+                                    # 逐词检查并换行
+                                    for word in words[1:]:
+                                        test_line = current_line + " " + word
+                                        # 检查添加这个词后的宽度
+                                        test_bbox = text_draw.textbbox((0, 0), test_line, font=font)
+                                        test_width = test_bbox[2] - test_bbox[0]
+                                        
+                                        if test_width <= max_text_width:
+                                            current_line = test_line
+                                        else:
+                                            lines.append(current_line)
+                                            current_line = word
+                                    
+                                    # 添加最后一行
+                                    lines.append(current_line)
+                                    
+                                    # 计算总高度和最大宽度
+                                    line_height = render_size * 1.2  # 行高略大于字体大小
+                                    total_height = len(lines) * line_height
+                                    max_width = 0
+                                    
+                                    for line in lines:
+                                        line_bbox = text_draw.textbbox((0, 0), line, font=font)
+                                        line_width = line_bbox[2] - line_bbox[0]
+                                        max_width = max(max_width, line_width)
+                                    
+                                    # 原始文本尺寸
+                                    original_text_width = max_width
+                                    original_text_height = total_height
+                                    font_debug_info.append(f"Original text dimensions: {original_text_width}x{original_text_height}px")
+                                    
+                                    # 添加文本宽度估算检查 - 防止文字变小
+                                    # 估算每个字符的平均宽度
+                                    avg_char_width = render_size * 0.7  # 大多数字体字符宽度约为字体大小的70%
+                                    
+                                    # 找到最长的一行
+                                    longest_line = max(lines, key=len) if lines else text_content
+                                    # 估算的最小宽度
+                                    estimated_min_width = len(longest_line) * avg_char_width * 0.8  # 给予20%的容错空间
+                                    
+                                    # 如果计算出的宽度异常小（小于估算宽度的80%），使用估算宽度
+                                    if original_text_width < estimated_min_width:
+                                        font_debug_info.append(f"Width calculation issue detected: calculated={original_text_width}px, estimated={estimated_min_width}px")
+                                        original_text_width = estimated_min_width
+                                        font_debug_info.append(f"Using estimated width: {original_text_width}px")
+                                    
+                                    # 如果宽度仍然过小，设置一个最小值
+                                    min_absolute_width = render_size * 4  # 至少4个字符宽度
+                                    if original_text_width < min_absolute_width:
+                                        font_debug_info.append(f"Width too small, using minimum width: {min_absolute_width}px")
+                                        original_text_width = min_absolute_width
+                                    
+                                    # 放大系数，使文字更清晰
+                                    scale_factor = 2.0  # 增加到2倍以提高清晰度
+                                    
+                                    # 创建高分辨率图层用于渲染文字
+                                    hr_width = img_width * 2
+                                    hr_height = img_height * 2
+                                    hr_layer = Image.new('RGBA', (hr_width, hr_height), (0, 0, 0, 0))
+                                    hr_draw = ImageDraw.Draw(hr_layer)
+                                    
+                                    # 尝试创建高分辨率字体
+                                    hr_font = None
+                                    try:
+                                        hr_font_size = render_size * 2
+                                        if st.session_state.loaded_font_path:
+                                            hr_font = ImageFont.truetype(st.session_state.loaded_font_path, hr_font_size)
+                                            font_debug_info.append(f"Created high-res font: {hr_font_size}px")
+                                    except Exception as hr_font_err:
+                                        font_debug_info.append(f"Failed to create high-res font: {str(hr_font_err)}")
+                                    
+                                    if hr_font is None:
+                                        hr_font = font
+                                        font_debug_info.append("Using original font for high-res rendering")
+                                    
+                                    # 高分辨率尺寸
+                                    hr_line_height = line_height * 2
+                                    hr_text_width = max_width * 2
+                                    hr_text_height = total_height * 2
+                                    
+                                    # 根据对齐方式计算X位置
+                                    if alignment.lower() == "left":
+                                        text_x = int(img_width * 0.2)
+                                    elif alignment.lower() == "right":
+                                        text_x = int(img_width * 0.8 - original_text_width)
+                                    else:  # 居中
+                                        text_x = (img_width - original_text_width) // 2
+                                    
+                                    # 垂直位置 - 上移以更好地展示在T恤上
+                                    text_y = int(img_height * 0.3 - original_text_height // 2)
+                                    
+                                    # 高分辨率位置
+                                    hr_text_x = text_x * 2
+                                    hr_text_y = text_y * 2
+                                    
+                                    font_debug_info.append(f"HR text position: ({hr_text_x}, {hr_text_y})")
+                                    
+                                    # 先应用特效 - 在高分辨率画布上
+                                    if "Outline" in text_style:
+                                        # 增强轮廓效果
+                                        outline_color = "black"
+                                        outline_width = max(8, hr_font_size // 10)  # 加粗轮廓宽度
+                                        
+                                        # 多方向轮廓，让描边更均匀
+                                        for angle in range(0, 360, 30):  # 每30度一个点，更平滑
+                                            rad = math.radians(angle)
+                                            offset_x = int(outline_width * math.cos(rad))
+                                            offset_y = int(outline_width * math.sin(rad))
+                                            
+                                            # 处理多行文本
+                                            for i, line in enumerate(lines):
+                                                line_y = hr_text_y + i * hr_line_height
+                                                if alignment.lower() == "center":
+                                                    line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
+                                                    line_width = line_bbox[2] - line_bbox[0]
+                                                    line_x = hr_text_x + (hr_text_width - line_width) // 2
+                                                elif alignment.lower() == "right":
+                                                    line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
+                                                    line_width = line_bbox[2] - line_bbox[0]
+                                                    line_x = hr_text_x + (hr_text_width - line_width)
+                                                else:
+                                                    line_x = hr_text_x
+                                                
+                                                hr_draw.text((line_x + offset_x, line_y + offset_y), 
+                                                              line, fill=outline_color, font=hr_font)
+                                    
+                                    if "Shadow" in text_style:
+                                        # 增强阴影效果
+                                        shadow_color = (0, 0, 0, 150)  # 半透明黑色
+                                        shadow_offset = max(15, hr_font_size // 8)  # 增加阴影偏移距离
                                         
                                         # 处理多行文本
                                         for i, line in enumerate(lines):
@@ -1101,15 +1125,20 @@ def show_low_complexity_general_sales():
                                             else:
                                                 line_x = hr_text_x
                                             
-                                            hr_draw.text((line_x + offset_x, line_y + offset_y), 
-                                                          line, fill=outline_color, font=hr_font)
-                                
-                                if "Shadow" in text_style:
-                                    # 增强阴影效果
-                                    shadow_color = (0, 0, 0, 150)  # 半透明黑色
-                                    shadow_offset = max(15, hr_font_size // 8)  # 增加阴影偏移距离
+                                            # 创建更平滑的阴影效果
+                                            blur_steps = 8  # 更多步骤，更平滑的阴影
+                                            for step in range(blur_steps):
+                                                offset = shadow_offset * (step + 1) / blur_steps
+                                                alpha = int(150 * (1 - step/blur_steps))
+                                                cur_shadow = (0, 0, 0, alpha)
+                                                hr_draw.text((line_x + offset, line_y + offset), 
+                                                             line, fill=cur_shadow, font=hr_font)
                                     
-                                    # 处理多行文本
+                                    # 将文字颜色从十六进制转换为RGBA
+                                    text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+                                    text_rgba = text_rgb + (255,)  # 完全不透明
+                                    
+                                    # 绘制主文字 - 在高分辨率画布上
                                     for i, line in enumerate(lines):
                                         line_y = hr_text_y + i * hr_line_height
                                         if alignment.lower() == "center":
@@ -1123,89 +1152,61 @@ def show_low_complexity_general_sales():
                                         else:
                                             line_x = hr_text_x
                                         
-                                        # 创建更平滑的阴影效果
-                                        blur_steps = 8  # 更多步骤，更平滑的阴影
-                                        for step in range(blur_steps):
-                                            offset = shadow_offset * (step + 1) / blur_steps
-                                            alpha = int(150 * (1 - step/blur_steps))
-                                            cur_shadow = (0, 0, 0, alpha)
-                                            hr_draw.text((line_x + offset, line_y + offset), 
-                                                         line, fill=cur_shadow, font=hr_font)
-                                
-                                # 将文字颜色从十六进制转换为RGBA
-                                text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-                                text_rgba = text_rgb + (255,)  # 完全不透明
-                                
-                                # 绘制主文字 - 在高分辨率画布上
-                                for i, line in enumerate(lines):
-                                    line_y = hr_text_y + i * hr_line_height
-                                    if alignment.lower() == "center":
-                                        line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
-                                        line_width = line_bbox[2] - line_bbox[0]
-                                        line_x = hr_text_x + (hr_text_width - line_width) // 2
-                                    elif alignment.lower() == "right":
-                                        line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
-                                        line_width = line_bbox[2] - line_bbox[0]
-                                        line_x = hr_text_x + (hr_text_width - line_width)
-                                    else:
-                                        line_x = hr_text_x
+                                        hr_draw.text((line_x, line_y), line, fill=text_rgba, font=hr_font)
                                     
-                                    hr_draw.text((line_x, line_y), line, fill=text_rgba, font=hr_font)
-                                
-                                # 特殊效果处理
-                                if text_effect != "None":
-                                    font_debug_info.append(f"Applying special effect: {text_effect}")
-                                    # 未来可以在这里添加高分辨率特效处理
-                                
-                                # 将高分辨率图层缩小回原始尺寸 - 使用LANCZOS重采样以获得最佳质量
-                                text_layer = hr_layer.resize((img_width, img_height), Image.LANCZOS)
-                                font_debug_info.append("Downsampled high-res text layer to original size")
-                                
-                                # 保存文本图层的副本用于颜色变化时恢复
-                                try:
-                                    st.session_state.text_layer = text_layer.copy()
-                                    font_debug_info.append("Text layer backup saved for color change restoration")
-                                except Exception as e:
-                                    font_debug_info.append(f"Failed to save text layer backup: {str(e)}")
-                                
-                                # 应用文字到设计
-                                new_design.paste(text_layer, (0, 0), text_layer)
-                                
-                                # 保存相关信息
-                                st.session_state.text_position = (text_x, text_y)
-                                st.session_state.text_size_info = {
-                                    "font_size": render_size,
-                                    "text_width": original_text_width,
-                                    "text_height": original_text_height,
-                                    "scale_factor": scale_factor
-                                }
-                                
-                                # 应用成功
-                                font_debug_info.append("High-definition text rendering applied successfully")
-                            
-                            except Exception as render_err:
-                                font_debug_info.append(f"High-definition rendering failed: {str(render_err)}")
-                                import traceback
-                                font_debug_info.append(traceback.format_exc())
-                                
-                                # 紧急备用方案 - 创建一个简单文字图像
-                                try:
-                                    font_debug_info.append("Using emergency backup rendering method")
-                                    # 创建一个白色底的图像
-                                    emergency_img = Image.new('RGBA', (img_width//2, img_height//5), (255, 255, 255, 255))
-                                    emergency_draw = ImageDraw.Draw(emergency_img)
+                                    # 特殊效果处理
+                                    if text_effect != "None":
+                                        font_debug_info.append(f"Applying special effect: {text_effect}")
+                                        # 未来可以在这里添加高分辨率特效处理
                                     
-                                    # 使用黑色绘制文字，较大字号确保可见
-                                    emergency_draw.text((10, 10), text_info["text"], fill="black")
+                                    # 将高分辨率图层缩小回原始尺寸 - 使用LANCZOS重采样以获得最佳质量
+                                    text_layer = hr_layer.resize((img_width, img_height), Image.LANCZOS)
+                                    font_debug_info.append("Downsampled high-res text layer to original size")
                                     
-                                    # 放置在T恤中心位置
-                                    paste_x = (img_width - emergency_img.width) // 2
-                                    paste_y = (img_height - emergency_img.height) // 2
+                                    # 保存文本图层的副本用于颜色变化时恢复
+                                    try:
+                                        st.session_state.text_layer = text_layer.copy()
+                                        font_debug_info.append("Text layer backup saved for color change restoration")
+                                    except Exception as e:
+                                        font_debug_info.append(f"Failed to save text layer backup: {str(e)}")
                                     
-                                    new_design.paste(emergency_img, (paste_x, paste_y))
-                                    font_debug_info.append("Applied emergency text rendering")
-                                except Exception as emergency_err:
-                                    font_debug_info.append(f"Emergency rendering also failed: {str(emergency_err)}")
+                                    # 应用文字到设计
+                                    new_design.paste(text_layer, (0, 0), text_layer)
+                                    
+                                    # 保存相关信息
+                                    st.session_state.text_position = (text_x, text_y)
+                                    st.session_state.text_size_info = {
+                                        "font_size": render_size,
+                                        "text_width": original_text_width,
+                                        "text_height": original_text_height,
+                                        "scale_factor": scale_factor
+                                    }
+                                    
+                                    # 应用成功
+                                    font_debug_info.append("High-definition text rendering applied successfully")
+                                except Exception as render_err:
+                                    font_debug_info.append(f"High-definition rendering failed: {str(render_err)}")
+                                    import traceback
+                                    font_debug_info.append(traceback.format_exc())
+                                    
+                                    # 紧急备用方案 - 创建一个简单文字图像
+                                    try:
+                                        font_debug_info.append("Using emergency backup rendering method")
+                                        # 创建一个白色底的图像
+                                        emergency_img = Image.new('RGBA', (img_width//2, img_height//5), (255, 255, 255, 255))
+                                        emergency_draw = ImageDraw.Draw(emergency_img)
+                                        
+                                        # 使用黑色绘制文字，较大字号确保可见
+                                        emergency_draw.text((10, 10), text_content, fill="black")
+                                        
+                                        # 放置在T恤中心位置
+                                        paste_x = (img_width - emergency_img.width) // 2
+                                        paste_y = (img_height - emergency_img.height) // 2
+                                        
+                                        new_design.paste(emergency_img, (paste_x, paste_y))
+                                        font_debug_info.append("Applied emergency text rendering")
+                                    except Exception as emergency_err:
+                                        font_debug_info.append(f"Emergency rendering also failed: {str(emergency_err)}")
                             
                             # 保存字体加载和渲染信息
                             st.session_state.font_debug_info = font_debug_info
@@ -1216,13 +1217,13 @@ def show_low_complexity_general_sales():
                             
                             # 保存完整的文字信息
                             st.session_state.applied_text = {
-                                "text": text_info["text"],
-                                "font": text_info["font"],
-                                "color": text_info["color"],
-                                "size": text_info["size"],
+                                "text": text_content,
+                                "font": font_family,
+                                "color": text_color,
+                                "size": text_size,
                                 "style": text_style,
                                 "effect": text_effect,
-                                "alignment": text_info["alignment"],
+                                "alignment": alignment,
                                 "position": (text_x, text_y),
                                 "use_drawing_method": True  # 标记使用了绘图方法
                             }
@@ -1230,8 +1231,8 @@ def show_low_complexity_general_sales():
                             # 添加详细调试信息
                             success_msg = f"""
                             Text applied to design successfully!
-                            Font: {text_info["font"]}
-                            Size: {text_info["size"]}px
+                            Font: {font_family}
+                            Size: {text_size}px
                             Actual width: {original_text_width}px
                             Actual height: {original_text_height}px
                             Position: ({text_x}, {text_y})
