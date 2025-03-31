@@ -28,8 +28,8 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
         "Cotton-Polyester Blend": 0.5  # 混纺中等
     }.get(fabric_type, intensity)
     
-    # 大幅降低纹理强度系数，确保不会覆盖底色
-    actual_intensity = fabric_intensity * 0.25  # 降低至原来的25%
+    # 调整纹理强度系数，确保不会覆盖底色但效果更明显
+    actual_intensity = fabric_intensity * 0.35  # 从0.25提高到0.35，增强约40%
     
     # 检测T恤颜色的深浅
     # 取样20个随机点并计算平均亮度
@@ -61,26 +61,26 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
     draw = ImageDraw.Draw(texture)
     
     # 根据T恤颜色调整纹理颜色
-    # 极大降低alpha通道值，确保纹理几乎不会影响底色
+    # 增强alpha通道值，使纹理效果更明显但仍然适度
     if is_dark_shirt:
-        # 深色T恤的纹理颜色 - 使用浅色，极低不透明度
+        # 深色T恤的纹理颜色 - 使用浅色，适度不透明度
         texture_colors = {
-            "Cotton": (220, 220, 220, int(30 * actual_intensity)),      # 进一步降低alpha值
-            "Polyester": (230, 230, 230, int(25 * actual_intensity)),   # 进一步降低alpha值
-            "Linen": (235, 230, 220, int(35 * actual_intensity)),       # 进一步降低alpha值
-            "Jersey": (210, 210, 210, int(35 * actual_intensity)),      # 进一步降低alpha值
-            "Bamboo": (225, 225, 215, int(30 * actual_intensity)),      # 进一步降低alpha值
-            "default": (220, 220, 220, int(25 * actual_intensity))      # 进一步降低alpha值
+            "Cotton": (220, 220, 220, int(45 * actual_intensity)),      # 增强alpha值
+            "Polyester": (230, 230, 230, int(40 * actual_intensity)),   # 增强alpha值
+            "Linen": (235, 230, 220, int(50 * actual_intensity)),       # 增强alpha值
+            "Jersey": (210, 210, 210, int(50 * actual_intensity)),      # 增强alpha值
+            "Bamboo": (225, 225, 215, int(45 * actual_intensity)),      # 增强alpha值
+            "default": (220, 220, 220, int(40 * actual_intensity))      # 增强alpha值
         }
     else:
-        # 浅色T恤的纹理颜色 - 使用深色，极低不透明度
+        # 浅色T恤的纹理颜色 - 使用深色，适度不透明度
         texture_colors = {
-            "Cotton": (150, 150, 150, int(25 * actual_intensity)),      # 进一步降低alpha值
-            "Polyester": (140, 140, 140, int(20 * actual_intensity)),   # 进一步降低alpha值
-            "Linen": (160, 155, 145, int(30 * actual_intensity)),       # 进一步降低alpha值
-            "Jersey": (140, 140, 140, int(30 * actual_intensity)),      # 进一步降低alpha值
-            "Bamboo": (180, 180, 170, int(25 * actual_intensity)),      # 进一步降低alpha值
-            "default": (160, 160, 160, int(20 * actual_intensity))      # 进一步降低alpha值
+            "Cotton": (150, 150, 150, int(40 * actual_intensity)),      # 增强alpha值
+            "Polyester": (140, 140, 140, int(35 * actual_intensity)),   # 增强alpha值
+            "Linen": (160, 155, 145, int(45 * actual_intensity)),       # 增强alpha值
+            "Jersey": (140, 140, 140, int(45 * actual_intensity)),      # 增强alpha值
+            "Bamboo": (180, 180, 170, int(40 * actual_intensity)),      # 增强alpha值
+            "default": (160, 160, 160, int(35 * actual_intensity))      # 增强alpha值
         }
     
     # 获取当前面料的纹理颜色
@@ -236,8 +236,8 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
     temp_result.paste(texture, (0, 0), fabric_mask)
     texture_data = np.array(temp_result)
     
-    # 计算混合后的图像数据 - 保留绝大部分原始颜色
-    blend_factor = 0.95  # 保留95%的原始颜色，只用5%的纹理效果
+    # 计算混合后的图像数据 - 减少原始颜色保留比例，使纹理更明显
+    blend_factor = 0.9  # 保留90%的原始颜色，使用10%的纹理效果
     
     # 对强度较低的像素使用不同的混合策略，保留更多颜色信息
     final_image_data = np.zeros_like(original_data)
@@ -246,7 +246,7 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
         # 这使纹理更像是"叠加"在原有颜色上，而不是取代它
         final_image_data[:,:,i] = np.clip(
             original_data[:,:,i] * blend_factor + 
-            texture_data[:,:,i] * (1 - blend_factor) * 0.8,  # 进一步降低纹理贡献
+            texture_data[:,:,i] * (1 - blend_factor) * 0.9,  # 将纹理贡献从0.8提升到0.9
             0, 255
         ).astype(np.uint8)
     
