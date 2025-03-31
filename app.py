@@ -33,53 +33,6 @@ from streamlit_image_coordinates import streamlit_image_coordinates
 from streamlit.components.v1 import html
 from streamlit_drawable_canvas import st_canvas
 
-# 将SVG转换为PNG的函数，确保透明度保留
-def convert_svg_to_png(svg_content):
-    """
-    将SVG内容转换为PNG，保留透明背景
-    
-    参数:
-    svg_content - SVG的二进制内容
-    
-    返回:
-    PIL图像对象（RGBA模式）
-    """
-    if CAIROSVG_AVAILABLE:
-        try:
-            # 使用cairosvg处理SVG，确保透明度保留
-            png_data = cairosvg.svg2png(bytestring=svg_content, background_color=None)
-            return Image.open(BytesIO(png_data)).convert("RGBA")
-        except Exception as conv_err:
-            st.error(f"使用cairosvg处理SVG时出错: {conv_err}")
-            
-            # 如果cairosvg处理失败，尝试使用svglib
-            if SVGLIB_AVAILABLE:
-                try:
-                    svg_data = BytesIO(svg_content)
-                    drawing = svg2rlg(svg_data)
-                    png_data = BytesIO()
-                    renderPM.drawToFile(drawing, png_data, fmt="PNG")
-                    png_data.seek(0)
-                    return Image.open(png_data).convert("RGBA")
-                except Exception as svg_err:
-                    st.error(f"使用svglib处理SVG时出错: {svg_err}")
-                    return None
-    elif SVGLIB_AVAILABLE:
-        # 直接使用svglib作为备选方案
-        try:
-            svg_data = BytesIO(svg_content)
-            drawing = svg2rlg(svg_data)
-            png_data = BytesIO()
-            renderPM.drawToFile(drawing, png_data, fmt="PNG")
-            png_data.seek(0)
-            return Image.open(png_data).convert("RGBA")
-        except Exception as svg_err:
-            st.error(f"使用svglib处理SVG时出错: {svg_err}")
-            return None
-    else:
-        st.error("无法处理SVG格式，SVG处理库未安装")
-        return None
-
 # 导入OpenAI配置
 from openai import OpenAI
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
@@ -88,6 +41,9 @@ client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
 
 # 导入面料纹理模块
 from fabric_texture import apply_fabric_texture
+
+# 导入SVG处理功能
+from svg_utils import convert_svg_to_png, CAIROSVG_AVAILABLE, SVGLIB_AVAILABLE
 
 # 导入分拆出去的各页面模块
 from welcome_page import show_welcome_page

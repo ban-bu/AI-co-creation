@@ -32,8 +32,8 @@ BASE_URL = "https://api.deepbricks.ai/v1/"
 GPT4O_MINI_API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
 GPT4O_MINI_BASE_URL = "https://api.deepbricks.ai/v1/"
 
-# 从app.py导入SVG转换函数
-from app import convert_svg_to_png
+# 从svg_utils导入SVG转换函数
+from svg_utils import convert_svg_to_png
 
 def get_ai_design_suggestions(user_preferences=None):
     """Get design suggestions from GPT-4o-mini"""

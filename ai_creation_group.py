@@ -6,8 +6,8 @@ import cairosvg
 from openai import OpenAI
 from streamlit_image_coordinates import streamlit_image_coordinates
 
-# 从app.py导入SVG转换函数
-from app import convert_svg_to_png
+# 从svg_utils导入SVG转换函数
+from svg_utils import convert_svg_to_png
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
