@@ -43,19 +43,16 @@ def get_ai_design_suggestions(user_preferences=None):
     
     # Construct the prompt
     prompt = f"""
-    As a T-shirt design consultant, please provide the following design suggestions for the "{user_preferences}" style:
+    Provide T-shirt design elements for "{user_preferences}" style:
 
-    1. Color Suggestions: Recommend 3 suitable colors, including:
-       - Color name and hex code (e.g., Blue (#0000FF))
-       - Why this color suits the style (2-3 sentences explanation)
+    1. Colors: 3 suitable colors with hex codes
+       Format: Color name (#HEXCODE)
        
-    2. Text Suggestions: Recommend 2 suitable texts/phrases:
-       - Specific text content
-       - Recommended font style
-       - Brief explanation of suitability
+    2. Text: 2 suitable short phrases
+       Format: "Text content"
        
-    Please ensure to include hex codes for colors, keep content detailed but concise.
-    For text suggestions, place each recommended phrase/text on a separate line and wrap them in quotes, e.g., "Just Do It".
+    Keep it minimal - just color names with hex codes and text phrases in quotes.
+    No explanations needed.
     """
     
     try:
@@ -63,7 +60,7 @@ def get_ai_design_suggestions(user_preferences=None):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a professional T-shirt design consultant, providing useful and specific suggestions. Include sufficient details to help users understand your recommendations, while avoiding unnecessary verbosity. Ensure to include hex codes for each color. For text suggestions, please wrap recommended phrases in quotes and place them on separate lines."},
+                {"role": "system", "content": "You are a T-shirt design assistant. Provide only color names with hex codes and text suggestions in quotes. No explanations or additional text. Format colors as 'Color name (#HEXCODE)' and texts as '\"Text phrase\"' each on a new line."},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -300,22 +297,22 @@ def show_low_complexity_general_sales():
     # 修改任务复杂度说明
     st.markdown("""
     <div style="background-color:#f0f0f0; padding:20px; border-radius:10px; margin-bottom:20px; border-left:4px solid #2196F3">
-    <h4 style="color:#1976D2; margin-top:0">基本定制选项</h4>
-    <p>在这个体验中，您可以通过以下选项自定义您的T恤：</p>
+    <h4 style="color:#1976D2; margin-top:0">Basic Customization Options</h4>
+    <p>In this experience, you can customize your T-shirt with the following options:</p>
     
     <div style="margin-left:15px">
-    <h5 style="color:#2196F3">1. T恤颜色选择</h5>
-    <p>从AI推荐中选择您喜欢的T恤颜色，使用预设选项或自定义颜色选择器找到完美的色调。</p>
+    <h5 style="color:#2196F3">1. T-shirt Color Selection</h5>
+    <p>Choose your preferred T-shirt color from AI recommendations, preset options, or use a custom color picker to find the perfect shade for your design.</p>
     
-    <h5 style="color:#2196F3">2. 文字定制</h5>
-    <p>添加个性化文字，可自定义字体样式、大小、颜色和特效，如阴影、轮廓或渐变，打造醒目的设计。</p>
+    <h5 style="color:#2196F3">2. Text Customization</h5>
+    <p>Add personalized text with customizable font styles, sizes, colors, and special effects like shadows, outlines, or gradients to create eye-catching designs.</p>
     
-    <h5 style="color:#2196F3">3. 设计位置</h5>
-    <p>使用直观的位置控制和预设对齐选项，微调文字元素的放置，实现完美构图。</p>
+    <h5 style="color:#2196F3">3. Design Positioning</h5>
+    <p>Fine-tune the placement of your text elements using intuitive positioning controls and preset alignment options for perfect composition.</p>
     </div>
     
     <p style="margin-top:15px; color:#666">
-    <i>💡 提示：从AI建议开始获得最佳效果，然后根据您的偏好进一步定制。</i>
+    <i>💡 Tip: Start with AI suggestions for the best results, then customize further based on your preferences.</i>
     </p>
     </div>
     """, unsafe_allow_html=True)
@@ -472,13 +469,13 @@ def show_low_complexity_general_sales():
                                 
                                 # 应用效果
                                 if "style" in text_info:
-                                    if "轮廓" in text_info["style"]:
+                                    if "outline" in text_info["style"]:
                                         offset = 2
                                         for offset_x, offset_y in [(offset,0), (-offset,0), (0,offset), (0,-offset)]:
                                             text_draw.text((small_text_x + offset_x, small_text_y + offset_y), 
                                                           text_info["text"], fill="black", font=font, anchor="mm")
                                     
-                                    if "阴影" in text_info["style"]:
+                                    if "shadow" in text_info["style"]:
                                         shadow_offset = 4
                                         text_draw.text((small_text_x + shadow_offset, small_text_y + shadow_offset), 
                                                       text_info["text"], fill=(0, 0, 0, 180), font=font, anchor="mm")
@@ -986,95 +983,171 @@ def show_low_complexity_general_sales():
         # 操作区，包含AI建议和其他控制选项
         
         # 重新组织布局，将所有控制选项都独立为可展开的部分，并默认展开
-        with st.expander("🤖 AI设计建议", expanded=True):
+        with st.expander("🤖 AI Design Suggestions", expanded=True):
             # 添加用户偏好输入
-            user_preference = st.text_input("描述您喜欢的风格或用途", placeholder="例如：运动风格、商务、日常休闲等")
+            user_preference = st.text_input("Describe your preferred style or usage", placeholder="For example: sports style, business, casual daily, etc.")
             
             col_pref1, col_pref2 = st.columns([1, 1])
             with col_pref1:
                 # 添加预设风格选择
-                preset_styles = ["", "时尚休闲", "商务正式", "运动风格", "摇滚", "日式动漫", "艺术复古", "美式街头"]
-                selected_preset = st.selectbox("或选择预设风格:", preset_styles)
+                preset_styles = ["", "Fashion Casual", "Business Formal", "Sports Style", "Rock", "Japanese Anime", "Artistic Retro", "American Street"]
+                selected_preset = st.selectbox("Or select a preset style:", preset_styles)
                 if selected_preset and not user_preference:
                     user_preference = selected_preset
             
             with col_pref2:
                 # 添加获取建议按钮
-                if st.button("获取个性化AI建议", key="get_ai_advice"):
-                    with st.spinner("生成个性化设计建议中..."):
+                if st.button("Get personalized AI suggestions", key="get_ai_advice"):
+                    with st.spinner("Generating personalized design suggestions..."):
                         suggestions = get_ai_design_suggestions(user_preference)
                         st.session_state.ai_suggestions = suggestions
             
             # 显示AI建议
             if st.session_state.ai_suggestions:
-                # 添加格式化的建议显示
+                # 简化建议显示样式
                 st.markdown("""
                 <style>
-                .suggestion-container {
+                .simple-suggestion {
                     background-color: #f8f9fa;
-                    border-left: 4px solid #4CAF50;
                     padding: 15px;
                     margin: 10px 0;
-                    border-radius: 0 5px 5px 0;
+                    border-radius: 5px;
                 }
-                .suggestion-section {
-                    margin-bottom: 12px;
-                    font-weight: 500;
-                }
-                .suggestion-item {
-                    margin-left: 15px;
+                .color-item {
                     margin-bottom: 8px;
+                    display: flex;
+                    align-items: center;
                 }
-                .color-name {
-                    font-weight: 500;
-                }
-                .color-code {
-                    font-family: monospace;
-                    background-color: #f1f1f1;
-                    padding: 2px 4px;
+                .color-box {
+                    width: 20px;
+                    height: 20px;
+                    margin-right: 10px;
+                    border: 1px solid #ddd;
                     border-radius: 3px;
                 }
-                .suggested-text {
+                .text-item {
+                    margin-bottom: 8px;
                     cursor: pointer;
-                    color: #0066cc;
-                    transition: all 0.2s;
+                    padding: 5px;
                 }
-                .suggested-text:hover {
-                    background-color: #e6f2ff;
-                    text-decoration: underline;
+                .text-item:hover {
+                    background-color: #f0f0f0;
                 }
                 </style>
                 """, unsafe_allow_html=True)
                 
-                st.markdown(st.session_state.ai_suggestions, unsafe_allow_html=True)
+                # 解析并显示AI建议内容
+                suggestion_lines = st.session_state.ai_suggestions.strip().split('\n')
+                
+                # 创建容器显示简化内容
+                with st.container():
+                    # 颜色部分处理
+                    st.markdown("#### Color Options:", unsafe_allow_html=True)
+                    color_html = "<div class='simple-suggestion'>"
+                    
+                    for line in suggestion_lines:
+                        # 查找颜色格式: "Color name (#HEXCODE)"
+                        if '(#' in line and ')' in line:
+                            try:
+                                color_name = line.split('(#')[0].strip()
+                                hex_code = '#' + line.split('(#')[1].split(')')[0].strip()
+                                # 添加颜色块和名称
+                                color_html += f"""
+                                <div class='color-item'>
+                                    <div class='color-box' style='background-color: {hex_code};'></div>
+                                    <span>{color_name} ({hex_code})</span>
+                                </div>
+                                """
+                                # 自动保存到AI建议颜色
+                                if 'ai_suggested_colors' not in st.session_state:
+                                    st.session_state.ai_suggested_colors = {}
+                                st.session_state.ai_suggested_colors[color_name] = hex_code
+                            except:
+                                pass
+                    
+                    color_html += "</div>"
+                    st.markdown(color_html, unsafe_allow_html=True)
+                    
+                    # 文本部分处理
+                    st.markdown("#### Text Options:", unsafe_allow_html=True)
+                    text_html = "<div class='simple-suggestion'>"
+                    
+                    for line in suggestion_lines:
+                        # 查找引号包围的文本
+                        import re
+                        matches = re.findall(r'"([^"]*)"', line)
+                        for match in matches:
+                            if match.strip():
+                                # 为每个文本添加点击功能
+                                text_id = f"text_{hash(match)}"
+                                text_html += f"""
+                                <div class='text-item' id='{text_id}' onclick="
+                                    const value = this.innerText.trim();
+                                    // 查找并更新文本输入框
+                                    const inputs = parent.document.querySelectorAll('input[type=text]');
+                                    for (let input of inputs) {{
+                                        if (input.placeholder === 'Enter or copy AI recommended text') {{
+                                            input.value = value;
+                                            input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                                            break;
+                                        }}
+                                    }}
+                                ">{match}</div>
+                                """
+            
+                    text_html += "</div>"
+                    st.markdown(text_html, unsafe_allow_html=True)
+                    
+                    # 添加JavaScript以支持点击文本
+                    st.markdown("""
+                    <script>
+                        // 支持文本点击选择功能
+                        setTimeout(function() {
+                            const textItems = document.querySelectorAll('.text-item');
+                            textItems.forEach(item => {
+                                item.addEventListener('click', function() {
+                                    const value = this.innerText.trim();
+                                    // 尝试设置session状态 (通过自定义事件)
+                                    const event = new CustomEvent('streamlit:setComponentValue', {
+                                        detail: {
+                                            value: value,
+                                            dataType: 'text'
+                                        }
+                                    });
+                                    window.dispatchEvent(event);
+                                });
+                            });
+                        }, 500);
+                    </script>
+                    """, unsafe_allow_html=True)
             else:
                 # 显示欢迎信息
                 st.markdown("""
                 <div style="background-color: #f0f7ff; padding: 15px; border-radius: 10px; border-left: 5px solid #1e88e5;">
-                <h4 style="color: #1e88e5; margin-top: 0;">👋 欢迎使用AI设计助手</h4>
-                <p>描述您喜欢的风格或T恤用途，AI助手将提供个性化的设计建议，包括：</p>
+                <h4 style="color: #1e88e5; margin-top: 0;">👋 Welcome to the AI Design Assistant</h4>
+                <p>Describe your preferred style or T-shirt purpose, and the AI assistant will provide personalized design suggestions, including:</p>
                 <ul>
-                    <li>适合您风格的T恤颜色推荐</li>
-                    <li>文字内容和字体风格建议</li>
+                    <li>T-shirt color recommendations suited to your style</li>
+                    <li>Text content and font style suggestions</li>
                 </ul>
-                <p>点击"获取个性化AI建议"按钮开始！</p>
+                <p>Click the "Get personalized AI suggestions" button to start!</p>
                 </div>
                 """, unsafe_allow_html=True)
         
         # 颜色与面料部分 - 独立出来，确保始终显示
-        with st.expander("🎨 颜色选择", expanded=True):
+        with st.expander("🎨 Color Selection", expanded=True):
             # 颜色选择部分
             if 'ai_suggested_colors' not in st.session_state:
                 # 初始提供一些默认颜色选项
                 st.session_state.ai_suggested_colors = {
-                    "白色": "#FFFFFF", 
-                    "黑色": "#000000", 
-                    "深蓝色": "#003366", 
-                    "浅灰色": "#CCCCCC", 
-                    "浅蓝色": "#ADD8E6"
+                    "White": "#FFFFFF", 
+                    "Black": "#000000", 
+                    "Navy Blue": "#003366", 
+                    "Light Gray": "#CCCCCC", 
+                    "Light Blue": "#ADD8E6"
                 }
             
-            st.markdown("##### 选择颜色")
+            st.markdown("##### Select Color")
             
             # 创建颜色选择列表 - 动态创建
             colors = st.session_state.ai_suggested_colors
@@ -1100,13 +1173,13 @@ def show_low_complexity_general_sales():
                         """, 
                         unsafe_allow_html=True
                     )
-                    if st.button(f"应用{color_name}", key=f"apply_{i}"):
+                    if st.button(f"Apply {color_name}", key=f"apply_{i}"):
                         st.session_state.shirt_color_hex = color_hex
                         st.rerun()
             
             # 添加自定义颜色调整功能
-            st.markdown("##### 自定义颜色")
-            custom_color = st.color_picker("选择自定义颜色:", st.session_state.shirt_color_hex, key="custom_color_picker")
+            st.markdown("##### Custom Color")
+            custom_color = st.color_picker("Select a custom color:", st.session_state.shirt_color_hex, key="custom_color_picker")
             custom_col1, custom_col2 = st.columns([3, 1])
             
             with custom_col1:
@@ -1126,12 +1199,12 @@ def show_low_complexity_general_sales():
                 )
             
             with custom_col2:
-                if st.button("应用自定义颜色"):
+                if st.button("Apply custom color"):
                     st.session_state.shirt_color_hex = custom_color
                     st.rerun()
             
         # 文字设计部分 - 独立出来，确保始终显示
-        with st.expander("✍️ 文字设计", expanded=True):
+        with st.expander("✍️ Text Design", expanded=True):
             # 文字选项
             text_col1, text_col2 = st.columns([2, 1])
             
@@ -1145,60 +1218,60 @@ def show_low_complexity_general_sales():
                 elif 'ai_text_suggestion' in st.session_state:
                     default_input = st.session_state.ai_text_suggestion
                 
-                text_content = st.text_input("输入或复制AI推荐的文字", default_input, key="ai_text_suggestion")
+                text_content = st.text_input("Enter or copy AI recommended text", default_input, key="ai_text_suggestion")
             
             with text_col2:
-                text_color = st.color_picker("文字颜色:", "#000000", key="ai_text_color")
+                text_color = st.color_picker("Text color:", "#000000", key="ai_text_color")
             
             # 字体选择 - 扩展为高复杂度方案的选项
             font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]
-            font_family = st.selectbox("字体系列:", font_options, key="ai_font_selection")
+            font_family = st.selectbox("Font family:", font_options, key="ai_font_selection")
             
             # 添加文字样式选项
-            text_style = st.multiselect("文字样式:", ["粗体", "斜体", "下划线", "阴影", "轮廓"], default=["粗体"])
+            text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
             
             # 添加动态文字大小滑块 - 增加最大值
-            text_size = st.slider("文字大小:", 20, 400, 39, key="ai_text_size")
+            text_size = st.slider("Text size:", 20, 400, 39, key="ai_text_size")
             
             # 添加文字效果选项
-            text_effect = st.selectbox("文字效果:", ["无", "弯曲", "拱形", "波浪", "3D", "渐变"])
+            text_effect = st.selectbox("Text effect:", ["None", "Bent", "Arch", "Wave", "3D", "Gradient"])
             
             # 添加对齐方式选项
-            alignment = st.radio("对齐方式:", ["左对齐", "居中", "右对齐"], horizontal=True, index=1)
+            alignment = st.radio("Alignment:", ["Left", "Center", "Right"], horizontal=True, index=1)
             
-            # 修改预览部分，添加样式效果
+            # 修改预览部分，将中文样式转换为英文样式名称
             if text_content:
                 # 构建样式字符串
                 style_str = ""
-                if "粗体" in text_style:
+                if "Bold" in text_style:
                     style_str += "font-weight: bold; "
-                if "斜体" in text_style:
+                if "Italic" in text_style:
                     style_str += "font-style: italic; "
-                if "下划线" in text_style:
+                if "Underline" in text_style:
                     style_str += "text-decoration: underline; "
-                if "阴影" in text_style:
+                if "Shadow" in text_style:
                     style_str += "text-shadow: 2px 2px 4px rgba(0,0,0,0.5); "
-                if "轮廓" in text_style:
+                if "Outline" in text_style:
                     style_str += "-webkit-text-stroke: 1px #000; "
                 
                 # 处理对齐
                 align_str = "center"
-                if alignment == "左对齐":
+                if alignment == "Left":
                     align_str = "left"
-                elif alignment == "右对齐":
+                elif alignment == "Right":
                     align_str = "right"
                 
                 # 处理效果
                 effect_str = ""
-                if text_effect == "弯曲":
+                if text_effect == "Bent":
                     effect_str = "transform: rotateX(10deg); transform-origin: center; "
-                elif text_effect == "拱形":
+                elif text_effect == "Arch":
                     effect_str = "transform: perspective(100px) rotateX(10deg); "
-                elif text_effect == "波浪":
+                elif text_effect == "Wave":
                     effect_str = "display: inline-block; transform: translateY(5px); animation: wave 2s ease-in-out infinite; "
                 elif text_effect == "3D":
                     effect_str = "text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb; "
-                elif text_effect == "渐变":
+                elif text_effect == "Gradient":
                     effect_str = "background: linear-gradient(45deg, #f3ec78, #af4261); -webkit-background-clip: text; -webkit-text-fill-color: transparent; "
                 
                 preview_size = text_size * 1.5  # 预览大小略大
@@ -1230,17 +1303,17 @@ def show_low_complexity_general_sales():
                 )
             
             # 应用文字按钮
-            if st.button("应用文字到设计", key="apply_ai_text"):
+            if st.button("Apply text to design", key="apply_ai_text"):
                 if not text_content.strip():
-                    st.warning("请输入文字内容!")
+                    st.warning("Please enter text content!")
                 else:
                     # 文字应用逻辑保持不变
-                    with st.spinner("应用文字设计中..."):
+                    with st.spinner("Applying text design..."):
                         # 在这里保留原文件中文字应用的完整逻辑
                         pass
 
-    # 返回主页按钮 - 这里进行修改
-    if st.button("返回主页"):
+    # 返回主页按钮 - 将中文改为英文
+    if st.button("Back to main page"):
         # 清空所有设计相关的状态
         keys_to_clear = [
             # 基本图像状态
@@ -1271,5 +1344,5 @@ def show_low_complexity_general_sales():
         st.session_state.page = "welcome"
         
         # 添加成功提示
-        st.success("所有设计已清除，正在返回主页...")
+        st.success("All designs have been cleared, returning to the main page...")
         st.rerun()
