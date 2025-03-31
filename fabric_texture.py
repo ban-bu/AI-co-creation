@@ -28,8 +28,8 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
         "Cotton-Polyester Blend": 0.5  # 混纺中等
     }.get(fabric_type, intensity)
     
-    # 使用更低的强度系数，确保不会完全覆盖底色
-    actual_intensity = fabric_intensity * 0.4  # 降低纹理强度
+    # 大幅降低纹理强度系数，确保不会覆盖底色
+    actual_intensity = fabric_intensity * 0.25  # 降低至原来的25%
     
     # 检测T恤颜色的深浅
     # 取样20个随机点并计算平均亮度
@@ -61,27 +61,26 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
     draw = ImageDraw.Draw(texture)
     
     # 根据T恤颜色调整纹理颜色
-    # 深色T恤使用浅色纹理，浅色T恤使用深色纹理
-    # 大幅降低alpha通道值以减少对底色的覆盖
+    # 极大降低alpha通道值，确保纹理几乎不会影响底色
     if is_dark_shirt:
-        # 深色T恤的纹理颜色 - 使用浅色，降低不透明度
+        # 深色T恤的纹理颜色 - 使用浅色，极低不透明度
         texture_colors = {
-            "Cotton": (220, 220, 220, int(60 * actual_intensity)),  # 降低alpha值
-            "Polyester": (230, 230, 230, int(50 * actual_intensity)),  # 降低alpha值
-            "Linen": (235, 230, 220, int(65 * actual_intensity)),  # 降低alpha值
-            "Jersey": (210, 210, 210, int(70 * actual_intensity)),  # 降低alpha值
-            "Bamboo": (225, 225, 215, int(60 * actual_intensity)),  # 降低alpha值
-            "default": (220, 220, 220, int(55 * actual_intensity))   # 降低alpha值
+            "Cotton": (220, 220, 220, int(30 * actual_intensity)),      # 进一步降低alpha值
+            "Polyester": (230, 230, 230, int(25 * actual_intensity)),   # 进一步降低alpha值
+            "Linen": (235, 230, 220, int(35 * actual_intensity)),       # 进一步降低alpha值
+            "Jersey": (210, 210, 210, int(35 * actual_intensity)),      # 进一步降低alpha值
+            "Bamboo": (225, 225, 215, int(30 * actual_intensity)),      # 进一步降低alpha值
+            "default": (220, 220, 220, int(25 * actual_intensity))      # 进一步降低alpha值
         }
     else:
-        # 浅色T恤的纹理颜色 - 使用深色，降低不透明度
+        # 浅色T恤的纹理颜色 - 使用深色，极低不透明度
         texture_colors = {
-            "Cotton": (150, 150, 150, int(50 * actual_intensity)),  # 降低alpha值
-            "Polyester": (140, 140, 140, int(40 * actual_intensity)),  # 降低alpha值
-            "Linen": (160, 155, 145, int(55 * actual_intensity)),  # 降低alpha值
-            "Jersey": (140, 140, 140, int(60 * actual_intensity)),  # 降低alpha值
-            "Bamboo": (180, 180, 170, int(50 * actual_intensity)),  # 降低alpha值
-            "default": (160, 160, 160, int(45 * actual_intensity))   # 降低alpha值
+            "Cotton": (150, 150, 150, int(25 * actual_intensity)),      # 进一步降低alpha值
+            "Polyester": (140, 140, 140, int(20 * actual_intensity)),   # 进一步降低alpha值
+            "Linen": (160, 155, 145, int(30 * actual_intensity)),       # 进一步降低alpha值
+            "Jersey": (140, 140, 140, int(30 * actual_intensity)),      # 进一步降低alpha值
+            "Bamboo": (180, 180, 170, int(25 * actual_intensity)),      # 进一步降低alpha值
+            "default": (160, 160, 160, int(20 * actual_intensity))      # 进一步降低alpha值
         }
     
     # 获取当前面料的纹理颜色
@@ -228,7 +227,7 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
     # 为了更好的视觉效果，稍微模糊面料掩码以平滑过渡
     fabric_mask = fabric_mask.filter(ImageFilter.GaussianBlur(radius=1))
     
-    # 修改纹理应用方式 - 使用混合模式而非直接替换
+    # 修改纹理应用方式 - 使用加法混合模式而非直接替换
     # 创建一个临时数组来存储原始图像颜色
     original_data = np.array(result)
     
@@ -237,10 +236,22 @@ def generate_fabric_texture(image, fabric_type, intensity=0.5):
     temp_result.paste(texture, (0, 0), fabric_mask)
     texture_data = np.array(temp_result)
     
-    # 计算混合后的图像数据 - 保留大部分原始颜色
-    blend_factor = 0.8  # 保留80%的原始颜色，20%的纹理效果
-    final_image_data = (original_data.astype(float) * blend_factor + 
-                        texture_data.astype(float) * (1 - blend_factor)).astype(np.uint8)
+    # 计算混合后的图像数据 - 保留绝大部分原始颜色
+    blend_factor = 0.95  # 保留95%的原始颜色，只用5%的纹理效果
+    
+    # 对强度较低的像素使用不同的混合策略，保留更多颜色信息
+    final_image_data = np.zeros_like(original_data)
+    for i in range(3):  # RGB通道
+        # 使用亮度增强的混合模式
+        # 这使纹理更像是"叠加"在原有颜色上，而不是取代它
+        final_image_data[:,:,i] = np.clip(
+            original_data[:,:,i] * blend_factor + 
+            texture_data[:,:,i] * (1 - blend_factor) * 0.8,  # 进一步降低纹理贡献
+            0, 255
+        ).astype(np.uint8)
+    
+    # 确保alpha通道保持不变
+    final_image_data[:,:,3] = original_data[:,:,3]
     
     # 创建最终图像
     result = Image.fromarray(final_image_data)
