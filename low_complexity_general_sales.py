@@ -1034,7 +1034,7 @@ def show_low_complexity_general_sales():
                     
                     # 直接使用st.session_state.ai_suggested_colors
                     if 'ai_suggested_colors' in st.session_state and st.session_state.ai_suggested_colors:
-                        for color_name, hex_code in st.session_state.ai_suggested_colors.items():
+                        for i, (color_name, hex_code) in enumerate(st.session_state.ai_suggested_colors.items()):
                             col1, col2, col3 = st.columns([1, 4, 3])
                             with col1:
                                 st.markdown(f"""
@@ -1043,7 +1043,7 @@ def show_low_complexity_general_sales():
                             with col2:
                                 st.write(f"{color_name}")
                             with col3:
-                                if st.button(f"Try Color", key=f"ai_color_{hex_code}"):
+                                if st.button(f"Try Color", key=f"ai_color_{i}_{hex_code.replace('#', '')}"):
                                     st.session_state.shirt_color_hex = hex_code
                                     st.rerun()
                     else:
