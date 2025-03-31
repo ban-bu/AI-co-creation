@@ -918,15 +918,65 @@ def show_high_complexity_general_sales():
                                             total_height = len(lines) * line_height
                                             max_width = 0
                                             
+                                            # 检测是否使用默认字体
+                                            font_is_default = "ImageFont" in str(type(font)) or "Default" in str(type(font))
+                                            font_debug_info.append(f"Font is default type: {font_is_default}, Font type: {type(font).__name__}")
+                                            
+                                            # 为默认字体提供更大的字符宽度估算
+                                            char_width_factor = 0.6 if not font_is_default else 0.9
+                                            avg_char_width = render_size * char_width_factor
+                                            font_debug_info.append(f"Using character width factor: {char_width_factor}, avg width: {avg_char_width}px")
+                                            
                                             for line in lines:
-                                                line_bbox = text_draw.textbbox((0, 0), line, font=font)
-                                                line_width = line_bbox[2] - line_bbox[0]
+                                                # 获取行宽度
+                                                try:
+                                                    line_bbox = text_draw.textbbox((0, 0), line, font=font)
+                                                    line_width = line_bbox[2] - line_bbox[0]
+                                                    
+                                                    # 记录原始计算宽度
+                                                    font_debug_info.append(f"Line '{line}': calculated width={line_width}px")
+                                                    
+                                                    # 估计每个字符的宽度
+                                                    estimated_width = len(line) * avg_char_width
+                                                    
+                                                    # 比较实际宽度和估计宽度，取较大值
+                                                    if line_width < estimated_width * 0.8:  # 如果实际宽度明显小于估计宽度
+                                                        font_debug_info.append(f"Width discrepancy: line='{line}', bbox width={line_width}, estimated={estimated_width}")
+                                                        line_width = estimated_width
+                                                except Exception as width_err:
+                                                    font_debug_info.append(f"Error calculating line width: {str(width_err)}")
+                                                    # 出错时使用估计宽度
+                                                    line_width = len(line) * avg_char_width
+                                                    font_debug_info.append(f"Falling back to estimated width: {line_width}px")
+                                                
                                                 max_width = max(max_width, line_width)
+                                            
+                                            # 确保宽度不会异常小
+                                            min_chars = max(len(max(lines, key=len)), 2)  # 最少2个字符宽度
+                                            min_expected_width = min_chars * avg_char_width
+                                            
+                                            if max_width < min_expected_width:
+                                                font_debug_info.append(f"Width too small: calculated={max_width}, adjusted to minimum={min_expected_width}")
+                                                max_width = min_expected_width
                                             
                                             # 原始文本尺寸
                                             original_text_width = max_width
                                             original_text_height = total_height
                                             font_debug_info.append(f"Original text dimensions: {original_text_width}x{original_text_height}px, divided into {len(lines)} lines")
+                                            
+                                            # 添加更详细的文本信息
+                                            font_debug_info.append(f"Text content: '{text_info['text'][:50]}{'...' if len(text_info['text']) > 50 else ''}'")
+                                            font_debug_info.append(f"Number of characters: {len(text_info['text'])}")
+                                            font_debug_info.append(f"Number of lines: {len(lines)}")
+                                            font_debug_info.append(f"Lines content: {[f'{l[:20]}...' if len(l) > 20 else l for l in lines]}")
+                                            
+                                            # 记录宽度调整的详细信息
+                                            if min_expected_width > max_width:
+                                                font_debug_info.append(f"Width adjustment was applied: original={max_width} -> adjusted={min_expected_width}")
+                                            
+                                            # 文本渲染质量
+                                            font_debug_info.append(f"Rendering quality factors:")
+                                            font_debug_info.append(f"- Render size: {render_size}px")
                                             
                                             # 放大系数，使文字更清晰
                                             scale_factor = 2.0  # 增加到2倍以提高清晰度
@@ -1686,6 +1736,13 @@ def show_high_complexity_general_sales():
             # 添加文字样式选项
             text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
             
+            # 添加一个快捷按钮行
+            quick_cols = st.columns(3)
+            with quick_cols[0]:
+                if st.button("Use large clear font (250px)", help="Set font size to 250 pixels for better visibility"):
+                    st.session_state.ai_text_size = 250
+                    st.rerun()
+            
             # 添加动态文字大小滑块 - 增加最大值
             text_size = st.slider("Text size:", 20, 400, 39, key="ai_text_size")
             
@@ -1822,12 +1879,38 @@ def show_high_complexity_general_sales():
                                     font = ImageFont.truetype(st.session_state.loaded_font_path, render_size)
                                     font_debug_info.append(f"Loaded font: {st.session_state.loaded_font_path}")
                                 else:
-                                    # 使用默认字体
-                                    font = ImageFont.load_default()
-                                    font_debug_info.append("Using default font")
+                                    # 尝试加载系统字体
+                                    font_loaded = False
+                                    if system == 'Linux':
+                                        try:
+                                            font_paths = [
+                                                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                                                "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+                                                "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+                                                "/usr/share/fonts/ubuntu/Ubuntu-R.ttf"
+                                            ]
+                                            for path in font_paths:
+                                                try:
+                                                    if os.path.exists(path):
+                                                        font = ImageFont.truetype(path, render_size)
+                                                        font_debug_info.append(f"Loaded Linux system font: {path}")
+                                                        font_loaded = True
+                                                        break
+                                                except Exception as font_err:
+                                                    font_debug_info.append(f"Failed to load Linux font {path}: {str(font_err)}")
+                                        except Exception as e:
+                                            font_debug_info.append(f"Error searching Linux fonts: {str(e)}")
+                                    
+                                    # 如果系统字体未加载，使用默认字体
+                                    if not font_loaded:
+                                        font = ImageFont.load_default()
+                                        font_debug_info.append("Using default font")
                             except Exception as font_err:
                                 font_debug_info.append(f"Font loading error: {str(font_err)}")
                                 font = ImageFont.load_default()
+                                
+                            # 记录最终使用的字体类型
+                            font_debug_info.append(f"Final font type: {type(font).__name__}")
                             
                             # 文本处理 - 换行
                             max_text_width = int(img_width * 0.7)  # 最大文本宽度为T恤宽度的70%
@@ -1856,15 +1939,65 @@ def show_high_complexity_general_sales():
                             total_height = len(lines) * line_height
                             max_width = 0
                             
+                            # 检测是否使用默认字体
+                            font_is_default = "ImageFont" in str(type(font)) or "Default" in str(type(font))
+                            font_debug_info.append(f"Font is default type: {font_is_default}, Font type: {type(font).__name__}")
+                            
+                            # 为默认字体提供更大的字符宽度估算
+                            char_width_factor = 0.6 if not font_is_default else 0.9
+                            avg_char_width = render_size * char_width_factor
+                            font_debug_info.append(f"Using character width factor: {char_width_factor}, avg width: {avg_char_width}px")
+                            
                             for line in lines:
-                                line_bbox = text_draw.textbbox((0, 0), line, font=font)
-                                line_width = line_bbox[2] - line_bbox[0]
+                                # 获取行宽度
+                                try:
+                                    line_bbox = text_draw.textbbox((0, 0), line, font=font)
+                                    line_width = line_bbox[2] - line_bbox[0]
+                                    
+                                    # 记录原始计算宽度
+                                    font_debug_info.append(f"Line '{line}': calculated width={line_width}px")
+                                    
+                                    # 估计每个字符的宽度
+                                    estimated_width = len(line) * avg_char_width
+                                    
+                                    # 比较实际宽度和估计宽度，取较大值
+                                    if line_width < estimated_width * 0.8:  # 如果实际宽度明显小于估计宽度
+                                        font_debug_info.append(f"Width discrepancy: line='{line}', bbox width={line_width}, estimated={estimated_width}")
+                                        line_width = estimated_width
+                                except Exception as width_err:
+                                    font_debug_info.append(f"Error calculating line width: {str(width_err)}")
+                                    # 出错时使用估计宽度
+                                    line_width = len(line) * avg_char_width
+                                    font_debug_info.append(f"Falling back to estimated width: {line_width}px")
+                                
                                 max_width = max(max_width, line_width)
+                            
+                            # 确保宽度不会异常小
+                            min_chars = max(len(max(lines, key=len)), 2)  # 最少2个字符宽度
+                            min_expected_width = min_chars * avg_char_width
+                            
+                            if max_width < min_expected_width:
+                                font_debug_info.append(f"Width too small: calculated={max_width}, adjusted to minimum={min_expected_width}")
+                                max_width = min_expected_width
                             
                             # 原始文本尺寸
                             original_text_width = max_width
                             original_text_height = total_height
                             font_debug_info.append(f"Original text dimensions: {original_text_width}x{original_text_height}px, divided into {len(lines)} lines")
+                            
+                            # 添加更详细的文本信息
+                            font_debug_info.append(f"Text content: '{text_content[:50]}{'...' if len(text_content) > 50 else ''}'")
+                            font_debug_info.append(f"Number of characters: {len(text_content)}")
+                            font_debug_info.append(f"Number of lines: {len(lines)}")
+                            font_debug_info.append(f"Lines content: {[f'{l[:20]}...' if len(l) > 20 else l for l in lines]}")
+                            
+                            # 记录宽度调整的详细信息
+                            if min_expected_width > max_width:
+                                font_debug_info.append(f"Width adjustment was applied: original={max_width} -> adjusted={min_expected_width}")
+                            
+                            # 文本渲染质量
+                            font_debug_info.append(f"Rendering quality factors:")
+                            font_debug_info.append(f"- Render size: {render_size}px")
                             
                             # 放大系数，使文字更清晰
                             scale_factor = 2.0  # 增加到2倍以提高清晰度
@@ -2032,13 +2165,15 @@ def show_high_complexity_general_sales():
                             # 添加详细调试信息
                             success_msg = f"""
                             Text applied to design successfully!
-                            Font: {font_family}
+                            Font: {font_family} ({type(font).__name__})
                             Size: {text_size}px
+                            Character width estimate: {avg_char_width:.1f}px per character
                             Actual width: {original_text_width}px
                             Actual height: {original_text_height}px
                             Position: ({text_x}, {text_y})
                             T-shirt size: {img_width} x {img_height}
-                            Rendering method: High-definition rendering
+                            Lines: {len(lines)}
+                            Rendering method: High-definition rendering (2x scale)
                             """
                             
                             st.success(success_msg)
