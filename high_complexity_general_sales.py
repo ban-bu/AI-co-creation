@@ -1695,22 +1695,6 @@ def show_high_complexity_general_sales():
                 
         # 文字设计部分 - 独立出来，确保始终显示
         with st.expander("✍️ Text Design", expanded=True):
-            st.markdown("#### Add Text to Your Design")
-            # 文字建议应用
-            if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
-                st.markdown("**AI recommended text:**")
-                suggested_texts_container = st.container()
-                with suggested_texts_container:
-                    text_buttons = st.columns(min(2, len(st.session_state.ai_suggested_texts)))
-                    
-                    for i, text in enumerate(st.session_state.ai_suggested_texts):
-                        with text_buttons[i % 2]:
-                            # 修改按钮实现方式，避免直接设置会话状态
-                            if st.button(f'"{text}"', key=f"text_btn_{i}"):
-                                # 创建一个临时状态变量
-                                st.session_state.temp_text_selection = text
-                                st.rerun()
-            
             # 文字选项
             text_col1, text_col2 = st.columns([2, 1])
             
@@ -1735,13 +1719,6 @@ def show_high_complexity_general_sales():
             
             # 添加文字样式选项
             text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
-            
-            # 添加一个快捷按钮行
-            quick_cols = st.columns(3)
-            with quick_cols[0]:
-                if st.button("Use large clear font (250px)", help="Set font size to 250 pixels for better visibility"):
-                    st.session_state.ai_text_size = 250
-                    st.rerun()
             
             # 添加动态文字大小滑块 - 增加最大值
             text_size = st.slider("Text size:", 20, 400, 100, key="ai_text_size")
@@ -2077,10 +2054,6 @@ def show_high_complexity_general_sales():
                                 # 应用文字到设计
                                 new_design.paste(text_layer, (0, 0), text_layer)
                                 
-                                # 更新最终设计和当前图像
-                                st.session_state.final_design = new_design
-                                st.session_state.current_image = new_design.copy()
-                                
                                 # 保存相关信息
                                 st.session_state.text_position = (text_x, text_y)
                                 st.session_state.text_size_info = {
@@ -2090,10 +2063,14 @@ def show_high_complexity_general_sales():
                                     "scale_factor": scale_factor
                                 }
                                 
-                                # 保存字体加载和渲染信息
-                                st.session_state.font_debug_info = font_debug_info
+                                # 应用成功
+                                font_debug_info.append("Text rendering applied successfully")
                                 
-                                # 保存完整的文字信息，标记使用了绘图方法
+                                # 更新设计和预览
+                                st.session_state.final_design = new_design
+                                st.session_state.current_image = new_design.copy()
+                                
+                                # 保存完整的文字信息
                                 st.session_state.applied_text = {
                                     "text": text_content,
                                     "font": font_family,
@@ -2103,25 +2080,25 @@ def show_high_complexity_general_sales():
                                     "effect": text_effect,
                                     "alignment": alignment,
                                     "position": (text_x, text_y),
-                                    "use_drawing_method": True  # 标记使用了绘图方法
+                                    "use_drawing_method": True
                                 }
                                 
-                                # 添加详细调试信息
+                                # 保存字体加载和渲染信息
+                                st.session_state.font_debug_info = font_debug_info
+                                
+                                # 显示成功消息
                                 success_msg = f"""
                                 Text applied to design successfully!
-                                Font: {font_family} ({type(font).__name__})
+                                Font: {font_family}
                                 Size: {render_size}px
                                 Actual width: {original_text_width}px
                                 Actual height: {original_text_height}px
                                 Position: ({text_x}, {text_y})
                                 T-shirt size: {img_width} x {img_height}
-                                Rendering method: High-definition rendering (2x scale)
+                                Rendering method: High-definition rendering
                                 """
-                                
                                 st.success(success_msg)
-                                
-                                # 保存完整的字体加载和渲染信息
-                                st.session_state.font_debug_info = font_debug_info
+                                st.rerun()
                             else:
                                 st.error("Failed to load any font. Cannot apply text.")
                         except Exception as e:
