@@ -97,15 +97,15 @@ def get_ai_design_suggestions(user_preferences=None):
                     text_matches = re.findall(text_pattern2, suggestion_text)
                 
                 # 保存文本建议
-                if text_matches:
-                    st.session_state.ai_suggested_texts = text_matches
-                else:
-                    st.session_state.ai_suggested_texts = []
-                
+                    if text_matches:
+                        st.session_state.ai_suggested_texts = text_matches
+                    else:
+                        st.session_state.ai_suggested_texts = []
+                        
             except Exception as e:
                 print(f"解析过程出错: {e}")
                 st.session_state.ai_suggested_texts = []
-            
+                
             # 返回原始文本，不做任何HTML格式化
             return suggestion_text
         else:
@@ -834,7 +834,7 @@ def show_low_complexity_general_sales():
                                     st.error(f"Error applying text: {str(e)}")
                                     import traceback
                                     st.error(traceback.format_exc())
-                
+        
         # Display current image and get click coordinates
         # 确保current_image存在
         if st.session_state.current_image is not None:
@@ -1084,51 +1084,7 @@ def show_low_complexity_general_sales():
         
         # 颜色与面料部分 - 独立出来，确保始终显示
         with st.expander("🎨 Color Selection", expanded=True):
-            # 颜色选择部分 - 使用固定预设颜色，不与AI建议联动
-            st.markdown("##### Select Color")
-            
-            # 创建固定的预设颜色选项
-            preset_colors = {
-                "White": "#FFFFFF", 
-                "Black": "#000000", 
-                "Navy Blue": "#003366", 
-                "Red": "#FF0000",
-                "Green": "#008000",
-                "Blue": "#0000FF",
-                "Yellow": "#FFFF00",
-                "Purple": "#800080",
-                "Light Gray": "#CCCCCC", 
-                "Light Blue": "#ADD8E6"
-            }
-            
-            # 显示预设颜色选择列表
-            color_cols = st.columns(min(3, len(preset_colors)))
-            
-            for i, (color_name, color_hex) in enumerate(preset_colors.items()):
-                with color_cols[i % 3]:
-                    # 显示颜色预览
-                    st.markdown(
-                        f"""
-                        <div style="
-                            background-color: {color_hex}; 
-                            width: 100%; 
-                            height: 40px; 
-                            border-radius: 5px;
-                            border: 1px solid #ddd;
-                            margin-bottom: 5px;">
-                        </div>
-                        <div style="text-align: center; margin-bottom: 10px;">
-                            {color_name}<br>
-                            <span style="font-family: monospace; font-size: 0.9em;">{color_hex}</span>
-                        </div>
-                        """, 
-                        unsafe_allow_html=True
-                    )
-                    if st.button(f"Apply {color_name}", key=f"preset_{i}"):
-                        st.session_state.shirt_color_hex = color_hex
-                        st.rerun()
-            
-            # 添加自定义颜色调整功能
+            # 颜色选择部分 - 只保留自定义颜色选择功能
             st.markdown("##### Custom Color")
             custom_color = st.color_picker("Select a custom color:", st.session_state.shirt_color_hex, key="custom_color_picker")
             custom_col1, custom_col2 = st.columns([3, 1])
@@ -1153,7 +1109,7 @@ def show_low_complexity_general_sales():
                 if st.button("Apply custom color"):
                     st.session_state.shirt_color_hex = custom_color
                     st.rerun()
-            
+        
         # 文字设计部分 - 独立出来，确保始终显示
         with st.expander("✍️ Text Design", expanded=True):
             # 文字选项
@@ -1252,7 +1208,7 @@ def show_low_complexity_general_sales():
                     """,
                     unsafe_allow_html=True
                 )
-            
+                
             # 应用文字按钮
             if st.button("Apply text to design", key="apply_ai_text"):
                 if not text_content.strip():
@@ -1296,4 +1252,4 @@ def show_low_complexity_general_sales():
         
         # 添加成功提示
         st.success("All designs have been cleared, returning to the main page...")
-        st.rerun()
+        st.rerun() 
