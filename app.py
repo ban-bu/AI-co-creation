@@ -43,7 +43,7 @@ client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
 from fabric_texture import apply_fabric_texture
 
 # 导入SVG处理功能
-from svg_utils import convert_svg_to_png, CAIROSVG_AVAILABLE, SVGLIB_AVAILABLE
+from svg_utils import convert_svg_to_png
 
 # 导入分拆出去的各页面模块
 from welcome_page import show_welcome_page
