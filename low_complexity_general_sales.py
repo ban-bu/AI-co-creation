@@ -487,8 +487,8 @@ def show_low_complexity_general_sales():
                                 else:  # 居中
                                     paste_x = (img_width - text_img_resized.width) // 2
                                 
-                                # 垂直位置
-                                paste_y = int(img_height * 0.4 - text_img_resized.height // 2)
+                                # 垂直位置 - 上移以更好地展示
+                                paste_y = int(img_height * 0.3 - text_img_resized.height // 2)
                                 
                                 # 粘贴到T恤上
                                 st.session_state.final_design.paste(text_img_resized, (paste_x, paste_y), text_img_resized)
@@ -661,8 +661,8 @@ def show_low_complexity_general_sales():
                                         else:  # 居中
                                             text_x = (img_width - text_width) // 2
                                         
-                                        # 垂直位置 - 保持在T恤上部
-                                        text_y = int(img_height * 0.4 - text_height // 2)
+                                        # 垂直位置 - 上移以更好地展示
+                                        text_y = int(img_height * 0.3 - text_height // 2)
                                         
                                         # 先应用特效
                                         if "style" in text_info:
@@ -744,8 +744,9 @@ def show_low_complexity_general_sales():
                                                     y_pos = i // img_width  # 计算像素的y位置
                                                     if item[3] > 0:  # 如果是文字部分
                                                         # 根据y位置计算颜色混合比例
-                                                        ratio = y_pos / text_height
+                                                        ratio = (y_pos - text_y) / text_height
                                                         if ratio > 1: ratio = 1
+                                                        if ratio < 0: ratio = 0
                                                         
                                                         # 线性混合两种颜色
                                                         r = int(from_color[0] * (1 - ratio) + to_color[0] * ratio)
@@ -766,7 +767,10 @@ def show_low_complexity_general_sales():
                                         st.session_state.text_size_info = {
                                             "font_size": render_size,
                                             "text_width": text_width,
-                                            "text_height": text_height
+                                            "text_height": text_height,
+                                            "scale_factor": 1.5,
+                                            "original_width": max_width,
+                                            "original_height": total_height
                                         }
                                         
                                         # 应用成功
@@ -1138,7 +1142,7 @@ def show_low_complexity_general_sales():
             text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
             
             # 添加动态文字大小滑块 - 增加最大值
-            text_size = st.slider("Text size:", 20, 400, 39, key="ai_text_size")
+            text_size = st.slider("Text size:", 20, 400, 100, key="ai_text_size")
             
             # 添加文字效果选项
             text_effect = st.selectbox("Text effect:", ["None", "Bent", "Arch", "Wave", "3D", "Gradient"])
@@ -1336,45 +1340,53 @@ def show_low_complexity_general_sales():
                                 text_height = total_height
                                 font_debug_info.append(f"Actual text size: {text_width}x{text_height}px, divided into {len(lines)} lines")
                                 
-                                # 根据对齐方式计算X位置
-                                if alignment.lower() == "left":
-                                    text_x = int(img_width * 0.2)
-                                elif alignment.lower() == "right":
-                                    text_x = int(img_width * 0.8 - text_width)
-                                else:  # 居中
-                                    text_x = (img_width - text_width) // 2
+                                # 放大渲染尺寸系数，让文字在T恤上更加明显
+                                render_scale = 1.5
+                                line_height = render_size * 1.2 * render_scale  # 增加行高
+                                text_width = max_width * render_scale
+                                text_height = total_height * render_scale
+                                font_debug_info.append(f"Scaled text size: {text_width}x{text_height}px with scale factor {render_scale}")
                                 
-                                # 垂直位置 - 保持在T恤上部
-                                text_y = int(img_height * 0.4 - text_height // 2)
+                                # 计算位置
+                                if text_info["alignment"] == "left":
+                                    paste_x = int(img_width * 0.2)
+                                elif text_info["alignment"] == "right":
+                                    paste_x = int(img_width * 0.8 - text_width)
+                                else:  # 居中
+                                    paste_x = (img_width - text_width) // 2
+                                
+                                # 垂直位置 - 上移以更好地展示
+                                paste_y = int(img_height * 0.3 - text_height // 2)
                                 
                                 # 先应用特效
-                                if "Outline" in text_style:
-                                    # 绘制粗轮廓
-                                    outline_color = "black"
-                                    outline_width = max(3, render_size // 20)
-                                    
-                                    # 8方向轮廓，让描边更均匀
-                                    for angle in range(0, 360, 45):
-                                        rad = math.radians(angle)
-                                        offset_x = int(outline_width * math.cos(rad))
-                                        offset_y = int(outline_width * math.sin(rad))
+                                if "style" in text_style:
+                                    if "outline" in text_style:
+                                        # 绘制粗轮廓
+                                        outline_color = "black"
+                                        outline_width = max(3, render_size // 20)
                                         
-                                        # 处理多行文本
-                                        for i, line in enumerate(lines):
-                                            line_y = text_y + i * line_height
-                                            if alignment.lower() == "center":
-                                                line_bbox = text_draw.textbbox((0, 0), line, font=font)
-                                                line_width = line_bbox[2] - line_bbox[0]
-                                                line_x = text_x + (text_width - line_width) // 2
-                                            elif alignment.lower() == "right":
-                                                line_bbox = text_draw.textbbox((0, 0), line, font=font)
-                                                line_width = line_bbox[2] - line_bbox[0]
-                                                line_x = text_x + (text_width - line_width)
-                                            else:
-                                                line_x = text_x
+                                        # 8方向轮廓，让描边更均匀
+                                        for angle in range(0, 360, 45):
+                                            rad = math.radians(angle)
+                                            offset_x = int(outline_width * math.cos(rad))
+                                            offset_y = int(outline_width * math.sin(rad))
                                             
-                                            text_draw.text((line_x + offset_x, line_y + offset_y), 
-                                                        line, fill=outline_color, font=font)
+                                            # 处理多行文本
+                                            for i, line in enumerate(lines):
+                                                line_y = paste_y + i * line_height
+                                                if alignment.lower() == "center":
+                                                    line_bbox = text_draw.textbbox((0, 0), line, font=font)
+                                                    line_width = line_bbox[2] - line_bbox[0]
+                                                    line_x = paste_x + (text_width - line_width) // 2
+                                                elif alignment.lower() == "right":
+                                                    line_bbox = text_draw.textbbox((0, 0), line, font=font)
+                                                    line_width = line_bbox[2] - line_bbox[0]
+                                                    line_x = paste_x + (text_width - line_width)
+                                                else:
+                                                    line_x = paste_x
+                                                
+                                                text_draw.text((line_x + offset_x, line_y + offset_y), 
+                                                            line, fill=outline_color, font=font)
                                 
                                 if "Shadow" in text_style:
                                     # 渐变阴影效果
@@ -1383,17 +1395,17 @@ def show_low_complexity_general_sales():
                                     
                                     # 处理多行文本
                                     for i, line in enumerate(lines):
-                                        line_y = text_y + i * line_height
+                                        line_y = paste_y + i * line_height
                                         if alignment.lower() == "center":
                                             line_bbox = text_draw.textbbox((0, 0), line, font=font)
                                             line_width = line_bbox[2] - line_bbox[0]
-                                            line_x = text_x + (text_width - line_width) // 2
+                                            line_x = paste_x + (text_width - line_width) // 2
                                         elif alignment.lower() == "right":
                                             line_bbox = text_draw.textbbox((0, 0), line, font=font)
                                             line_width = line_bbox[2] - line_bbox[0]
-                                            line_x = text_x + (text_width - line_width)
+                                            line_x = paste_x + (text_width - line_width)
                                         else:
-                                            line_x = text_x
+                                            line_x = paste_x
                                         
                                         text_draw.text((line_x + shadow_offset, line_y + shadow_offset), 
                                                     line, fill=shadow_color, font=font)
@@ -1404,17 +1416,17 @@ def show_low_complexity_general_sales():
                                 
                                 # 绘制主文字 - 处理多行文本
                                 for i, line in enumerate(lines):
-                                    line_y = text_y + i * line_height
+                                    line_y = paste_y + i * line_height
                                     if alignment.lower() == "center":
                                         line_bbox = text_draw.textbbox((0, 0), line, font=font)
                                         line_width = line_bbox[2] - line_bbox[0]
-                                        line_x = text_x + (text_width - line_width) // 2
+                                        line_x = paste_x + (text_width - line_width) // 2
                                     elif alignment.lower() == "right":
                                         line_bbox = text_draw.textbbox((0, 0), line, font=font)
                                         line_width = line_bbox[2] - line_bbox[0]
-                                        line_x = text_x + (text_width - line_width)
+                                        line_x = paste_x + (text_width - line_width)
                                     else:
-                                        line_x = text_x
+                                        line_x = paste_x
                                     
                                     text_draw.text((line_x, line_y), line, fill=text_rgba, font=font)
                                 
@@ -1428,17 +1440,17 @@ def show_low_complexity_general_sales():
                                         
                                         # 先绘制文字蒙版
                                         for i, line in enumerate(lines):
-                                            line_y = text_y + i * line_height
+                                            line_y = paste_y + i * line_height
                                             if alignment.lower() == "center":
                                                 line_bbox = text_draw.textbbox((0, 0), line, font=font)
                                                 line_width = line_bbox[2] - line_bbox[0]
-                                                line_x = text_x + (text_width - line_width) // 2
+                                                line_x = paste_x + (text_width - line_width) // 2
                                             elif alignment.lower() == "right":
                                                 line_bbox = text_draw.textbbox((0, 0), line, font=font)
                                                 line_width = line_bbox[2] - line_bbox[0]
-                                                line_x = text_x + (text_width - line_width)
+                                                line_x = paste_x + (text_width - line_width)
                                             else:
-                                                line_x = text_x
+                                                line_x = paste_x
                                             
                                             gradient_draw.text((line_x, line_y), line, fill=(255, 255, 255, 255), font=font)
                                         
@@ -1453,7 +1465,7 @@ def show_low_complexity_general_sales():
                                             y_pos = i // img_width  # 计算像素的y位置
                                             if item[3] > 0:  # 如果是文字部分
                                                 # 根据y位置计算颜色混合比例
-                                                ratio = (y_pos - text_y) / text_height
+                                                ratio = (y_pos - paste_y) / text_height
                                                 if ratio > 1: ratio = 1
                                                 if ratio < 0: ratio = 0
                                                 
@@ -1472,11 +1484,14 @@ def show_low_complexity_general_sales():
                                 new_design.paste(text_layer, (0, 0), text_layer)
                                 
                                 # 保存相关信息
-                                st.session_state.text_position = (text_x, text_y)
+                                st.session_state.text_position = (paste_x, paste_y)
                                 st.session_state.text_size_info = {
                                     "font_size": render_size,
                                     "text_width": text_width,
-                                    "text_height": text_height
+                                    "text_height": text_height,
+                                    "scale_factor": render_scale,
+                                    "original_width": max_width,
+                                    "original_height": total_height
                                 }
                                 
                                 # 应用成功
@@ -1495,7 +1510,7 @@ def show_low_complexity_general_sales():
                                     "style": text_style,
                                     "effect": text_effect,
                                     "alignment": alignment,
-                                    "position": (text_x, text_y),
+                                    "position": (paste_x, paste_y),
                                     "use_drawing_method": True
                                 }
                                 
