@@ -1693,7 +1693,7 @@ def show_high_complexity_general_sales():
                         # 显示确认信息
                         st.success(f"Fabric texture updated: {fabric_type}")
                 
-        # 文字设计部分
+        # 文字设计部分 - 独立出来，确保始终显示
         with st.expander("✍️ Text Design", expanded=True):
             st.markdown("#### Add Text to Your Design")
             # 文字建议应用
@@ -1711,7 +1711,7 @@ def show_high_complexity_general_sales():
                                 st.session_state.temp_text_selection = text
                                 st.rerun()
             
-            # 文字选项 - 使用高复杂度方案的全部功能
+            # 文字选项
             text_col1, text_col2 = st.columns([2, 1])
             
             with text_col1:
@@ -1724,14 +1724,14 @@ def show_high_complexity_general_sales():
                 elif 'ai_text_suggestion' in st.session_state:
                     default_input = st.session_state.ai_text_suggestion
                 
-                text_content = st.text_input("Your text", default_input, key="ai_text_suggestion")
+                text_content = st.text_input("Enter or copy AI recommended text", default_input, key="ai_text_suggestion")
             
             with text_col2:
                 text_color = st.color_picker("Text color:", "#000000", key="ai_text_color")
             
             # 字体选择 - 扩展为高复杂度方案的选项
             font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]
-            font_family = st.selectbox("Font series:", font_options, key="ai_font_selection")
+            font_family = st.selectbox("Font family:", font_options, key="ai_font_selection")
             
             # 添加文字样式选项
             text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
@@ -1744,7 +1744,7 @@ def show_high_complexity_general_sales():
                     st.rerun()
             
             # 添加动态文字大小滑块 - 增加最大值
-            text_size = st.slider("Text size:", 20, 400, 39, key="ai_text_size")
+            text_size = st.slider("Text size:", 20, 400, 100, key="ai_text_size")
             
             # 添加文字效果选项
             text_effect = st.selectbox("Text effect:", ["None", "Bent", "Arch", "Wave", "3D", "Gradient"])
@@ -1752,7 +1752,7 @@ def show_high_complexity_general_sales():
             # 添加对齐方式选项
             alignment = st.radio("Alignment:", ["Left", "Center", "Right"], horizontal=True, index=1)
             
-            # 修改预览部分，添加样式效果
+            # 修改预览部分，将中文样式转换为英文样式名称
             if text_content:
                 # 构建样式字符串
                 style_str = ""
@@ -1818,7 +1818,7 @@ def show_high_complexity_general_sales():
             # 应用文字按钮
             if st.button("Apply text to design", key="apply_ai_text"):
                 if not text_content.strip():
-                    st.error("Please enter some text before applying")
+                    st.warning("Please enter text content!")
                 else:
                     # 文字应用逻辑
                     with st.spinner("Applying text design..."):
@@ -2043,7 +2043,7 @@ def show_high_complexity_general_sales():
                                             alpha = int(150 * (1 - step/blur_steps))
                                             cur_shadow = (0, 0, 0, alpha)
                                             hr_draw.text((line_x + offset, line_y + offset), 
-                                                      line, fill=cur_shadow, font=hr_font)
+                                                       line, fill=cur_shadow, font=hr_font)
                                 
                                 # 将文字颜色从十六进制转换为RGBA
                                 text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
@@ -2110,7 +2110,7 @@ def show_high_complexity_general_sales():
                                 success_msg = f"""
                                 Text applied to design successfully!
                                 Font: {font_family} ({type(font).__name__})
-                                Size: {text_size}px
+                                Size: {render_size}px
                                 Actual width: {original_text_width}px
                                 Actual height: {original_text_height}px
                                 Position: ({text_x}, {text_y})
