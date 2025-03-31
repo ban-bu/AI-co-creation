@@ -23,6 +23,7 @@ import re
 import math
 # 导入面料纹理模块
 from fabric_texture import apply_fabric_texture
+import uuid
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
@@ -1357,11 +1358,11 @@ def show_high_complexity_general_sales():
     with controls_col:
         # 操作区，包含AI建议和其他控制选项
         with st.expander("🤖 AI design suggestions", expanded=True):
+            st.markdown("#### Get AI Suggestions")
             # 添加用户偏好输入
             user_preference = st.text_input("Describe your preferred style or usage", placeholder="For example: sports style, business场合, casual daily, etc.")
             
             # 添加更详细的个人特征输入
-            st.markdown("#### Personal characteristics")
             col_per1, col_per2 = st.columns(2)
             
             with col_per1:
@@ -1444,129 +1445,126 @@ def show_high_complexity_general_sales():
                 """, unsafe_allow_html=True)
                 
                 st.markdown(st.session_state.ai_suggestions, unsafe_allow_html=True)
-                
-                # 添加应用建议的部分
-                st.markdown("---")
-                st.markdown("#### Apply AI suggestions")
-                
-                # 颜色建议应用
-                if 'ai_suggested_colors' not in st.session_state:
-                    # 初始提供一些默认颜色选项
-                    st.session_state.ai_suggested_colors = {
-                        "white": "#FFFFFF", 
-                        "black": "#000000", 
-                        "navy blue": "#003366", 
-                        "light gray": "#CCCCCC", 
-                        "light blue": "#ADD8E6"
-                    }
-                
-                st.markdown("##### Apply recommended colors")
-                
-                # 创建颜色选择列表 - 动态创建
-                colors = st.session_state.ai_suggested_colors
-                color_cols = st.columns(min(3, len(colors)))
-                
-                for i, (color_name, color_hex) in enumerate(colors.items()):
-                    with color_cols[i % 3]:
-                        # 显示颜色预览
-                        st.markdown(
-                            f"""
-                            <div style="
-                                background-color: {color_hex}; 
-                                width: 100%; 
-                                height: 40px; 
-                                border-radius: 5px;
-                                border: 1px solid #ddd;
-                                margin-bottom: 5px;">
-                            </div>
-                            <div style="text-align: center; margin-bottom: 10px;">
-                                {color_name}<br>
-                                <span style="font-family: monospace; font-size: 0.9em;">{color_hex}</span>
-                            </div>
-                            """, 
-                            unsafe_allow_html=True
-                        )
-                        if st.button(f"Apply {color_name}", key=f"apply_{i}"):
-                            st.session_state.shirt_color_hex = color_hex
-                            st.rerun()
-                
-                # 添加自定义颜色调整功能
-                st.markdown("##### Custom color")
-                custom_color = st.color_picker("Select a custom color:", st.session_state.shirt_color_hex, key="custom_color_picker")
-                custom_col1, custom_col2 = st.columns([3, 1])
-                
-                with custom_col1:
-                    # 显示自定义颜色预览
+
+        # 将应用建议的部分移出条件判断，确保始终显示
+        with st.expander("🎨 Color & Fabric", expanded=True):
+            st.markdown("#### T-shirt Color")
+            
+            # 颜色建议应用
+            if 'ai_suggested_colors' not in st.session_state:
+                # 初始提供一些默认颜色选项
+                st.session_state.ai_suggested_colors = {
+                    "white": "#FFFFFF", 
+                    "black": "#000000", 
+                    "navy blue": "#003366", 
+                    "light gray": "#CCCCCC", 
+                    "light blue": "#ADD8E6"
+                }
+            
+            # 创建颜色选择列表 - 动态创建
+            colors = st.session_state.ai_suggested_colors
+            color_cols = st.columns(min(3, len(colors)))
+            
+            for i, (color_name, color_hex) in enumerate(colors.items()):
+                with color_cols[i % 3]:
+                    # 显示颜色预览
                     st.markdown(
                         f"""
                         <div style="
-                            background-color: {custom_color}; 
+                            background-color: {color_hex}; 
                             width: 100%; 
                             height: 40px; 
                             border-radius: 5px;
                             border: 1px solid #ddd;
                             margin-bottom: 5px;">
                         </div>
+                        <div style="text-align: center; margin-bottom: 10px;">
+                            {color_name}<br>
+                            <span style="font-family: monospace; font-size: 0.9em;">{color_hex}</span>
+                        </div>
                         """, 
                         unsafe_allow_html=True
                     )
-                
-                with custom_col2:
-                    if st.button("Apply custom color"):
-                        st.session_state.shirt_color_hex = custom_color
+                    if st.button(f"Apply {color_name}", key=f"apply_{i}"):
+                        st.session_state.shirt_color_hex = color_hex
                         st.rerun()
+            
+            # 添加自定义颜色调整功能
+            st.markdown("##### Custom color")
+            custom_color = st.color_picker("Select a custom color:", st.session_state.shirt_color_hex, key="custom_color_picker")
+            custom_col1, custom_col2 = st.columns([3, 1])
+            
+            with custom_col1:
+                # 显示自定义颜色预览
+                st.markdown(
+                    f"""
+                    <div style="
+                        background-color: {custom_color}; 
+                        width: 100%; 
+                        height: 40px; 
+                        border-radius: 5px;
+                        border: 1px solid #ddd;
+                        margin-bottom: 5px;">
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+            
+            with custom_col2:
+                if st.button("Apply custom color"):
+                    st.session_state.shirt_color_hex = custom_color
+                    st.rerun()
+            
+            # 添加面料纹理选择
+            st.markdown("#### Fabric Texture")
+            if 'fabric_type' not in st.session_state:
+                st.session_state.fabric_type = "Cotton"  # 默认面料类型
+            
+            # 如果有AI推荐的面料，则显示它们
+            if 'ai_suggested_fabrics' in st.session_state and st.session_state.ai_suggested_fabrics:
+                st.markdown("**AI Recommended Fabrics:**")
                 
-                # 添加面料纹理选择
-                st.markdown("##### Fabric Texture")
-                if 'fabric_type' not in st.session_state:
-                    st.session_state.fabric_type = "Cotton"  # 默认面料类型
+                # 创建面料推荐显示
+                fabric_matches = st.session_state.ai_suggested_fabrics
+                fabric_cols = st.columns(min(2, len(fabric_matches)))
                 
-                # 如果有AI推荐的面料，则显示它们
-                if 'ai_suggested_fabrics' in st.session_state and st.session_state.ai_suggested_fabrics:
-                    st.markdown("**AI Recommended Fabrics:**")
-                    
-                    # 创建面料推荐显示
-                    fabric_matches = st.session_state.ai_suggested_fabrics
-                    fabric_cols = st.columns(min(2, len(fabric_matches)))
-                    
-                    for i, (fabric_name, fabric_desc) in enumerate(fabric_matches.items()):
-                        with fabric_cols[i % 2]:
-                            # 显示简短描述
-                            short_desc = fabric_desc[:100] + "..." if len(fabric_desc) > 100 else fabric_desc
+                for i, (fabric_name, fabric_desc) in enumerate(fabric_matches.items()):
+                    with fabric_cols[i % 2]:
+                        # 显示简短描述
+                        short_desc = fabric_desc[:100] + "..." if len(fabric_desc) > 100 else fabric_desc
+                        
+                        st.markdown(f"**{fabric_name}**")
+                        st.markdown(f"*{short_desc}*")
+                        
+                        if st.button(f"Use {fabric_name}", key=f"fabric_{i}"):
+                            # 更新面料类型
+                            st.session_state.fabric_type = fabric_name
                             
-                            st.markdown(f"**{fabric_name}**")
-                            st.markdown(f"*{short_desc}*")
-                            
-                            if st.button(f"Use {fabric_name}", key=f"fabric_{i}"):
-                                # 更新面料类型
-                                st.session_state.fabric_type = fabric_name
-                                
-                                # 应用面料纹理
-                                if st.session_state.original_base_image is not None:
-                                    try:
-                                        # 应用纹理
-                                        new_colored_image = change_shirt_color(
-                                            st.session_state.original_base_image,
-                                            st.session_state.shirt_color_hex,
-                                            apply_texture=True,
-                                            fabric_type=fabric_name
-                                        )
-                                        st.session_state.base_image = new_colored_image
-                                        
-                                        # 更新当前图像
-                                        new_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
-                                        st.session_state.current_image = new_image
-                                        
-                                        # 如果有最终设计，也需要更新
-                                        if st.session_state.final_design is not None:
-                                            st.session_state.final_design = new_colored_image.copy()
-                                        
-                                        st.success(f"Applied {fabric_name} texture")
-                                        st.rerun()
-                                    except Exception as e:
-                                        st.warning(f"Error applying fabric texture: {e}")
+                            # 应用面料纹理
+                            if st.session_state.original_base_image is not None:
+                                try:
+                                    # 应用纹理
+                                    new_colored_image = change_shirt_color(
+                                        st.session_state.original_base_image,
+                                        st.session_state.shirt_color_hex,
+                                        apply_texture=True,
+                                        fabric_type=fabric_name
+                                    )
+                                    st.session_state.base_image = new_colored_image
+                                    
+                                    # 更新当前图像
+                                    new_image, _ = draw_selection_box(new_colored_image, st.session_state.current_box_position)
+                                    st.session_state.current_image = new_image
+                                    
+                                    # 如果有最终设计，也需要更新
+                                    if st.session_state.final_design is not None:
+                                        st.session_state.final_design = new_colored_image.copy()
+                                    
+                                    st.success(f"Applied {fabric_name} texture")
+                                    st.rerun()
+                                except Exception as e:
+                                    st.warning(f"Error applying fabric texture: {e}")
                 
-                st.markdown("---")
                 st.markdown("**All Available Fabrics:**")
                 # 面料选择
                 fabric_options = ["Cotton", "Polyester", "Cotton-Polyester Blend", "Jersey", "Linen", "Bamboo"]
@@ -1621,530 +1619,267 @@ def show_high_complexity_general_sales():
                         # 显示确认信息
                         st.success(f"Fabric texture updated: {fabric_type}")
                 
-                # 文字建议应用
-                st.markdown("##### Apply recommended text")
-                
-                # 显示解析的推荐文字，点击直接填充
-                if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
-                    st.markdown("**Click the recommended text below to apply quickly:**")
-                    suggested_texts_container = st.container()
-                    with suggested_texts_container:
-                        text_buttons = st.columns(min(2, len(st.session_state.ai_suggested_texts)))
-                        
-                        for i, text in enumerate(st.session_state.ai_suggested_texts):
-                            with text_buttons[i % 2]:
-                                # 修改按钮实现方式，避免直接设置会话状态
-                                if st.button(f'"{text}"', key=f"text_btn_{i}"):
-                                    # 创建一个临时状态变量
-                                    st.session_state.temp_text_selection = text
-                                    st.rerun()
-                
-                # 文字选项 - 使用高复杂度方案的全部功能
-                text_col1, text_col2 = st.columns([2, 1])
-                
-                with text_col1:
-                    # 使用临时变量的值作为默认值
-                    default_input = ""
-                    if 'temp_text_selection' in st.session_state:
-                        default_input = st.session_state.temp_text_selection
-                        # 使用后清除临时状态
-                        del st.session_state.temp_text_selection
-                    elif 'ai_text_suggestion' in st.session_state:
-                        default_input = st.session_state.ai_text_suggestion
+        # 文字设计部分
+        with st.expander("✍️ Text Design", expanded=True):
+            st.markdown("#### Add Text to Your Design")
+            # 文字建议应用
+            if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
+                st.markdown("**AI recommended text:**")
+                suggested_texts_container = st.container()
+                with suggested_texts_container:
+                    text_buttons = st.columns(min(2, len(st.session_state.ai_suggested_texts)))
                     
-                    text_content = st.text_input("Input or copy the recommended text by AI", default_input, key="ai_text_suggestion")
-                
-                with text_col2:
-                    text_color = st.color_picker("Text color:", "#000000", key="ai_text_color")
-                
-                # 字体选择 - 扩展为高复杂度方案的选项
-                font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]
-                font_family = st.selectbox("Font series:", font_options, key="ai_font_selection")
-                
-                # 添加文字样式选项
-                text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
-                
-                # 添加动态文字大小滑块 - 增加最大值
-                text_size = st.slider("Text size:", 20, 400, 39, key="ai_text_size")
-                
-                # 添加文字效果选项
-                text_effect = st.selectbox("Text effect:", ["None", "Bent", "Arch", "Wave", "3D", "Gradient"])
-                
-                # 添加对齐方式选项
-                alignment = st.radio("Alignment:", ["Left", "Center", "Right"], horizontal=True, index=1)
-                
-                # 修改预览部分，添加样式效果
-                if text_content:
-                    # 构建样式字符串
-                    style_str = ""
-                    if "粗体" in text_style:
-                        style_str += "font-weight: bold; "
-                    if "斜体" in text_style:
-                        style_str += "font-style: italic; "
-                    if "下划线" in text_style:
-                        style_str += "text-decoration: underline; "
-                    if "阴影" in text_style:
-                        style_str += "text-shadow: 2px 2px 4px rgba(0,0,0,0.5); "
-                    if "轮廓" in text_style:
-                        style_str += "-webkit-text-stroke: 1px #000; "
-                    
-                    # 处理对齐
-                    align_str = "center"
-                    if alignment == "Left":
-                        align_str = "left"
-                    elif alignment == "Right":
-                        align_str = "right"
-                    
-                    # 处理效果
-                    effect_str = ""
-                    if text_effect == "Bent":
-                        effect_str = "transform: rotateX(10deg); transform-origin: center; "
-                    elif text_effect == "Arch":
-                        effect_str = "transform: perspective(100px) rotateX(10deg); "
-                    elif text_effect == "Wave":
-                        effect_str = "display: inline-block; transform: translateY(5px); animation: wave 2s ease-in-out infinite; "
-                    elif text_effect == "3D":
-                        effect_str = "text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb; "
-                    elif text_effect == "Gradient":
-                        effect_str = "background: linear-gradient(45deg, #f3ec78, #af4261); -webkit-background-clip: text; -webkit-text-fill-color: transparent; "
-                    
-                    preview_size = text_size * 1.5  # 预览大小略大
-                    st.markdown(
-                        f"""
-                        <style>
-                        @keyframes wave {{
-                            0%, 100% {{ transform: translateY(0px); }}
-                            50% {{ transform: translateY(-10px); }}
-                        }}
-                        </style>
-                        <div style="
-                            padding: 10px;
-                            margin: 10px 0;
-                            border: 1px solid #ddd;
-                            border-radius: 5px;
-                            font-family: {font_family}, sans-serif;
-                            color: {text_color};
-                            text-align: {align_str};
-                            font-size: {preview_size}px;
-                            line-height: 1.2;
-                            {style_str}
-                            {effect_str}
-                        ">
-                        {text_content}
-                        </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
-                    
-                # 修改应用文字到设计部分的代码，完全重写文字应用逻辑
-                if st.button("Apply text to design", key="apply_ai_text"):
-                    if not text_content.strip():
-                        st.warning("请输入文字内容！")
-                    else:
-                        with st.spinner("正在应用文字设计..."):
-                            try:
-                                # 导入必要的模块
-                                from PIL import ImageFont
-                                
-                                # 获取当前图像
-                                if st.session_state.final_design is not None:
-                                    new_design = st.session_state.final_design.copy()
-                                else:
-                                    new_design = st.session_state.base_image.copy()
-                                
-                                # 确保图像是RGBA模式
-                                new_design = new_design.convert('RGBA')
-                                
-                                # 创建文字图层
-                                text_layer = Image.new('RGBA', new_design.size, (0, 0, 0, 0))
-                                text_draw = ImageDraw.Draw(text_layer)
-                                
-                                # 计算文字位置
-                                img_width, img_height = new_design.size
-                                text_x = img_width // 2  # 居中
-                                text_y = img_height // 3  # 在上部1/3处
-                                
-                                # 设置字体大小
-                                font_size = text_size
-                                
-                                # 尝试加载系统字体
-                                try:
-                                    import os
-                                    font_path = "C:/Windows/Fonts/arial.ttf"  # Windows系统字体路径
-                                    if os.path.exists(font_path):
-                                        font = ImageFont.truetype(font_path, font_size)
-                                    else:
-                                        font = ImageFont.load_default()
-                                except Exception:
-                                    font = ImageFont.load_default()
-                                
-                                # 转换颜色为RGBA
-                                text_rgb = tuple(int(text_color.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
-                                text_rgba = text_rgb + (255,)  # 完全不透明
-                                
-                                # 获取文字边界框
-                                bbox = text_draw.textbbox((text_x, text_y), text_content, font=font, anchor="mm")
-                                text_width = bbox[2] - bbox[0]
-                                text_height = bbox[3] - bbox[1]
-                                
-                                # 根据对齐方式调整位置
-                                if alignment == "Left":
-                                    text_x = int(img_width * 0.2)
-                                elif alignment == "Right":
-                                    text_x = int(img_width * 0.8)
-                                # Center保持不变
-                                
-                                # 应用文字样式
-                                if "Shadow" in text_style:
-                                    # 绘制阴影
-                                    shadow_offset = 3
-                                    text_draw.text((text_x + shadow_offset, text_y + shadow_offset), 
-                                                 text_content, font=font, fill=(0, 0, 0, 128), anchor="mm")
-                                
-                                if "Outline" in text_style:
-                                    # 绘制轮廓
-                                    outline_color = (0, 0, 0, 255)
-                                    for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
-                                        text_draw.text((text_x + dx, text_y + dy), 
-                                                     text_content, font=font, fill=outline_color, anchor="mm")
-                                
-                                # 绘制主文字
-                                text_draw.text((text_x, text_y), text_content, 
-                                             font=font, fill=text_rgba, anchor="mm")
-                                
-                                # 合并图层
-                                new_design = Image.alpha_composite(new_design, text_layer)
-                                
-                                # 更新设计
-                                st.session_state.final_design = new_design
-                                st.session_state.current_image = new_design.copy()
-                                
-                                # 保存文字信息
-                                st.session_state.applied_text = {
-                                    "text": text_content,
-                                    "font": font_family,
-                                    "color": text_color,
-                                    "size": text_size,
-                                    "style": text_style,
-                                    "effect": text_effect,
-                                    "alignment": alignment,
-                                    "position": (text_x, text_y)
-                                }
-                                
-                                st.success("文字已成功应用到设计上！")
+                    for i, text in enumerate(st.session_state.ai_suggested_texts):
+                        with text_buttons[i % 2]:
+                            # 修改按钮实现方式，避免直接设置会话状态
+                            if st.button(f'"{text}"', key=f"text_btn_{i}"):
+                                # 创建一个临时状态变量
+                                st.session_state.temp_text_selection = text
                                 st.rerun()
-                                
-                            except Exception as e:
-                                st.error(f"应用文字时出错: {str(e)}")
-                                import traceback
-                                st.error(traceback.format_exc())
+            
+            # 文字选项 - 使用高复杂度方案的全部功能
+            text_col1, text_col2 = st.columns([2, 1])
+            
+            with text_col1:
+                # 使用临时变量的值作为默认值
+                default_input = ""
+                if 'temp_text_selection' in st.session_state:
+                    default_input = st.session_state.temp_text_selection
+                    # 使用后清除临时状态
+                    del st.session_state.temp_text_selection
+                elif 'ai_text_suggestion' in st.session_state:
+                    default_input = st.session_state.ai_text_suggestion
                 
-                # 添加Logo选择功能
-                st.markdown("##### Apply Logo")
+                text_content = st.text_input("Your text", default_input, key="ai_text_suggestion")
+            
+            with text_col2:
+                text_color = st.color_picker("Text color:", "#000000", key="ai_text_color")
+            
+            # 字体选择 - 扩展为高复杂度方案的选项
+            font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]
+            font_family = st.selectbox("Font series:", font_options, key="ai_font_selection")
+            
+            # 添加文字样式选项
+            text_style = st.multiselect("Text style:", ["Bold", "Italic", "Underline", "Shadow", "Outline"], default=["Bold"])
+            
+            # 添加动态文字大小滑块 - 增加最大值
+            text_size = st.slider("Text size:", 20, 400, 39, key="ai_text_size")
+            
+            # 添加文字效果选项
+            text_effect = st.selectbox("Text effect:", ["None", "Bent", "Arch", "Wave", "3D", "Gradient"])
+            
+            # 添加对齐方式选项
+            alignment = st.radio("Alignment:", ["Left", "Center", "Right"], horizontal=True, index=1)
+            
+            # 修改预览部分，添加样式效果
+            if text_content:
+                # 构建样式字符串
+                style_str = ""
+                if "粗体" in text_style:
+                    style_str += "font-weight: bold; "
+                if "斜体" in text_style:
+                    style_str += "font-style: italic; "
+                if "下划线" in text_style:
+                    style_str += "text-decoration: underline; "
+                if "阴影" in text_style:
+                    style_str += "text-shadow: 2px 2px 4px rgba(0,0,0,0.5); "
+                if "轮廓" in text_style:
+                    style_str += "-webkit-text-stroke: 1px #000; "
+                
+                # 处理对齐
+                align_str = "center"
+                if alignment == "Left":
+                    align_str = "left"
+                elif alignment == "Right":
+                    align_str = "right"
+                
+                # 处理效果
+                effect_str = ""
+                if text_effect == "Bent":
+                    effect_str = "transform: rotateX(10deg); transform-origin: center; "
+                elif text_effect == "Arch":
+                    effect_str = "transform: perspective(100px) rotateX(10deg); "
+                elif text_effect == "Wave":
+                    effect_str = "display: inline-block; transform: translateY(5px); animation: wave 2s ease-in-out infinite; "
+                elif text_effect == "3D":
+                    effect_str = "text-shadow: 0 1px 0 #ccc, 0 2px 0 #c9c9c9, 0 3px 0 #bbb; "
+                elif text_effect == "Gradient":
+                    effect_str = "background: linear-gradient(45deg, #f3ec78, #af4261); -webkit-background-clip: text; -webkit-text-fill-color: transparent; "
+                
+                preview_size = text_size * 1.5  # 预览大小略大
+                st.markdown(
+                    f"""
+                    <style>
+                    @keyframes wave {{
+                        0%, 100% {{ transform: translateY(0px); }}
+                        50% {{ transform: translateY(-10px); }}
+                    }}
+                    </style>
+                    <div style="
+                        padding: 10px;
+                        margin: 10px 0;
+                        border: 1px solid #ddd;
+                        border-radius: 5px;
+                        font-family: {font_family}, sans-serif;
+                        color: {text_color};
+                        text-align: {align_str};
+                        font-size: {preview_size}px;
+                        line-height: 1.2;
+                        {style_str}
+                        {effect_str}
+                    ">
+                    {text_content}
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                
+            # 应用文字按钮
+            if st.button("Apply text to design", key="apply_ai_text"):
+                if not text_content.strip():
+                    st.error("Please enter some text before applying")
+                else:
+                    # 保存当前文字设置
+                    text_info = {
+                        "text": text_content,
+                        "font": font_family,
+                        "color": text_color,
+                        "size": text_size,
+                        "style": text_style,
+                        "effect": text_effect,
+                        "alignment": alignment
+                    }
+                    st.session_state.current_text_info = text_info
+                    st.rerun()
 
-                # 显示自动生成的Logo
-                if hasattr(st.session_state, 'generated_logo') and hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
-                    logo_auto_col1, logo_auto_col2 = st.columns([3, 2])
+        # Logo设计部分
+        with st.expander("🖼️ Logo Design", expanded=True):
+            st.markdown("#### Add Logo to Your Design")
+            
+            # 自动生成的Logo显示
+            if hasattr(st.session_state, 'show_generated_logo') and st.session_state.show_generated_logo:
+                st.markdown("**AI Generated Logo from Your Preferences:**")
+                st.image(st.session_state.generated_logo, width=150)
+                
+                if st.button("Apply AI Generated Logo"):
+                    # 保存Logo信息
+                    st.session_state.selected_preset_logo = "temp_logo.png"  # 临时名称
                     
-                    with logo_auto_col1:
-                        # 显示Logo
-                        preview_width = 200
-                        preview_height = int(preview_width * st.session_state.generated_logo.height / st.session_state.generated_logo.width)
-                        st.image(st.session_state.generated_logo, caption="AI generated Logo", width=preview_width)
+                    # 保存图像到临时文件
+                    temp_logo = st.session_state.generated_logo
+                    temp_logo.save("temp_logo.png")
                     
-                    with logo_auto_col2:
-                        st.success("Logo generated automatically based on AI suggestions")
-                        st.markdown(f"**Prompt**：{st.session_state.logo_prompt}")
-                        
-                        # 直接提供应用Logo的按钮
-                        if st.button("Apply this Logo to design directly", key="apply_auto_logo"):
-                            with st.spinner("Applying Logo to design..."):
-                                try:
-                                    # 获取当前图像
-                                    if st.session_state.final_design is not None:
-                                        new_design = st.session_state.final_design.copy()
-                                    else:
-                                        new_design = st.session_state.base_image.copy()
-                                    
-                                    # 获取图像尺寸并使用更大的绘制区域
-                                    img_width, img_height = new_design.size
-                                    
-                                    # 定义更大的T恤前胸区域
-                                    chest_width = int(img_width * 0.95)  # 几乎整个宽度
-                                    chest_height = int(img_height * 0.6)  # 更大的高度范围
-                                    chest_left = (img_width - chest_width) // 2
-                                    chest_top = int(img_height * 0.2)  # 更高的位置
-                                    
-                                    # 使用默认设置
-                                    logo_size = 40  # 默认40%大小
-                                    logo_position = "Center"  # 默认居中
-                                    logo_opacity = 100  # 默认100%不透明
-                                    
-                                    # 调整Logo大小
-                                    logo_size_factor = logo_size / 100
-                                    logo_width = int(chest_width * logo_size_factor * 0.5)
-                                    logo_height = int(logo_width * st.session_state.generated_logo.height / st.session_state.generated_logo.width)
-                                    logo_resized = st.session_state.generated_logo.resize((logo_width, logo_height), Image.LANCZOS)
-                                    
-                                    # 位置映射
-                                    position_mapping = {
-                                        "Top-left": (chest_left + 10, chest_top + 10),
-                                        "Top-center": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
-                                        "Top-right": (chest_left + chest_width - logo_width - 10, chest_top + 10),
-                                        "Center": (chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2),
-                                        "Bottom-left": (chest_left + 10, chest_top + chest_height - logo_height - 10),
-                                        "Bottom-center": (chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10),
-                                        "Bottom-right": (chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10)
-                                    }
-                                    
-                                    logo_x, logo_y = position_mapping.get(logo_position, (chest_left + 10, chest_top + 10))
-                                    
-                                    # 粘贴Logo到设计
-                                    new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
-                                    
-                                    # 更新设计
-                                    st.session_state.final_design = new_design
-                                    st.session_state.current_image = new_design.copy()
-                                    
-                                    # 保存Logo信息
-                                    st.session_state.applied_logo = {
-                                        "prompt": st.session_state.logo_prompt,
-                                        "size": logo_size,
-                                        "position": logo_position,
-                                        "opacity": logo_opacity
-                                    }
-                                    
-                                    st.success("Logo applied to design successfully!")
-                                    st.rerun()
-                                    
-                                except Exception as e:
-                                    st.error(f"Error applying Logo: {str(e)}")
-                                    import traceback
-                                    st.error(traceback.format_exc())
-
-                # Logo生成选项
-                logo_col1, logo_col2 = st.columns([2, 1])
-
-                with logo_col1:
-                    # 根据AI建议的Logo元素自动填充初始提示词
-                    initial_logo_prompt = ""
-                    if hasattr(st.session_state, 'ai_suggested_logos') and st.session_state.ai_suggested_logos:
-                        # 使用第一个推荐的Logo描述
-                        initial_logo_prompt = st.session_state.ai_suggested_logos[0]
-                    
-                    logo_prompt = st.text_input("Describe the Logo style you want", 
-                                               value=initial_logo_prompt,
-                                               placeholder="For example: A simple modern mountain logo, using blue and white")
-
-                with logo_col2:
-                    # 修改自动生成状态显示 - 移除这部分提示
-                    # if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
-                    #    st.info("您可以修改提示词重新生成Logo")
-                    
-                    if st.button("Generate Logo", key="generate_logo"):
-                        if not logo_prompt:
-                            st.warning("Please enter a Logo description")
-                        else:
-                            with st.spinner("Generating Logo..."):
-                                try:
-                                    # 构建完整的提示词
-                                    full_prompt = f"Create a T-shirt Logo design: {logo_prompt}. Requirements: 1. Use a simple design 2. Suitable for T-shirt printing 3. Background transparent 4. Clear and recognizable图案清晰可识别"
-                                    
-                                    # 调用DALL-E生成图像
-                                    logo_image = generate_vector_image(full_prompt)
-                                    
-                                    if logo_image:
-                                        # 保存生成的Logo
-                                        st.session_state.generated_logo = logo_image
-                                        # 保存Logo提示词
-                                        st.session_state.logo_prompt = logo_prompt
-                                        # 标记为用户手动生成的Logo
-                                        st.session_state.logo_auto_generated = False
-                                        st.success("Logo generated successfully!")
-                                        st.rerun()
-                                except Exception as e:
-                                    st.error(f"Error generating Logo: {str(e)}")
-
-                # 如果有其他AI建议的Logo元素，显示切换选项
-                if hasattr(st.session_state, 'ai_suggested_logos') and len(st.session_state.ai_suggested_logos) > 1:
-                    # 修改显示逻辑，即使已经生成了Logo也显示其他建议
-                    st.markdown("**Other Logo suggestions from AI:**")
-                    for i, logo_desc in enumerate(st.session_state.ai_suggested_logos[1:], 1):
-                        if st.button(f"Use suggestion {i}: {logo_desc[:50]}...", key=f"use_logo_suggestion_{i}"):
-                            with st.spinner("Generating Logo..."):
-                                try:
-                                    # 构建完整的提示词
-                                    full_prompt = f"Create a Logo design: {logo_desc}. Requirements: 1. Use a simple design 2. Suitable for printing 3. Background transparent 4. Clear and recognizable图案清晰可识别"
-                                    
-                                    # 调用DALL-E生成图像
-                                    logo_image = generate_vector_image(full_prompt)
-                                    
-                                    if logo_image:
-                                        # 保存生成的Logo
-                                        st.session_state.generated_logo = logo_image
-                                        # 保存Logo提示词
-                                        st.session_state.logo_prompt = logo_desc
-                                        # 标记为用户选择的Logo
-                                        st.session_state.logo_auto_generated = False
-                                        st.success("Logo generated successfully!")
-                                        st.rerun()
-                                except Exception as e:
-                                    st.error(f"Error generating Logo: {str(e)}")
-
-                # If there is a generated Logo, display the Logo settings options
-                if hasattr(st.session_state, 'generated_logo'):
-                    st.markdown("#### Logo settings")
-                    
-                    # 显示已生成的Logo提示词和预览
-                    logo_preview_col, logo_regen_col = st.columns([3, 2])
-                    
-                    with logo_preview_col:
-                        # 显示生成的Logo预览
-                        preview_width = 200
-                        preview_height = int(preview_width * st.session_state.generated_logo.height / st.session_state.generated_logo.width)
-                        st.image(st.session_state.generated_logo, caption="Generated Logo", width=preview_width)
-                    
-                    with logo_regen_col:
-                        # 显示当前使用的提示词和生成方式
-                        if hasattr(st.session_state, 'logo_auto_generated') and st.session_state.logo_auto_generated:
-                            st.markdown(f"**Current prompt**：{st.session_state.logo_prompt if hasattr(st.session_state, 'logo_prompt') else '未指定'} (Auto generated)")
-                        else:
-                            st.markdown(f"**Current prompt**：{st.session_state.logo_prompt if hasattr(st.session_state, 'logo_prompt') else '未指定'}")
-                        
-                        # 添加重新生成选项
-                        new_logo_prompt = st.text_input("Enter a new Logo description to regenerate", placeholder="Describe the new Logo style you want", key="new_logo_prompt")
-                        
-                        if st.button("Regenerate Logo", key="regenerate_logo"):
-                            if not new_logo_prompt:
-                                st.warning("Please enter a new Logo description")
-                            else:
-                                with st.spinner("Regenerating Logo..."):
-                                    try:
-                                        # 构建完整的提示词
-                                        full_prompt = f"Create a Logo design: {new_logo_prompt}. Requirements: 1. Use a simple design 2. Suitable for printing 3. Background transparent 4. Clear and recognizable图案清晰可识别"
-                                        
-                                        # 调用DALL-E生成图像
-                                        logo_image = generate_vector_image(full_prompt)
-                                        
-                                        if logo_image:
-                                            # 保存生成的Logo
-                                            st.session_state.generated_logo = logo_image
-                                            # 更新Logo提示词
-                                            st.session_state.logo_prompt = new_logo_prompt
-                                            # 标记为用户手动生成的Logo
-                                            st.session_state.logo_auto_generated = False
-                                            st.success("Logo regenerated successfully!")
-                                            st.rerun()
-                                    except Exception as e:
-                                        st.error(f"Error regenerating Logo: {str(e)}")
-                    
-                    # Logo大小
-                    logo_size = st.slider("Logo size:", 10, 100, 40, format="%d%%", key="ai_logo_size")
-                    
-                    # Logo位置
-                    logo_position = st.radio("Position:", 
-                        ["Top-left", "Top-center", "Top-right", "Center", "Bottom-left", "Bottom-center", "Bottom-right"], 
-                        index=3, horizontal=True, key="ai_logo_position")
-                    
-                    # Logo透明度
-                    logo_opacity = st.slider("Logo opacity:", 10, 100, 100, 5, format="%d%%", key="ai_logo_opacity")
-                    
-                    # 应用Logo按钮
-                    if st.button("Apply Logo to design", key="apply_ai_logo"):
-                        with st.spinner("Applying Logo to design..."):
-                            try:
-                                # 获取当前图像
-                                if st.session_state.final_design is not None:
-                                    new_design = st.session_state.final_design.copy()
-                                else:
-                                    new_design = st.session_state.base_image.copy()
-                                
-                                # 获取图像尺寸并使用更大的绘制区域
-                                img_width, img_height = new_design.size
-                                
-                                # 定义更大的T恤前胸区域
-                                chest_width = int(img_width * 0.95)  # 几乎整个宽度
-                                chest_height = int(img_height * 0.6)  # 更大的高度范围
-                                chest_left = (img_width - chest_width) // 2
-                                chest_top = int(img_height * 0.2)  # 更高的位置
-                                
-                                # 调整Logo大小
-                                logo_size_factor = logo_size / 100
-                                logo_width = int(chest_width * logo_size_factor * 0.5)
-                                logo_height = int(logo_width * st.session_state.generated_logo.height / st.session_state.generated_logo.width)
-                                logo_resized = st.session_state.generated_logo.resize((logo_width, logo_height), Image.LANCZOS)
-                                
-                                # 位置映射
-                                position_mapping = {
-                                    "Top-left": (chest_left + 10, chest_top + 10),
-                                    "Top-center": (chest_left + (chest_width - logo_width) // 2, chest_top + 10),
-                                    "Top-right": (chest_left + chest_width - logo_width - 10, chest_top + 10),
-                                    "Center": (chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2),
-                                    "Bottom-left": (chest_left + 10, chest_top + chest_height - logo_height - 10),
-                                    "Bottom-center": (chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10),
-                                    "Bottom-right": (chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10)
-                                }
-                                
-                                logo_x, logo_y = position_mapping.get(logo_position, (chest_left + 10, chest_top + 10))
-                                
-                                # 设置透明度
-                                if logo_opacity < 100:
-                                    logo_data = logo_resized.getdata()
-                                    new_data = []
-                                    for item in logo_data:
-                                        r, g, b, a = item
-                                        new_a = int(a * logo_opacity / 100)
-                                        new_data.append((r, g, b, new_a))
-                                    logo_resized.putdata(new_data)
-                                
-                                # 粘贴Logo到设计
-                                new_design.paste(logo_resized, (logo_x, logo_y), logo_resized)
-                                
-                                # 更新设计
-                                st.session_state.final_design = new_design
-                                st.session_state.current_image = new_design.copy()
-                                
-                                # 保存Logo信息
-                                st.session_state.applied_logo = {
-                                    "prompt": st.session_state.logo_prompt,
-                                    "size": logo_size,
-                                    "position": logo_position,
-                                    "opacity": logo_opacity
-                                }
-                                
-                                # 添加详细调试信息
-                                success_msg = f"""
-                                Logo applied successfully!
-                                Prompt: {st.session_state.logo_prompt}
-                                Size: {logo_size}%
-                                Actual width: {logo_width}px
-                                Actual height: {logo_height}px
-                                Position: {logo_position} ({logo_x}, {logo_y})
-                                Opacity: {logo_opacity}%
-                                T-shirt size: {img_width} x {img_height}
-                                """
-                                
-                                st.success(success_msg)
-                                st.rerun()
-                                
-                            except Exception as e:
-                                st.error(f"Apply Logo error: {str(e)}")
-                                import traceback
-                                st.error(traceback.format_exc())
+                    # 创建Logo应用信息
+                    st.session_state.applied_logo = {
+                        "source": "ai",
+                        "path": "temp_logo.png",
+                        "size": 25,  # 默认大小25%
+                        "position": "Center",
+                        "opacity": 100
+                    }
+                    st.rerun()
+            
+            # 预设Logo选项
+            st.markdown("**Preset Logos:**")
+            
+            # 获取所有预设Logo
+            preset_logos = get_preset_logos()
+            
+            if preset_logos:
+                # 创建Logo预览网格
+                logo_cols = st.columns(min(4, len(preset_logos)))
+                
+                for i, logo_path in enumerate(preset_logos):
+                    with logo_cols[i % 4]:
+                        st.image(logo_path, width=80)
+                        if st.button(f"Select Logo {i+1}", key=f"logo_{i}"):
+                            st.session_state.selected_preset_logo = logo_path
+                            
+                            # 创建或更新应用信息
+                            st.session_state.applied_logo = {
+                                "source": "preset",
+                                "path": logo_path,
+                                "size": 25,  # 默认大小25%
+                                "position": "Center",
+                                "opacity": 100
+                            }
+                            st.rerun()
             else:
-                # 显示欢迎信息
-                st.markdown("""
-                <div style="background-color: #f0f7ff; padding: 15px; border-radius: 10px; border-left: 5px solid #1e88e5;">
-                <h4 style="color: #1e88e5; margin-top: 0;">👋 Welcome to the AI design assistant</h4>
-                <p>Describe your preferred style or T-shirt purpose, the AI assistant will provide personalized design suggestions, including:</p>
-                <ul>
-                    <li>Recommended T-shirt colors for your style</li>
-                    <li>Text content and font style suggestions</li>
-                    <li>Logo selection and design element recommendations</li>
-                </ul>
-                <p>Click the "Get personalized AI suggestions" button to start!</p>
-                </div>
-                """, unsafe_allow_html=True)
+                st.info("No preset logos found. Please upload your own logo.")
+            
+            # 自定义Logo上传
+            st.markdown("**Upload Custom Logo:**")
+            uploaded_logo = st.file_uploader("Choose a logo image (PNG with transparency recommended)", type=["png", "jpg", "jpeg"])
+            
+            if uploaded_logo is not None:
+                # 显示上传的Logo预览
+                logo_preview = Image.open(BytesIO(uploaded_logo.getvalue()))
+                st.image(logo_preview, width=150)
+                
+                if st.button("Use this logo"):
+                    # 保存上传的Logo
+                    logo_image = Image.open(BytesIO(uploaded_logo.getvalue())).convert("RGBA")
+                    logo_filename = f"uploaded_logo_{uuid.uuid4()}.png"
+                    logo_path = os.path.join("logos", logo_filename)
+                    
+                    # 确保目录存在
+                    os.makedirs("logos", exist_ok=True)
+                    logo_image.save(logo_path)
+                    
+                    # 保存Logo信息
+                    st.session_state.selected_preset_logo = logo_path
+                    st.session_state.applied_logo = {
+                        "source": "upload",
+                        "path": logo_path,
+                        "size": 25,  # 默认大小25%
+                        "position": "Center",
+                        "opacity": 100
+                    }
+                    st.rerun()
+            
+            # 如果已选择Logo，显示调整选项
+            if 'selected_preset_logo' in st.session_state:
+                # 确保应用信息已存在
+                if 'applied_logo' not in st.session_state:
+                    st.session_state.applied_logo = {
+                        "source": "preset",
+                        "path": st.session_state.selected_preset_logo,
+                        "size": 25,
+                        "position": "Center",
+                        "opacity": 100
+                    }
+                
+                st.markdown("**Adjust Logo:**")
+                
+                # 显示当前Logo预览
+                try:
+                    current_logo = Image.open(st.session_state.selected_preset_logo)
+                    st.image(current_logo, width=100)
+                except Exception as e:
+                    st.warning(f"可能无法打开Logo: {e}")
+                
+                # Logo大小调整
+                logo_size = st.slider("Logo size (%)", 5, 50, st.session_state.applied_logo["size"])
+                
+                # Logo位置选择
+                position_options = ["Top-left", "Top-center", "Top-right", "Center", "Bottom-left", "Bottom-center", "Bottom-right"]
+                logo_position = st.selectbox("Logo position", position_options, 
+                                            index=position_options.index(st.session_state.applied_logo["position"]) if st.session_state.applied_logo["position"] in position_options else 3)
+                
+                # Logo透明度调整
+                logo_opacity = st.slider("Logo opacity (%)", 10, 100, st.session_state.applied_logo["opacity"])
+                
+                # 应用Logo按钮
+                if st.button("Apply logo with settings"):
+                    # 更新Logo设置
+                    st.session_state.applied_logo = {
+                        "source": st.session_state.applied_logo["source"],
+                        "path": st.session_state.selected_preset_logo,
+                        "size": logo_size,
+                        "position": logo_position,
+                        "opacity": logo_opacity
+                    }
+                    st.rerun()
     
     # Return to main interface button - modified here
     if st.button("Back to main page"):
