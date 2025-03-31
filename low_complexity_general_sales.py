@@ -1388,6 +1388,27 @@ def show_low_complexity_general_sales():
                                 original_text_height = total_height
                                 font_debug_info.append(f"Original text dimensions: {original_text_width}x{original_text_height}px")
                                 
+                                # 添加文本宽度估算检查 - 防止文字变小
+                                # 估算每个字符的平均宽度
+                                avg_char_width = render_size * 0.7  # 大多数字体字符宽度约为字体大小的70%
+                                
+                                # 找到最长的一行
+                                longest_line = max(lines, key=len) if lines else text_content
+                                # 估算的最小宽度
+                                estimated_min_width = len(longest_line) * avg_char_width * 0.8  # 给予20%的容错空间
+                                
+                                # 如果计算出的宽度异常小（小于估算宽度的80%），使用估算宽度
+                                if original_text_width < estimated_min_width:
+                                    font_debug_info.append(f"Width calculation issue detected: calculated={original_text_width}px, estimated={estimated_min_width}px")
+                                    original_text_width = estimated_min_width
+                                    font_debug_info.append(f"Using estimated width: {original_text_width}px")
+                                
+                                # 如果宽度仍然过小，设置一个最小值
+                                min_absolute_width = render_size * 4  # 至少4个字符宽度
+                                if original_text_width < min_absolute_width:
+                                    font_debug_info.append(f"Width too small, using minimum width: {min_absolute_width}px")
+                                    original_text_width = min_absolute_width
+                                
                                 # 放大系数，使文字更清晰
                                 scale_factor = 2.0  # 增加到2倍以提高清晰度
                                 
@@ -1416,10 +1437,13 @@ def show_low_complexity_general_sales():
                                 hr_text_width = max_width * 2
                                 hr_text_height = total_height * 2
                                 
+                                # 获取对齐方式并转换为小写
+                                alignment = text_info["alignment"].lower() if isinstance(text_info["alignment"], str) else "center"
+                                
                                 # 根据对齐方式计算X位置
-                                if alignment.lower() == "left":
+                                if alignment == "left":
                                     text_x = int(img_width * 0.2)
-                                elif alignment.lower() == "right":
+                                elif alignment == "right":
                                     text_x = int(img_width * 0.8 - original_text_width)
                                 else:  # 居中
                                     text_x = (img_width - original_text_width) // 2
@@ -1434,7 +1458,7 @@ def show_low_complexity_general_sales():
                                 font_debug_info.append(f"HR text position: ({hr_text_x}, {hr_text_y})")
                                 
                                 # 先应用特效 - 在高分辨率画布上
-                                if "Outline" in text_style:
+                                if "Outline" in text_info["style"]:
                                     # 增强轮廓效果
                                     outline_color = "black"
                                     outline_width = max(8, hr_font_size // 10)  # 加粗轮廓宽度
@@ -1448,11 +1472,11 @@ def show_low_complexity_general_sales():
                                         # 处理多行文本
                                         for i, line in enumerate(lines):
                                             line_y = hr_text_y + i * hr_line_height
-                                            if alignment.lower() == "center":
+                                            if alignment == "center":
                                                 line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                                 line_width = line_bbox[2] - line_bbox[0]
                                                 line_x = hr_text_x + (hr_text_width - line_width) // 2
-                                            elif alignment.lower() == "right":
+                                            elif alignment == "right":
                                                 line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                                 line_width = line_bbox[2] - line_bbox[0]
                                                 line_x = hr_text_x + (hr_text_width - line_width)
@@ -1462,7 +1486,7 @@ def show_low_complexity_general_sales():
                                             hr_draw.text((line_x + offset_x, line_y + offset_y), 
                                                       line, fill=outline_color, font=hr_font)
                                 
-                                if "Shadow" in text_style:
+                                if "Shadow" in text_info["style"]:
                                     # 增强阴影效果
                                     shadow_color = (0, 0, 0, 150)  # 半透明黑色
                                     shadow_offset = max(15, hr_font_size // 8)  # 增加阴影偏移距离
@@ -1470,11 +1494,11 @@ def show_low_complexity_general_sales():
                                     # 处理多行文本
                                     for i, line in enumerate(lines):
                                         line_y = hr_text_y + i * hr_line_height
-                                        if alignment.lower() == "center":
+                                        if alignment == "center":
                                             line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                             line_width = line_bbox[2] - line_bbox[0]
                                             line_x = hr_text_x + (hr_text_width - line_width) // 2
-                                        elif alignment.lower() == "right":
+                                        elif alignment == "right":
                                             line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                             line_width = line_bbox[2] - line_bbox[0]
                                             line_x = hr_text_x + (hr_text_width - line_width)
@@ -1497,11 +1521,11 @@ def show_low_complexity_general_sales():
                                 # 绘制主文字 - 在高分辨率画布上
                                 for i, line in enumerate(lines):
                                     line_y = hr_text_y + i * hr_line_height
-                                    if alignment.lower() == "center":
+                                    if alignment == "center":
                                         line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                         line_width = line_bbox[2] - line_bbox[0]
                                         line_x = hr_text_x + (hr_text_width - line_width) // 2
-                                    elif alignment.lower() == "right":
+                                    elif alignment == "right":
                                         line_bbox = hr_draw.textbbox((0, 0), line, font=hr_font)
                                         line_width = line_bbox[2] - line_bbox[0]
                                         line_x = hr_text_x + (hr_text_width - line_width)
@@ -1530,6 +1554,13 @@ def show_low_complexity_general_sales():
                                     "text_height": original_text_height,
                                     "scale_factor": scale_factor
                                 }
+                                
+                                # 保存文本图层的副本用于颜色变化时恢复
+                                try:
+                                    st.session_state.text_layer = text_layer.copy()
+                                    font_debug_info.append("Text layer backup saved for color change restoration")
+                                except Exception as e:
+                                    font_debug_info.append(f"Failed to save text layer backup: {str(e)}")
                                 
                                 # 应用成功
                                 font_debug_info.append("Text rendering applied successfully")
