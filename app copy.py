@@ -47,11 +47,12 @@ from svg_utils import convert_svg_to_png
 
 # 导入分拆出去的各页面模块
 from welcome_page import show_welcome_page
+# 导入四个组对应的新文件
+from low_no_explanation import show_low_complexity_general_sales
+from low_with_explanation import show_low_complexity_popup_sales
+from high_no_explanation import show_high_complexity_popup_sales
+from high_with_explanation import show_high_complexity_general_sales
 from survey_page import show_survey_page, initialize_experiment_data, save_experiment_data
-from low_no_explanation import show_low_recommendation_without_explanation
-from low_with_explanation import show_low_recommendation_with_explanation
-from high_no_explanation import show_high_recommendation_without_explanation
-from high_with_explanation import show_high_recommendation_with_explanation
 
 # Page configuration
 st.set_page_config(
@@ -202,13 +203,13 @@ def main():
     elif st.session_state.page == "design":
         # 根据不同的实验组调用不同的设计页面函数
         if st.session_state.experiment_group == "AI Customization Group":
-            show_low_recommendation_without_explanation()
+            show_low_complexity_general_sales()
         elif st.session_state.experiment_group == "AI Design Group":
-            show_low_recommendation_with_explanation()
+            show_low_complexity_popup_sales()
         elif st.session_state.experiment_group == "AI Creation Group":
-            show_high_recommendation_with_explanation()
+            show_high_complexity_popup_sales()
         elif st.session_state.experiment_group == "Preset Design Group":
-            show_high_recommendation_without_explanation()
+            show_high_complexity_general_sales()
         else:
             st.error("实验组类型错误，请返回首页重新选择")
             if st.button("返回首页"):

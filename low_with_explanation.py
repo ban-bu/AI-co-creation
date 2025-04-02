@@ -36,7 +36,7 @@ GPT4O_MINI_BASE_URL = "https://api.deepbricks.ai/v1/"
 # 从svg_utils导入SVG转换函数
 from svg_utils import convert_svg_to_png
 
-def get_ai_design_suggestions(user_preferences=None):
+def get_ai_design_suggestions(user_preferences=None, age_group=None, gender=None, interests=None, occasion=None):
     """Get design suggestions from GPT-4o-mini with more personalized features"""
     client = OpenAI(api_key=GPT4O_MINI_API_KEY, base_url=GPT4O_MINI_BASE_URL)
     
@@ -44,16 +44,32 @@ def get_ai_design_suggestions(user_preferences=None):
     if not user_preferences:
         user_preferences = "casual fashion t-shirt design"
     
+    # Construct the prompt with user information
+    user_info = []
+    if age_group:
+        user_info.append(f"Age Group: {age_group}")
+    if gender:
+        user_info.append(f"Gender: {gender}")
+    if interests:
+        user_info.append(f"Interests/Hobbies: {interests}")
+    if occasion:
+        user_info.append(f"Wearing Occasion: {occasion}")
+    
+    user_info_str = "\n".join(user_info) if user_info else ""
+    
     # Construct the prompt
     prompt = f"""
-    As a T-shirt design consultant, please provide personalized color suggestions for a "{user_preferences}" style T-shirt.
+    As a T-shirt design consultant, please provide color suggestions for a "{user_preferences}" style T-shirt.
     
-    Please provide the following color suggestions:
+    User Information:
+    {user_info_str}
+    
+    Please provide color suggestions based on the user's profile:
 
-    1. Color Suggestions: Recommend 2 suitable colors, including:
-       - Color name and hex code (e.g., Blue (#0000FF))
-       - Why this color suits the style (2-3 sentences explanation)
-       
+    Color Suggestions: Recommend 2-3 suitable colors, including:
+    - Color name and hex code (e.g., Blue (#0000FF))
+    - Why this color suits the style and user profile (2-3 sentences explanation)
+    
     Please ensure to include hex codes for colors, keep content detailed but concise.
     """
     
@@ -62,7 +78,7 @@ def get_ai_design_suggestions(user_preferences=None):
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are a professional T-shirt design consultant, providing useful and specific suggestions. Include sufficient details to help users understand your recommendations, while avoiding unnecessary verbosity. Ensure to include hex codes for each color. For text suggestions, please wrap recommended phrases in quotes and place them on separate lines."},
+                {"role": "system", "content": "You are a professional T-shirt design consultant, providing useful and specific color suggestions. Include sufficient details to help users understand your recommendations, while avoiding unnecessary verbosity. Ensure to include hex codes for each color."},
                 {"role": "user", "content": prompt}
             ]
         )
@@ -86,64 +102,9 @@ def get_ai_design_suggestions(user_preferences=None):
                 # 保存到会话状态
                 if color_matches:
                     st.session_state.ai_suggested_colors = color_matches
-                    
-                # 尝试提取推荐文字
-                text_pattern = r'[""]([^""]+)[""]'
-                text_matches = re.findall(text_pattern, suggestion_text)
                 
-                # 保存推荐文字到会话状态
-                if text_matches:
-                    st.session_state.ai_suggested_texts = text_matches
-                else:
-                    # 尝试使用另一种模式匹配
-                    text_pattern2 = r'"([^"]+)"'
-                    text_matches = re.findall(text_pattern2, suggestion_text)
-                    if text_matches:
-                        st.session_state.ai_suggested_texts = text_matches
-                    else:
-                        st.session_state.ai_suggested_texts = []
-                
-                # 提取推荐面料类型
-                fabric_types = ["Cotton", "Polyester", "Cotton-Polyester Blend", "Jersey", "Linen", "Bamboo"]
-                fabric_matches = {}
-                
-                for fabric in fabric_types:
-                    if fabric in suggestion_text:
-                        # 尝试提取该面料周围的一段文本作为描述
-                        start_idx = suggestion_text.find(fabric)
-                        end_idx = min(start_idx + 200, len(suggestion_text))
-                        desc_text = suggestion_text[start_idx:end_idx]
-                        # 尝试在这段文本中找一个句子作为描述
-                        sentence_end = re.search(r'\.(?=\s|$)', desc_text)
-                        if sentence_end:
-                            desc = desc_text[:sentence_end.end()].strip()
-                        else:
-                            desc = desc_text.split('\n')[0].strip()
-                        fabric_matches[fabric] = desc
-                
-                # 保存推荐面料到会话状态
-                if fabric_matches:
-                    st.session_state.ai_suggested_fabrics = fabric_matches
-                
-                # 提取Logo建议并自动生成Logo
-                logo_pattern = r'(?:Logo Element Suggestions|Logo|design elements?):(.*?)(?:\d\.|$)'
-                logo_section_match = re.search(logo_pattern, suggestion_text, re.DOTALL | re.IGNORECASE)
-                
-                if logo_section_match:
-                    logo_section = logo_section_match.group(1).strip()
-                    # 提取单个Logo描述
-                    logo_desc_pattern = r'(?:-|\d+\.)\s*(.*?)(?=(?:-|\d+\.)|$)'
-                    logo_descriptions = re.findall(logo_desc_pattern, logo_section, re.DOTALL)
-                    
-                    if logo_descriptions:
-                        # 清理描述（去除多余空格和换行）
-                        cleaned_descriptions = [re.sub(r'\s+', ' ', desc.strip()) for desc in logo_descriptions]
-                        # 保存到会话状态
-                        st.session_state.ai_suggested_logos = cleaned_descriptions
-                    
             except Exception as e:
                 print(f"Error parsing: {e}")
-                st.session_state.ai_suggested_texts = []
                 
             # 使用更好的排版处理文本
             # 替换标题格式
@@ -155,25 +116,15 @@ def get_ai_design_suggestions(user_preferences=None):
             # 强调颜色名称和代码
             formatted_text = re.sub(r'([^\s\(\)]+)\s*\(#([0-9A-Fa-f]{6})\)', r'<span class="color-name">\1</span> <span class="color-code">(#\2)</span>', formatted_text)
             
-            # 不再使用JavaScript回调，而是简单地加粗文本
-            formatted_text = re.sub(r'[""]([^""]+)[""]', r'"<strong>\1</strong>"', formatted_text)
-            formatted_text = re.sub(r'"([^"]+)"', r'"<strong>\1</strong>"', formatted_text)
-            
             suggestion_with_style = f"""
             <div class="suggestion-container">
             {formatted_text}
             </div>
             """
             
-            # 打印调试信息，确认Logo是否自动生成
-            if hasattr(st.session_state, 'generated_logo'):
-                print("Logo generated successfully and saved to session_state")
-            else:
-                print("Failed to generate Logo or not saved to session_state")
-            
             return suggestion_with_style
         else:
-            return "can not get AI suggestions, please try again later."
+            return "Cannot get AI suggestions, please try again later."
     except Exception as e:
         return f"Error getting AI suggestions: {str(e)}"
 
@@ -337,74 +288,12 @@ def get_preset_logos():
     return preset_logos
 
 # AI Customization Group design page
-def show_high_complexity_general_sales():
+def show_low_recommendation_with_explanation():
     st.title("👕 AI Co-Creation Experiment Platform")
-    st.markdown("### High Task Complexity-General Sales - Create Your Unique T-shirt Design")
+    st.markdown("### Low recommendation-with explanation - Create Your Unique T-shirt Design")
     
     # 添加General Sales情境描述
-    
-    # 任务复杂度说明
-    st.markdown("""
-    <div style="background-color:#f0f0f0; padding:20px; border-radius:10px; margin-bottom:20px; border-left:4px solid #2196F3">
-    <h4 style="color:#1976D2; margin-top:0">Advanced Customization Options</h4>
-    <p>In this experience, you can customize your T-shirt with the following comprehensive options:</p>
-    
-    <div style="margin-left:15px">
-    <h5 style="color:#2196F3">1. T-shirt Color & Fabric Selection</h5>
-    <p>Choose your preferred T-shirt color from AI recommendations, preset options, or use a custom color picker. Enhanced with multiple fabric texture options:</p>
-    <ul>
-        <li>Cotton: Soft and breathable natural fiber</li>
-        <li>Polyester: Durable and wrinkle-resistant synthetic fabric</li>
-        <li>Cotton-Polyester Blend: Perfect balance of comfort and durability</li>
-        <li>Jersey: Stretchy knit fabric with excellent drape</li>
-        <li>Linen: Lightweight natural fabric with superior cooling properties</li>
-        <li>Bamboo: Sustainable fabric with silky smooth texture</li>
-    </ul>
-    
-    <h5 style="color:#2196F3">2. Advanced Text Customization</h5>
-    <p>Create eye-catching designs with comprehensive text customization options:</p>
-    <ul>
-        <li>Font Selection: Arial, Times New Roman, Courier, Verdana, Georgia, Script, Impact</li>
-        <li>Text Styles: Bold, Italic, Underline, Shadow, Outline</li>
-        <li>Special Effects: Bent, Arch, Wave, 3D, Gradient</li>
-        <li>Alignment Options: Left, Center, Right</li>
-        <li>Dynamic Size: Adjustable from 20 to 400 pixels</li>
-    </ul>
-    
-    <h5 style="color:#2196F3">3. Professional Logo Integration</h5>
-    <p>Enhance your design with versatile logo options:</p>
-    <ul>
-        <li>AI-Generated Logos: Create professional logos from descriptions</li>
-        <li>Preset Logo Library: Choose from curated logo collection</li>
-        <li>Custom Logo Upload: Use your own logo designs</li>
-        <li>Logo Customization: Adjust size, position, and transparency</li>
-    </ul>
-    
-    <h5 style="color:#2196F3">4. Precise Design Positioning</h5>
-    <p>Achieve perfect composition with advanced positioning tools:</p>
-    <ul>
-        <li>Precise placement of text and logo elements</li>
-        <li>Multiple preset position options</li>
-        <li>Real-time preview and adjustment</li>
-        <li>Smart alignment assistance</li>
-    </ul>
-    
-    <h5 style="color:#2196F3">5. AI Design Assistant</h5>
-    <p>Get intelligent design recommendations:</p>
-    <ul>
-        <li>Color combination suggestions</li>
-        <li>Fabric type recommendations</li>
-        <li>Text content ideas</li>
-        <li>Logo design inspiration</li>
-    </ul>
-    </div>
-    
-    <p style="margin-top:15px; color:#666">
-    <i>💡 Tip: Start with AI suggestions for the best results, then customize further based on your preferences.</i>
-    </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
+   
     # 初始化T恤颜色和纹理状态变量
     if 'shirt_color_hex' not in st.session_state:
         st.session_state.shirt_color_hex = "#FFFFFF"  # 默认白色
@@ -1280,25 +1169,65 @@ def show_high_complexity_general_sales():
                 if st.button("Confirm completion"):
                     st.session_state.page = "survey"
                     st.rerun()
+            
+            # 添加返回主页按钮
+            st.markdown("---")  # 添加分隔线
+            if st.button("🏠 Retrun to Main Page"):
+                # 重置所有相关的session state
+                keys_to_reset = [
+                    'base_image', 'current_image', 'final_design', 'generated_design',
+                    'applied_text', 'applied_logo', 'generated_logo', 'logo_auto_generated',
+                    'show_generated_logo', 'shirt_color_hex', 'current_applied_color',
+                    'fabric_type', 'current_applied_fabric', 'ai_suggestions',
+                    'original_base_image', 'current_box_position', 'text_layer',
+                    'text_size_info', 'text_position', 'font_debug_info',
+                    'loaded_font_path', 'using_fallback_text', 'design_area',
+                    'ai_suggested_colors', 'ai_suggested_texts', 'ai_suggested_fabrics',
+                    'ai_suggested_logos', 'logo_prompt', 'selected_preset_logo',
+                    'temp_text_selection', 'ai_text_suggestion'
+                ]
+                
+                # 清除所有状态变量
+                for key in keys_to_reset:
+                    if key in st.session_state:
+                        del st.session_state[key]
+                
+                # 设置页面为welcome
+                st.session_state.page = "welcome"
+                st.rerun()
     
     with controls_col:
         # 操作区，包含AI建议和其他控制选项
-        with st.expander("🤖 AI design suggestions", expanded=True):
-            st.markdown("#### Get AI Suggestions")
+        with st.expander("🤖 AI Color Suggestions", expanded=True):
+            st.markdown("#### Get AI Color Suggestions")
+            
+            # 添加用户信息输入
+            col1, col2 = st.columns(2)
+            with col1:
+                age_group = st.selectbox("Age group:", ["", "Under 18", "18-24", "25-34", "35-44", "45-54", "55+"])
+                interests = st.text_input("Your interests or hobbies:", placeholder="E.g., sports, music, art, gaming...")
+            with col2:
+                gender = st.selectbox("Gender:", ["", "Male", "Female", "Other", "Prefer not to say"])
+                occasion = st.selectbox("Occasion for wearing:", ["", "Casual Daily", "Sports/Exercise", "Work/Business", "Party/Social", "Special Event"])
+            
             # 添加用户偏好输入
-            user_preference = st.text_input("Describe your preferred style or usage", placeholder="For example: sports style, business场合, casual daily, etc.")
+            user_preference = st.text_input("Describe your preferred style", placeholder="For example: sports style, business, casual daily, etc.")
             
             # 添加获取建议按钮
-            if st.button("Get personalized AI suggestions", key="get_ai_advice"):
-                with st.spinner("Generating personalized design suggestions..."):
+            if st.button("Get personalized color suggestions", key="get_ai_advice"):
+                with st.spinner("Generating personalized color suggestions..."):
                     suggestions = get_ai_design_suggestions(
-                        user_preferences=user_preference
+                        user_preferences=user_preference,
+                        age_group=age_group if age_group else None,
+                        gender=gender if gender else None,
+                        interests=interests if interests else None,
+                        occasion=occasion if occasion else None
                     )
                     st.session_state.ai_suggestions = suggestions
-                    st.success("AI suggestions have been applied to your design options!")
+                    st.success("AI color suggestions are ready!")
                     
                     # 显示AI生成的建议内容
-                    st.markdown("#### AI Design Suggestions")
+                    st.markdown("#### AI Color Suggestions")
                     st.markdown(suggestions, unsafe_allow_html=True)
                     
                     # 添加样式
@@ -1347,6 +1276,10 @@ def show_high_complexity_general_sales():
                     "light gray": "#CCCCCC", 
                     "light blue": "#ADD8E6"
                 }
+            
+            # 添加提示文字
+            if st.session_state.ai_suggestions:
+                st.markdown("**Here are the colors AI provides:**")
             
             # 创建颜色选择列表 - 动态创建
             colors = st.session_state.ai_suggested_colors
@@ -1448,38 +1381,14 @@ def show_high_complexity_general_sales():
         
         # 文字设计部分 - 独立出来，确保始终显示
         with st.expander("✍️ Text Design", expanded=True):
-            # 显示AI建议的文字候选项
-            if 'ai_suggested_texts' in st.session_state and st.session_state.ai_suggested_texts:
-                st.markdown("**AI Suggested Text Options:**")
-                
-                # 创建候选项网格布局
-                text_suggestions = st.session_state.ai_suggested_texts
-                suggestion_cols = st.columns(min(3, len(text_suggestions)))
-                
-                for i, suggestion in enumerate(text_suggestions):
-                    with suggestion_cols[i % 3]:
-                        # 使用Streamlit按钮替代HTML点击事件
-                        if st.button(suggestion, key=f"suggestion_{i}"):
-                            st.session_state.ai_text_suggestion = suggestion
-                            st.rerun()
-            
             # 文字选项
             text_col1, text_col2 = st.columns([2, 1])
             
             with text_col1:
-                # 使用临时变量的值作为默认值
-                default_input = ""
-                if 'temp_text_selection' in st.session_state:
-                    default_input = st.session_state.temp_text_selection
-                    # 使用后清除临时状态
-                    del st.session_state.temp_text_selection
-                elif 'ai_text_suggestion' in st.session_state:
-                    default_input = st.session_state.ai_text_suggestion
-                
-                text_content = st.text_input("Enter or copy AI recommended text", default_input, key="ai_text_suggestion")
+                text_content = st.text_input("Enter text for your design", key="text_input")
             
             with text_col2:
-                text_color = st.color_picker("Text color:", "#000000", key="ai_text_color")
+                text_color = st.color_picker("Text color:", "#000000", key="text_color")
             
             # 字体选择 - 扩展为高复杂度方案的选项
             font_options = ["Arial", "Times New Roman", "Courier", "Verdana", "Georgia", "Script", "Impact"]

@@ -7,45 +7,45 @@ DATA_FILE = "experiment_data.csv"
 
 # Welcome and information collection page
 def show_welcome_page():
-    st.title("👕 AI Co-Creation Clothing Consumer Behavior Experiment")
+    st.title("👕 AI T-shirt Design Experiment Platform")
     
     with st.container():
         st.markdown('<div class="welcome-card">', unsafe_allow_html=True)
         st.markdown("### Welcome to our experiment!")
         st.markdown("""
-        This experiment aims to study the impact of AI Co-Creation on consumer purchasing behavior. You will have the opportunity to experience the T-shirt customization process and share your feedback.
+        This experiment aims to study the impact of AI-assisted design on consumer purchasing behavior. You will have the opportunity to experience the T-shirt customization process and share your feedback.
         
         **Experiment Process**:
         1. Choose an experiment group
         2. Complete T-shirt customization
-        3. Submit survey feedback
+        3. Submit feedback survey
         
         Your participation is crucial to our research. Thank you for your support!
         """)
         st.markdown('</div>', unsafe_allow_html=True)
     
-    st.markdown("### Please select the experiment group you want to participate in")
+    st.markdown("### Please select your experiment group")
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### Low Task Complexity-General Sales")
+        st.markdown("#### Low Recommendation - No Explanation")
         st.markdown("""
-        - Simple customization tasks 
-        - General sales environment
-        - Create unique designs based on your preferences
-        - Freely place design patterns on the T-shirt
+        - Simple customization tasks
+        - Basic design options
+        - No AI explanation
+        - Intuitive interface
         """)
-        if st.button("Choose Low Complexity-General"):
+        if st.button("Choose Low Recommendation - No Explanation"):
             st.session_state.experiment_group = "AI Customization Group"
             st.session_state.user_info = {
-                'age': 25,  # 默认值
-                'gender': "Male",  # 默认值
-                'shopping_frequency': "Weekly",  # 默认值
-                'customize_experience': "Some experience",  # 默认值
-                'ai_attitude': 5,  # 默认值
-                'uniqueness_importance': 5  # 默认值
+                'age': 25,
+                'gender': "Male",
+                'shopping_frequency': "Weekly",
+                'customize_experience': "Some experience",
+                'ai_attitude': 5,
+                'uniqueness_importance': 5
             }
             st.session_state.page = "design"
             st.rerun()
@@ -53,22 +53,22 @@ def show_welcome_page():
     
     with col2:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### High Task Complexity-General Sales")
+        st.markdown("#### Low Recommendation - With Explanation")
         st.markdown("""
-        - Advanced customization options
-        - General sales environment
-        - Choose and manipulate professional designs
-        - Multiple customization features available
+        - Simple customization tasks
+        - Basic design options
+        - AI design explanations
+        - Smart recommendations
         """)
-        if st.button("Choose High Complexity-General"):
-            st.session_state.experiment_group = "Preset Design Group"
+        if st.button("Choose Low Recommendation - With Explanation"):
+            st.session_state.experiment_group = "AI Design Group"
             st.session_state.user_info = {
-                'age': 25,  # 默认值
-                'gender': "Male",  # 默认值
-                'shopping_frequency': "Weekly",  # 默认值
-                'customize_experience': "Some experience",  # 默认值
-                'ai_attitude': 5,  # 默认值
-                'uniqueness_importance': 5  # 默认值
+                'age': 25,
+                'gender': "Male",
+                'shopping_frequency': "Weekly",
+                'customize_experience': "Some experience",
+                'ai_attitude': 5,
+                'uniqueness_importance': 5
             }
             st.session_state.page = "design"
             st.rerun()
@@ -76,22 +76,22 @@ def show_welcome_page():
     
     with col3:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### Low Task Complexity-Pop up Sales")
+        st.markdown("#### High Recommendation - No Explanation")
         st.markdown("""
-        - Simple customization tasks
-        - Pop-up store experience
-        - Create designs with minimal options
-        - Quick and straightforward process
+        - Advanced customization options
+        - Rich design features
+        - No AI explanation
+        - Professional design tools
         """)
-        if st.button("Choose Low Complexity-Pop-up"):
-            st.session_state.experiment_group = "AI Design Group"
+        if st.button("Choose High Recommendation - No Explanation"):
+            st.session_state.experiment_group = "Preset Design Group"
             st.session_state.user_info = {
-                'age': 25,  # 默认值
-                'gender': "Male",  # 默认值
-                'shopping_frequency': "Weekly",  # 默认值
-                'customize_experience': "Some experience",  # 默认值
-                'ai_attitude': 5,  # 默认值
-                'uniqueness_importance': 5  # 默认值
+                'age': 25,
+                'gender': "Male",
+                'shopping_frequency': "Weekly",
+                'customize_experience': "Some experience",
+                'ai_attitude': 5,
+                'uniqueness_importance': 5
             }
             st.session_state.page = "design"
             st.rerun()
@@ -99,22 +99,22 @@ def show_welcome_page():
         
     with col4:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### High Task Complexity-Pop up Sales")
+        st.markdown("#### High Recommendation - With Explanation")
         st.markdown("""
         - Advanced customization options
-        - Pop-up store experience
-        - Create highly detailed designs
-        - Extensive customization features 
+        - Rich design features
+        - AI design explanations
+        - Intelligent design assistance
         """)
-        if st.button("Choose High Complexity-Pop-up"):
+        if st.button("Choose High Recommendation - With Explanation"):
             st.session_state.experiment_group = "AI Creation Group"
             st.session_state.user_info = {
-                'age': 25,  # 默认值
-                'gender': "Male",  # 默认值
-                'shopping_frequency': "Weekly",  # 默认值
-                'customize_experience': "Some experience",  # 默认值
-                'ai_attitude': 5,  # 默认值
-                'uniqueness_importance': 5  # 默认值
+                'age': 25,
+                'gender': "Male",
+                'shopping_frequency': "Weekly",
+                'customize_experience': "Some experience",
+                'ai_attitude': 5,
+                'uniqueness_importance': 5
             }
             st.session_state.page = "design"
             st.rerun()
@@ -136,10 +136,10 @@ def show_welcome_page():
                     st.markdown("#### Participant Statistics")
                     group_counts = experiment_df['experiment_group'].value_counts()
                     st.write(f"Total participants: {len(experiment_df)}")
-                    st.write(f"Low Task Complexity-General Sales: {group_counts.get('AI Customization Group', 0)} people")
-                    st.write(f"High Task Complexity-General Sales: {group_counts.get('Preset Design Group', 0)} people")
-                    st.write(f"Low Task Complexity-Pop up Sales: {group_counts.get('AI Design Group', 0)} people")
-                    st.write(f"High Task Complexity-Pop up Sales: {group_counts.get('AI Creation Group', 0)} people")
+                    st.write(f"Low Recommendation - No Explanation: {group_counts.get('AI Customization Group', 0)} people")
+                    st.write(f"Low Recommendation - With Explanation: {group_counts.get('AI Design Group', 0)} people")
+                    st.write(f"High Recommendation - No Explanation: {group_counts.get('AI Creation Group', 0)} people")
+                    st.write(f"High Recommendation - With Explanation: {group_counts.get('Preset Design Group', 0)} people")
                     
                     # Purchase intention comparison
                     st.markdown("#### Purchase Intention Comparison")
