@@ -339,7 +339,7 @@ def generate_complete_design(design_prompt):
         
         if logo_description:
             # 修改Logo提示词，确保生成的Logo有白色背景，没有透明部分
-            logo_prompt = f"Create a Logo design for printing: {logo_description}. Requirements: 1. Simple professional design 2. Solid white background (NO TRANSPARENCY) 3. Clear and distinct graphic 4. Good contrast with colors that will show well on fabric"
+            logo_prompt = f"Create a Logo design for printing: {logo_description}. Requirements: 1. Simple professional design 2. NO TRANSPARENCY background (NO TRANSPARENCY) 3. Clear and distinct graphic 4. Good contrast with colors that will show well on fabric"
             logo_image = generate_vector_image(logo_prompt)
         
         # 最终设计 - 不添加文字
