@@ -495,8 +495,6 @@ def show_high_recommendation_without_explanation():
     with design_col:
         # 创建占位区域用于T恤设计展示
         design_area = st.empty()
-        progress_area = st.empty()
-        message_area = st.empty()
         
         # 在设计区域显示当前状态的T恤设计
         if st.session_state.final_design is not None:
@@ -640,6 +638,10 @@ def show_high_recommendation_without_explanation():
         generate_col = st.empty()
         with generate_col:
             generate_button = st.button("🎨 Generate T-shirt Design", key="generate_design", use_container_width=True)
+
+        # 创建进度和消息区域在输入框下方
+        progress_area = st.empty()
+        message_area = st.empty()
         
         # 生成设计按钮事件处理
         if generate_button:
@@ -667,7 +669,7 @@ def show_high_recommendation_without_explanation():
                         if st.session_state.original_tshirt is not None:
                             st.image(st.session_state.original_tshirt, use_container_width=True)
                     
-                    # 创建进度条
+                    # 创建进度条和状态消息在输入框下方
                     progress_bar = progress_area.progress(0)
                     message_area.info(f"AI is generating {design_count} designs for you, please wait...")
                     
@@ -682,7 +684,7 @@ def show_high_recommendation_without_explanation():
                         try:
                             return generate_complete_design(user_prompt, variation_id)
                         except Exception as e:
-                            st.error(f"Error generating design: {str(e)}")
+                            message_area.error(f"Error generating design: {str(e)}")
                             return None, {"error": f"Failed to generate design: {str(e)}"}
                     
                     # 对于单个设计，直接生成
@@ -693,15 +695,37 @@ def show_high_recommendation_without_explanation():
                         progress_bar.progress(100)
                         message_area.success("Design generation complete!")
                     else:
-                        # 对于多个设计，分步生成并更新进度
-                        for i in range(design_count):
-                            message_area.info(f"Generating design {i+1}/{design_count}...")
-                            design, info = generate_single_safely(i)
-                            if design:
-                                designs.append((design, info))
-                            # 更新进度
-                            progress = int(100 * (i+1) / design_count)
+                        # 为多个设计使用并行处理
+                        completed_count = 0
+                        
+                        # 进度更新函数
+                        def update_progress():
+                            nonlocal completed_count
+                            completed_count += 1
+                            progress = int(100 * completed_count / design_count)
                             progress_bar.progress(progress)
+                            message_area.info(f"Generated {completed_count}/{design_count} designs...")
+                        
+                        # 使用线程池并行生成多个设计
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=design_count) as executor:
+                            # 提交所有任务
+                            future_to_id = {executor.submit(generate_single_safely, i): i for i in range(design_count)}
+                            
+                            # 收集结果
+                            for future in concurrent.futures.as_completed(future_to_id):
+                                design_id = future_to_id[future]
+                                try:
+                                    design, info = future.result()
+                                    if design:
+                                        designs.append((design, info))
+                                except Exception as e:
+                                    message_area.error(f"Design {design_id} generation failed: {str(e)}")
+                                
+                                # 更新进度
+                                update_progress()
+                        
+                        # 按照ID排序设计
+                        designs.sort(key=lambda x: x[1].get("variation_id", 0) if x[1] and "variation_id" in x[1] else 0)
                     
                     # 记录结束时间
                     end_time = time.time()
