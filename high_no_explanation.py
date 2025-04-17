@@ -25,6 +25,9 @@ import math
 from fabric_texture import apply_fabric_texture
 import uuid
 import json
+# 导入并行处理库
+import concurrent.futures
+import time
 
 # API配置信息 - 实际使用时应从主文件传入或使用环境变量
 API_KEY = "sk-lNVAREVHjj386FDCd9McOL7k66DZCUkTp6IbV0u9970qqdlg"
@@ -396,21 +399,45 @@ def generate_complete_design(design_prompt, variation_id=None):
         return None, {"error": f"Error generating design: {str(e)}\n{traceback_str}"}
 
 def generate_multiple_designs(design_prompt, count=1):
-    """Generate multiple T-shirt designs"""
+    """Generate multiple T-shirt designs in parallel"""
+    if count <= 1:
+        # 如果只需要一个设计，直接生成不需要并行
+        base_design, base_info = generate_complete_design(design_prompt)
+        if base_design:
+            return [(base_design, base_info)]
+        else:
+            return []
+    
     designs = []
     
-    # 先生成基础设计
-    base_design, base_info = generate_complete_design(design_prompt)
-    if base_design:
-        designs.append((base_design, base_info))
-    else:
-        return designs  # 如果基础设计失败，返回空列表
+    # 定义一个函数来生成单个设计，用于并行处理
+    def generate_single_design(variation_id):
+        try:
+            if variation_id == 0:  # 基础设计
+                return generate_complete_design(design_prompt)
+            else:  # 变体设计
+                return generate_complete_design(design_prompt, variation_id=variation_id)
+        except Exception as e:
+            print(f"Error generating design {variation_id}: {e}")
+            return None, {"error": f"Failed to generate design {variation_id}"}
     
-    # 生成变体设计
-    for i in range(1, count):
-        design, info = generate_complete_design(design_prompt, variation_id=i)
-        if design:
-            designs.append((design, info))
+    # 创建线程池
+    with concurrent.futures.ThreadPoolExecutor(max_workers=count) as executor:
+        # 提交所有任务
+        future_to_id = {executor.submit(generate_single_design, i): i for i in range(count)}
+        
+        # 收集结果
+        for future in concurrent.futures.as_completed(future_to_id):
+            design_id = future_to_id[future]
+            try:
+                design, info = future.result()
+                if design:
+                    designs.append((design, info))
+            except Exception as e:
+                print(f"Design {design_id} generated an exception: {e}")
+    
+    # 按照原始ID顺序排序
+    designs.sort(key=lambda x: x[1].get("variation_id", 0) if x[1] and "variation_id" in x[1] else 0)
     
     return designs
 
@@ -564,12 +591,81 @@ def show_high_recommendation_without_explanation():
                     # 清空之前的设计
                     st.session_state.generated_designs = []
                     
-                    # 生成多个设计
-                    designs = generate_multiple_designs(user_prompt, design_count)
+                    # 创建进度条
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    # 记录开始时间
+                    start_time = time.time()
+                    
+                    # 定义进度回调函数
+                    completed_designs = 0
+                    
+                    def progress_callback():
+                        nonlocal completed_designs
+                        completed_designs += 1
+                        progress = int(100 * completed_designs / design_count)
+                        progress_bar.progress(progress)
+                        status_text.text(f"Generated {completed_designs}/{design_count} designs...")
+                    
+                    # 创建一个包装函数用于生成并更新进度
+                    def generate_with_progress(design_prompt, count):
+                        if count <= 1:
+                            # 如果只需要一个设计，直接生成
+                            design, info = generate_complete_design(design_prompt)
+                            designs = []
+                            if design:
+                                designs.append((design, info))
+                            progress_callback()
+                            return designs
+                        
+                        designs = []
+                        
+                        # 定义一个函数来生成单个设计
+                        def generate_single_design(variation_id):
+                            try:
+                                if variation_id == 0:  # 基础设计
+                                    return generate_complete_design(design_prompt)
+                                else:  # 变体设计
+                                    return generate_complete_design(design_prompt, variation_id=variation_id)
+                            except Exception as e:
+                                print(f"Error generating design {variation_id}: {e}")
+                                return None, {"error": f"Failed to generate design {variation_id}"}
+                        
+                        # 创建线程池
+                        with concurrent.futures.ThreadPoolExecutor(max_workers=count) as executor:
+                            # 提交所有任务
+                            future_to_id = {executor.submit(generate_single_design, i): i for i in range(count)}
+                            
+                            # 收集结果
+                            for future in concurrent.futures.as_completed(future_to_id):
+                                design_id = future_to_id[future]
+                                try:
+                                    design, info = future.result()
+                                    if design:
+                                        designs.append((design, info))
+                                except Exception as e:
+                                    print(f"Design {design_id} generated an exception: {e}")
+                                
+                                # 更新进度
+                                progress_callback()
+                        
+                        # 按照原始ID顺序排序
+                        designs.sort(key=lambda x: x[1].get("variation_id", 0) if x[1] and "variation_id" in x[1] else 0)
+                        
+                        return designs
+                    
+                    # 生成设计
+                    designs = generate_with_progress(user_prompt, design_count)
+                    
+                    # 记录结束时间
+                    end_time = time.time()
+                    generation_time = end_time - start_time
                     
                     if designs:
                         st.session_state.generated_designs = designs
                         st.session_state.selected_design_index = 0
+                        status_text.text(f"Generated {len(designs)} designs in {generation_time:.1f} seconds!")
                         st.success(f"Generated {len(designs)} designs for you! Please select your favorite design.")
                     else:
                         st.error("Error generating design, please try again")
@@ -634,21 +730,7 @@ def show_high_recommendation_without_explanation():
                 elif st.session_state.recommendation_level == "high":
                     design_count = 5
                 
-                with st.spinner(f"AI is generating {design_count} designs for you, please wait..."):
-                    # 清空之前的设计
-                    st.session_state.generated_designs = []
-                    
-                    # 生成多个设计
-                    designs = generate_multiple_designs(user_prompt, design_count)
-                    
-                    if designs:
-                        st.session_state.generated_designs = designs
-                        st.session_state.selected_design_index = 0
-                        st.success(f"Generated {len(designs)} designs for you! Please select your favorite design.")
-                    else:
-                        st.error("Error generating design, please try again")
-                
-                st.session_state.is_generating = False
+                # 跳转到前面已定义的生成处理代码
                 st.rerun()
     
     # 下载按钮 (在主区域底部)
