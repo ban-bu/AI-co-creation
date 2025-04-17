@@ -443,7 +443,9 @@ def show_high_recommendation_without_explanation():
                 st.rerun()
         
         # 显示设计信息
-        if st.session_state.design_info is not None and not isinstance(st.session_state.design_info, dict) or "error" not in st.session_state.design_info:
+        if (st.session_state.design_info is not None and 
+            isinstance(st.session_state.design_info, dict) and 
+            "error" not in st.session_state.design_info):
             st.markdown("### 设计方案详情")
             
             try:
