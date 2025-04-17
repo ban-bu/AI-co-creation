@@ -564,44 +564,31 @@ def show_high_recommendation_without_explanation():
         # 设计提示词和推荐级别选择区
         st.markdown("### 设计选项")
         
-        # 使用卡片样式突出显示推荐级别选项
-        st.markdown("""
-        <style>
-        .recommendation-option {
-            padding: 10px;
-            border-radius: 5px;
-            margin: 5px 0;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .recommendation-option:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .recommendation-selected {
-            border: 2px solid #f63366;
-            background-color: rgba(246, 51, 102, 0.1);
-        }
-        .recommendation-normal {
-            border: 2px solid #e0e0e0;
-            background-color: #f8f9fa;
-        }
-        </style>
-        """, unsafe_allow_html=True)
-        
-        # 推荐级别选择（横向按钮）
-        rec_cols = st.columns(3)
+        # 重新实现推荐级别选择，确保不会有两排按钮
+        level_cols = st.columns(3)
         levels = ["low", "medium", "high"]
-        level_names = ["低级别 (1个)", "中级别 (3个)", "高级别 (5个)"]
+        level_labels = ["低级别 (1个)", "中级别 (3个)", "高级别 (5个)"]
         
-        # 使用会话状态记录选择
-        for i, (level, name) in enumerate(zip(levels, level_names)):
-            with rec_cols[i]:
-                if st.button(name, key=f"rec_level_{level}", 
-                           type="primary" if st.session_state.recommendation_level == level else "secondary",
-                           use_container_width=True):
-                    st.session_state.recommendation_level = level
-                    st.rerun()
+        with level_cols[0]:
+            if st.button(level_labels[0], key="btn_low", 
+                       type="primary" if st.session_state.recommendation_level == "low" else "secondary",
+                       use_container_width=True):
+                st.session_state.recommendation_level = "low"
+                st.rerun()
+                
+        with level_cols[1]:
+            if st.button(level_labels[1], key="btn_medium", 
+                       type="primary" if st.session_state.recommendation_level == "medium" else "secondary",
+                       use_container_width=True):
+                st.session_state.recommendation_level = "medium"
+                st.rerun()
+                
+        with level_cols[2]:
+            if st.button(level_labels[2], key="btn_high", 
+                       type="primary" if st.session_state.recommendation_level == "high" else "secondary",
+                       use_container_width=True):
+                st.session_state.recommendation_level = "high"
+                st.rerun()
         
         # 提示词输入区
         st.markdown("#### 请描述您想要的T恤设计:")
