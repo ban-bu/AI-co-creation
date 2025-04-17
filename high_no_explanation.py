@@ -433,9 +433,35 @@ def show_high_recommendation_without_explanation():
         st.session_state.generated_designs = []
     if 'selected_design_index' not in st.session_state:
         st.session_state.selected_design_index = 0
+    if 'original_tshirt' not in st.session_state:
+        # 加载原始白色T恤图像
+        try:
+            original_image_path = "white_shirt.png"
+            possible_paths = [
+                "white_shirt.png",
+                "./white_shirt.png",
+                "../white_shirt.png",
+                "images/white_shirt.png",
+            ]
+            
+            found = False
+            for path in possible_paths:
+                if os.path.exists(path):
+                    original_image_path = path
+                    found = True
+                    break
+            
+            if found:
+                st.session_state.original_tshirt = Image.open(original_image_path).convert("RGBA")
+            else:
+                st.error("无法找到T恤基础图像")
+                st.session_state.original_tshirt = None
+        except Exception as e:
+            st.error(f"加载T恤图像时出错: {str(e)}")
+            st.session_state.original_tshirt = None
     
     # 创建两列布局
-    design_col, info_col = st.columns([3, 2])
+    design_col, input_col = st.columns([3, 2])
     
     with design_col:
         # T恤设计展示区域
@@ -527,48 +553,90 @@ def show_high_recommendation_without_explanation():
                 st.session_state.generated_designs = []  # 清空生成的设计列表
                 st.rerun()
         else:
-            st.markdown("### T恤设计预览区")
-            st.info("请输入设计提示词，选择推荐级别，AI将为您生成专属T恤设计")
+            # 显示原始空白T恤
+            st.markdown("### T恤设计预览")
+            if st.session_state.original_tshirt is not None:
+                st.image(st.session_state.original_tshirt, use_container_width=True)
+            else:
+                st.info("无法加载原始T恤图像，请刷新页面重试")
     
-    with info_col:
-        # 设计提示词输入区
-        st.markdown("### 输入您的设计理念")
+    with input_col:
+        # 设计提示词和推荐级别选择区
+        st.markdown("### 设计选项")
+        
+        # 使用卡片样式突出显示推荐级别选项
+        st.markdown("""
+        <style>
+        .recommendation-option {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .recommendation-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .recommendation-selected {
+            border: 2px solid #f63366;
+            background-color: rgba(246, 51, 102, 0.1);
+        }
+        .recommendation-normal {
+            border: 2px solid #e0e0e0;
+            background-color: #f8f9fa;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+        
+        # 推荐级别选择（横向按钮）
+        st.markdown("#### 选择推荐级别：")
+        
+        rec_cols = st.columns(3)
+        levels = ["low", "medium", "high"]
+        level_names = ["低级别 (1个)", "中级别 (3个)", "高级别 (5个)"]
+        
+        # 使用会话状态记录选择
+        for i, (level, name) in enumerate(zip(levels, level_names)):
+            with rec_cols[i]:
+                selected_class = "recommendation-selected" if st.session_state.recommendation_level == level else "recommendation-normal"
+                st.markdown(f"""
+                <div class="recommendation-option {selected_class}" id="{level}-option">
+                    <p style="text-align:center; margin:0; font-weight:{'bold' if st.session_state.recommendation_level == level else 'normal'};">
+                        {name}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                if st.button(f"选择{name}", key=f"rec_level_{level}"):
+                    st.session_state.recommendation_level = level
+                    st.rerun()
+        
+        # 提示词输入区
+        st.markdown("#### 请描述您想要的T恤设计:")
         user_prompt = st.text_area(
-            "描述您想要的T恤设计风格、主题或用途",
+            "设计提示词",
             value=st.session_state.user_prompt,
-            height=100,
+            height=120,
             placeholder="例如：运动风格、商务风格、日常休闲、节日主题等"
         )
         
-        # 添加推荐级别选择
-        st.markdown("### 选择推荐级别")
-        recommendation_level = st.radio(
-            "生成设计数量:",
-            ["low", "medium", "high"],
-            format_func=lambda x: {
-                "low": "低推荐级别 (1个设计)",
-                "medium": "中推荐级别 (3个设计)",
-                "high": "高推荐级别 (5个设计)"
-            }.get(x),
-            index=["low", "medium", "high"].index(st.session_state.recommendation_level),
-            horizontal=True
-        )
+        # 生成设计按钮（更大更突出）
+        generate_button = st.button("🎨 生成T恤设计", key="generate_design", use_container_width=True)
         
-        # 生成设计按钮
-        if st.button("🎨 生成T恤设计", key="generate_design"):
+        if generate_button:
             if not user_prompt:
                 st.error("请输入设计提示词")
             else:
                 st.session_state.user_prompt = user_prompt
-                st.session_state.recommendation_level = recommendation_level
                 st.session_state.is_generating = True
                 st.session_state.final_design = None  # 清除之前选择的最终设计
                 
                 # 根据推荐级别确定生成的设计数量
                 design_count = 1
-                if recommendation_level == "medium":
+                if st.session_state.recommendation_level == "medium":
                     design_count = 3
-                elif recommendation_level == "high":
+                elif st.session_state.recommendation_level == "high":
                     design_count = 5
                 
                 with st.spinner(f"AI正在为您生成{design_count}个设计方案，请稍候..."):
