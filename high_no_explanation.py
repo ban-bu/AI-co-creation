@@ -285,7 +285,7 @@ def apply_logo_to_shirt(shirt_image, logo_image, position="center", size_percent
     
     return result_image
 
-def generate_complete_design(design_prompt):
+def generate_complete_design(design_prompt, variation_id=None):
     """根据提示词生成完整的T恤设计方案"""
     if not design_prompt:
         return None, {"error": "请输入设计提示词"}
@@ -322,10 +322,37 @@ def generate_complete_design(design_prompt):
         return None, {"error": f"加载T恤图像时出错: {str(e)}"}
     
     try:
-        # 1. 应用颜色和纹理
+        # 如果提供了变体ID，为不同变体生成不同的设计
         color_hex = design_suggestions.get("color", {}).get("hex", "#FFFFFF")
         fabric_type = design_suggestions.get("fabric", "Cotton")
         
+        # 根据变体ID调整颜色和纹理
+        if variation_id is not None:
+            # 为不同变体生成不同的颜色 (简单的色调变化)
+            color_rgb = tuple(int(color_hex.lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
+            r, g, b = color_rgb
+            
+            if variation_id == 1:  # 稍微调亮
+                r = min(255, int(r * 1.2))
+                g = min(255, int(g * 1.2))
+                b = min(255, int(b * 1.2))
+            elif variation_id == 2:  # 稍微调暗
+                r = int(r * 0.8)
+                g = int(g * 0.8)
+                b = int(b * 0.8)
+            elif variation_id == 3:  # 更偏向红色
+                r = min(255, int(r * 1.3))
+            elif variation_id == 4:  # 更偏向蓝色
+                b = min(255, int(b * 1.3))
+            
+            color_hex = f"#{r:02x}{g:02x}{b:02x}"
+            
+            # 可能的面料变化
+            fabric_options = ["Cotton", "Polyester", "Cotton-Polyester Blend", "Jersey", "Linen", "Bamboo"]
+            if variation_id < len(fabric_options):
+                fabric_type = fabric_options[variation_id % len(fabric_options)]
+        
+        # 1. 应用颜色和纹理
         colored_shirt = change_shirt_color(
             original_image,
             color_hex,
@@ -338,8 +365,15 @@ def generate_complete_design(design_prompt):
         logo_image = None
         
         if logo_description:
+            # 为变体版本可能稍微修改logo描述
+            logo_desc = logo_description
+            if variation_id is not None and variation_id > 0:
+                modifiers = ["minimalist", "colorful", "abstract", "geometric", "vintage"]
+                if variation_id <= len(modifiers):
+                    logo_desc = f"{modifiers[variation_id-1]} {logo_description}"
+            
             # 修改Logo提示词，确保生成的Logo有白色背景，没有透明部分
-            logo_prompt = f"Create a Logo design for printing: {logo_description}. Requirements: 1. Simple professional design 2. NO TRANSPARENCY background (NO TRANSPARENCY) 3. Clear and distinct graphic 4. Good contrast with colors that will show well on fabric"
+            logo_prompt = f"Create a Logo design for printing: {logo_desc}. Requirements: 1. Simple professional design 2. NO TRANSPARENCY background (NO TRANSPARENCY) 3. Clear and distinct graphic 4. Good contrast with colors that will show well on fabric"
             logo_image = generate_vector_image(logo_prompt)
         
         # 最终设计 - 不添加文字
@@ -349,12 +383,36 @@ def generate_complete_design(design_prompt):
         if logo_image:
             final_design = apply_logo_to_shirt(colored_shirt, logo_image, "center", 30)
         
-        return final_design, design_suggestions
+        return final_design, {
+            "color": {"hex": color_hex, "name": design_suggestions.get("color", {}).get("name", "自定义颜色")},
+            "fabric": fabric_type,
+            "logo": logo_description,
+            "variation_id": variation_id
+        }
     
     except Exception as e:
         import traceback
         traceback_str = traceback.format_exc()
         return None, {"error": f"生成设计时出错: {str(e)}\n{traceback_str}"}
+
+def generate_multiple_designs(design_prompt, count=1):
+    """生成多个T恤设计方案"""
+    designs = []
+    
+    # 先生成基础设计
+    base_design, base_info = generate_complete_design(design_prompt)
+    if base_design:
+        designs.append((base_design, base_info))
+    else:
+        return designs  # 如果基础设计失败，返回空列表
+    
+    # 生成变体设计
+    for i in range(1, count):
+        design, info = generate_complete_design(design_prompt, variation_id=i)
+        if design:
+            designs.append((design, info))
+    
+    return designs
 
 def show_high_recommendation_without_explanation():
     st.title("👕 AI Co-Creation Experiment Platform")
@@ -369,6 +427,12 @@ def show_high_recommendation_without_explanation():
         st.session_state.design_info = None
     if 'is_generating' not in st.session_state:
         st.session_state.is_generating = False
+    if 'recommendation_level' not in st.session_state:
+        st.session_state.recommendation_level = "low"
+    if 'generated_designs' not in st.session_state:
+        st.session_state.generated_designs = []
+    if 'selected_design_index' not in st.session_state:
+        st.session_state.selected_design_index = 0
     
     # 创建两列布局
     design_col, info_col = st.columns([3, 2])
@@ -378,9 +442,93 @@ def show_high_recommendation_without_explanation():
         if st.session_state.final_design is not None:
             st.markdown("### 您的专属T恤设计")
             st.image(st.session_state.final_design, use_container_width=True)
+        elif len(st.session_state.generated_designs) > 0:
+            st.markdown("### 为您生成的设计方案")
+            
+            # 创建多列来显示设计
+            design_count = len(st.session_state.generated_designs)
+            if design_count > 3:
+                # 两行显示
+                row1_cols = st.columns(min(3, design_count))
+                row2_cols = st.columns(min(3, max(0, design_count - 3)))
+                
+                # 显示第一行
+                for i in range(min(3, design_count)):
+                    with row1_cols[i]:
+                        design, _ = st.session_state.generated_designs[i]
+                        # 添加选中状态的样式
+                        if i == st.session_state.selected_design_index:
+                            st.markdown(f"""
+                            <div style="border:3px solid #f63366; padding:3px; border-radius:5px;">
+                            <p style="text-align:center; color:#f63366; margin:0; font-weight:bold;">设计 {i+1}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<p style='text-align:center;'>设计 {i+1}</p>", unsafe_allow_html=True)
+                        
+                        # 显示设计并添加点击功能
+                        clicked = st.image(design, use_column_width=True)
+                        if st.button(f"选择设计 {i+1}", key=f"select_design_{i}"):
+                            st.session_state.selected_design_index = i
+                            st.session_state.final_design = design
+                            st.session_state.design_info = st.session_state.generated_designs[i][1]
+                            st.rerun()
+                
+                # 显示第二行
+                for i in range(3, design_count):
+                    with row2_cols[i-3]:
+                        design, _ = st.session_state.generated_designs[i]
+                        # 添加选中状态的样式
+                        if i == st.session_state.selected_design_index:
+                            st.markdown(f"""
+                            <div style="border:3px solid #f63366; padding:3px; border-radius:5px;">
+                            <p style="text-align:center; color:#f63366; margin:0; font-weight:bold;">设计 {i+1}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<p style='text-align:center;'>设计 {i+1}</p>", unsafe_allow_html=True)
+                        
+                        # 显示设计并添加点击功能
+                        clicked = st.image(design, use_column_width=True)
+                        if st.button(f"选择设计 {i+1}", key=f"select_design_{i}"):
+                            st.session_state.selected_design_index = i
+                            st.session_state.final_design = design
+                            st.session_state.design_info = st.session_state.generated_designs[i][1]
+                            st.rerun()
+            else:
+                # 单行显示
+                cols = st.columns(design_count)
+                for i in range(design_count):
+                    with cols[i]:
+                        design, _ = st.session_state.generated_designs[i]
+                        # 添加选中状态的样式
+                        if i == st.session_state.selected_design_index:
+                            st.markdown(f"""
+                            <div style="border:3px solid #f63366; padding:3px; border-radius:5px;">
+                            <p style="text-align:center; color:#f63366; margin:0; font-weight:bold;">设计 {i+1}</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        else:
+                            st.markdown(f"<p style='text-align:center;'>设计 {i+1}</p>", unsafe_allow_html=True)
+                        
+                        # 显示设计并添加点击功能
+                        clicked = st.image(design, use_column_width=True)
+                        if st.button(f"选择设计 {i+1}", key=f"select_design_{i}"):
+                            st.session_state.selected_design_index = i
+                            st.session_state.final_design = design
+                            st.session_state.design_info = st.session_state.generated_designs[i][1]
+                            st.rerun()
+            
+            # 添加确认选择按钮
+            if st.button("✅ 确认选择此设计"):
+                selected_design, selected_info = st.session_state.generated_designs[st.session_state.selected_design_index]
+                st.session_state.final_design = selected_design
+                st.session_state.design_info = selected_info
+                st.session_state.generated_designs = []  # 清空生成的设计列表
+                st.rerun()
         else:
             st.markdown("### T恤设计预览区")
-            st.info("请输入设计提示词，AI将为您生成专属T恤设计")
+            st.info("请输入设计提示词，选择推荐级别，AI将为您生成专属T恤设计")
     
     with info_col:
         # 设计提示词输入区
@@ -392,26 +540,50 @@ def show_high_recommendation_without_explanation():
             placeholder="例如：运动风格、商务风格、日常休闲、节日主题等"
         )
         
+        # 添加推荐级别选择
+        st.markdown("### 选择推荐级别")
+        recommendation_level = st.radio(
+            "生成设计数量:",
+            ["low", "medium", "high"],
+            format_func=lambda x: {
+                "low": "低推荐级别 (1个设计)",
+                "medium": "中推荐级别 (3个设计)",
+                "high": "高推荐级别 (5个设计)"
+            }.get(x),
+            index=["low", "medium", "high"].index(st.session_state.recommendation_level),
+            horizontal=True
+        )
+        
         # 生成设计按钮
         if st.button("🎨 生成T恤设计", key="generate_design"):
             if not user_prompt:
                 st.error("请输入设计提示词")
             else:
                 st.session_state.user_prompt = user_prompt
+                st.session_state.recommendation_level = recommendation_level
                 st.session_state.is_generating = True
+                st.session_state.final_design = None  # 清除之前选择的最终设计
                 
-                with st.spinner("AI正在为您生成设计，请稍候..."):
-                    final_design, design_info = generate_complete_design(user_prompt)
+                # 根据推荐级别确定生成的设计数量
+                design_count = 1
+                if recommendation_level == "medium":
+                    design_count = 3
+                elif recommendation_level == "high":
+                    design_count = 5
+                
+                with st.spinner(f"AI正在为您生成{design_count}个设计方案，请稍候..."):
+                    # 清空之前的设计
+                    st.session_state.generated_designs = []
                     
-                    if final_design is not None:
-                        st.session_state.final_design = final_design
-                        st.session_state.design_info = design_info
-                        st.success("设计已生成！")
+                    # 生成多个设计
+                    designs = generate_multiple_designs(user_prompt, design_count)
+                    
+                    if designs:
+                        st.session_state.generated_designs = designs
+                        st.session_state.selected_design_index = 0
+                        st.success(f"已为您生成{len(designs)}个设计方案，请选择您喜欢的设计！")
                     else:
-                        if "error" in design_info:
-                            st.error(design_info["error"])
-                        else:
-                            st.error("生成设计时出错，请重试")
+                        st.error("生成设计时出错，请重试")
                 
                 st.session_state.is_generating = False
                 st.rerun()
@@ -442,7 +614,8 @@ def show_high_recommendation_without_explanation():
     st.markdown("---")
     if st.button("🏠 返回主页"):
         # 重置相关状态变量
-        for key in ['user_prompt', 'final_design', 'design_info', 'is_generating']:
+        for key in ['user_prompt', 'final_design', 'design_info', 'is_generating', 
+                    'recommendation_level', 'generated_designs', 'selected_design_index']:
             if key in st.session_state:
                 del st.session_state[key]
         
