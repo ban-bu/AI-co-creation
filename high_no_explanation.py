@@ -493,7 +493,7 @@ def show_high_recommendation_without_explanation():
                             st.markdown(f"<p style='text-align:center;'>设计 {i+1}</p>", unsafe_allow_html=True)
                         
                         # 显示设计并添加点击功能
-                        clicked = st.image(design, use_column_width=True)
+                        clicked = st.image(design, use_container_width=True)
                         if st.button(f"选择设计 {i+1}", key=f"select_design_{i}"):
                             st.session_state.selected_design_index = i
                             st.session_state.final_design = design
@@ -515,7 +515,7 @@ def show_high_recommendation_without_explanation():
                             st.markdown(f"<p style='text-align:center;'>设计 {i+1}</p>", unsafe_allow_html=True)
                         
                         # 显示设计并添加点击功能
-                        clicked = st.image(design, use_column_width=True)
+                        clicked = st.image(design, use_container_width=True)
                         if st.button(f"选择设计 {i+1}", key=f"select_design_{i}"):
                             st.session_state.selected_design_index = i
                             st.session_state.final_design = design
@@ -538,7 +538,7 @@ def show_high_recommendation_without_explanation():
                             st.markdown(f"<p style='text-align:center;'>设计 {i+1}</p>", unsafe_allow_html=True)
                         
                         # 显示设计并添加点击功能
-                        clicked = st.image(design, use_column_width=True)
+                        clicked = st.image(design, use_container_width=True)
                         if st.button(f"选择设计 {i+1}", key=f"select_design_{i}"):
                             st.session_state.selected_design_index = i
                             st.session_state.final_design = design
@@ -590,8 +590,6 @@ def show_high_recommendation_without_explanation():
         """, unsafe_allow_html=True)
         
         # 推荐级别选择（横向按钮）
-        st.markdown("#### 选择推荐级别：")
-        
         rec_cols = st.columns(3)
         levels = ["low", "medium", "high"]
         level_names = ["低级别 (1个)", "中级别 (3个)", "高级别 (5个)"]
@@ -599,16 +597,9 @@ def show_high_recommendation_without_explanation():
         # 使用会话状态记录选择
         for i, (level, name) in enumerate(zip(levels, level_names)):
             with rec_cols[i]:
-                selected_class = "recommendation-selected" if st.session_state.recommendation_level == level else "recommendation-normal"
-                st.markdown(f"""
-                <div class="recommendation-option {selected_class}" id="{level}-option">
-                    <p style="text-align:center; margin:0; font-weight:{'bold' if st.session_state.recommendation_level == level else 'normal'};">
-                        {name}
-                    </p>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                if st.button(f"选择{name}", key=f"rec_level_{level}"):
+                if st.button(name, key=f"rec_level_{level}", 
+                           type="primary" if st.session_state.recommendation_level == level else "secondary",
+                           use_container_width=True):
                     st.session_state.recommendation_level = level
                     st.rerun()
         
