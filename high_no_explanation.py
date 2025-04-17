@@ -245,7 +245,7 @@ def apply_text_to_shirt(image, text, color_hex="#FFFFFF", font_size=80):
     
     return result_image
 
-def apply_logo_to_shirt(shirt_image, logo_image, position="center", size_percent=30, opacity=100):
+def apply_logo_to_shirt(shirt_image, logo_image, position="center", size_percent=30):
     """将logo应用到T恤图像上"""
     if logo_image is None:
         return shirt_image
@@ -269,34 +269,12 @@ def apply_logo_to_shirt(shirt_image, logo_image, position="center", size_percent
     # 根据位置确定坐标
     position = position.lower() if isinstance(position, str) else "center"
     
-    if position == "top-left":
-        logo_x, logo_y = chest_left + 10, chest_top + 10
-    elif position == "top-center":
+    if position == "top-center":
         logo_x, logo_y = chest_left + (chest_width - logo_width) // 2, chest_top + 10
-    elif position == "top-right":
-        logo_x, logo_y = chest_left + chest_width - logo_width - 10, chest_top + 10
-    elif position == "center-left":
-        logo_x, logo_y = chest_left + 10, chest_top + (chest_height - logo_height) // 2
-    elif position == "center-right":
-        logo_x, logo_y = chest_left + chest_width - logo_width - 10, chest_top + (chest_height - logo_height) // 2
-    elif position == "bottom-left":
-        logo_x, logo_y = chest_left + 10, chest_top + chest_height - logo_height - 10
-    elif position == "bottom-center":
-        logo_x, logo_y = chest_left + (chest_width - logo_width) // 2, chest_top + chest_height - logo_height - 10
-    elif position == "bottom-right":
-        logo_x, logo_y = chest_left + chest_width - logo_width - 10, chest_top + chest_height - logo_height - 10
-    else:  # center
+    elif position == "center":
         logo_x, logo_y = chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2 + 30  # 略微偏下
-    
-    # 设置透明度
-    if opacity < 100:
-        logo_data = logo_resized.getdata()
-        new_data = []
-        for item in logo_data:
-            r, g, b, a = item
-            new_a = int(a * opacity / 100)
-            new_data.append((r, g, b, new_a))
-        logo_resized.putdata(new_data)
+    else:  # 默认中间
+        logo_x, logo_y = chest_left + (chest_width - logo_width) // 2, chest_top + (chest_height - logo_height) // 2 + 30
     
     # 创建临时图像用于粘贴logo
     temp_image = Image.new("RGBA", result_image.size, (0, 0, 0, 0))
@@ -360,20 +338,16 @@ def generate_complete_design(design_prompt):
         logo_image = None
         
         if logo_description:
-            logo_prompt = f"Create a Logo design: {logo_description}. Requirements: 1. Simple professional design 2. Suitable for T-shirt printing 3. Transparent background 4. Clear and recognizable图案清晰可识别"
+            # 修改Logo提示词，确保生成的Logo有白色背景，没有透明部分
+            logo_prompt = f"Create a Logo design for T-shirt printing: {logo_description}. Requirements: 1. Simple professional design 2. Solid white background (NO TRANSPARENCY) 3. Clear and distinct graphic 4. Good contrast with colors that will show well on fabric"
             logo_image = generate_vector_image(logo_prompt)
         
-        # 3. 应用文字
-        text = design_suggestions.get("text", "")
-        text_color = "#FFFFFF" if color_hex.lower() in ["#000000", "#0000ff", "#ff0000", "#800080"] else "#000000"
+        # 最终设计 - 不添加文字
+        final_design = colored_shirt
         
-        # 应用文字
-        design_with_text = apply_text_to_shirt(colored_shirt, text, text_color)
-        
-        # 4. 应用Logo
-        final_design = design_with_text
+        # 应用Logo (如果有)
         if logo_image:
-            final_design = apply_logo_to_shirt(design_with_text, logo_image, "center", 30)
+            final_design = apply_logo_to_shirt(colored_shirt, logo_image, "center", 30)
         
         return final_design, design_suggestions
     
@@ -441,55 +415,6 @@ def show_high_recommendation_without_explanation():
                 
                 st.session_state.is_generating = False
                 st.rerun()
-        
-        # 显示设计信息
-        if (st.session_state.design_info is not None and 
-            isinstance(st.session_state.design_info, dict) and 
-            "error" not in st.session_state.design_info):
-            st.markdown("### 设计方案详情")
-            
-            try:
-                info = st.session_state.design_info
-                
-                # 颜色信息
-                color_info = info.get("color", {})
-                color_name = color_info.get("name", "未指定")
-                color_hex = color_info.get("hex", "#FFFFFF")
-                
-                st.markdown(f"""
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    margin-bottom: 10px;
-                ">
-                    <div style="
-                        background-color: {color_hex}; 
-                        width: 20px; 
-                        height: 20px; 
-                        border-radius: 3px;
-                        border: 1px solid #ddd;
-                        margin-right: 10px;
-                    "></div>
-                    <div><strong>颜色:</strong> {color_name} ({color_hex})</div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # 面料信息
-                fabric = info.get("fabric", "未指定")
-                st.markdown(f"**面料:** {fabric}")
-                
-                # 文字信息
-                text = info.get("text", "")
-                if text:
-                    st.markdown(f"**文字设计:** \"{text}\"")
-                
-                # Logo信息
-                logo = info.get("logo", "")
-                if logo:
-                    st.markdown(f"**Logo元素:** {logo}")
-            
-            except Exception as e:
-                st.error(f"显示设计信息时出错: {str(e)}")
     
     # 下载按钮 (在主区域底部)
     if st.session_state.final_design is not None:
