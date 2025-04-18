@@ -207,7 +207,7 @@ def main():
             show_low_recommendation_with_explanation()
         elif st.session_state.experiment_group == "AI Creation Group":
             show_high_recommendation_with_explanation()
-        elif st.session_state.experiment_group == "Preset Design Group":
+        elif st.session_state.experiment_group == "study1: The Effects of AI Recommendation Levels on AI Creativity":
             show_high_recommendation_without_explanation()
         else:
             st.error("实验组类型错误，请返回首页重新选择")

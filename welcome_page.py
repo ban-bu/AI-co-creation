@@ -84,7 +84,7 @@ def show_welcome_page():
         - Professional design tools
         """)
         if st.button("Choose High Recommendation - No Explanation"):
-            st.session_state.experiment_group = "Preset Design Group"
+            st.session_state.experiment_group = "study1: The Effects of AI Recommendation Levels on AI Creativity"
             st.session_state.user_info = {
                 'age': 25,
                 'gender': "Male",
@@ -138,8 +138,8 @@ def show_welcome_page():
                     st.write(f"Total participants: {len(experiment_df)}")
                     st.write(f"Low Recommendation - No Explanation: {group_counts.get('AI Customization Group', 0)} people")
                     st.write(f"Low Recommendation - With Explanation: {group_counts.get('AI Design Group', 0)} people")
-                    st.write(f"High Recommendation - No Explanation: {group_counts.get('AI Creation Group', 0)} people")
-                    st.write(f"High Recommendation - With Explanation: {group_counts.get('Preset Design Group', 0)} people")
+                    st.write(f"High Recommendation - No Explanation: {group_counts.get('study1: The Effects of AI Recommendation Levels on AI Creativity', 0)} people")
+                    st.write(f"High Recommendation - With Explanation: {group_counts.get('AI Creation Group', 0)} people")
                     
                     # Purchase intention comparison
                     st.markdown("#### Purchase Intention Comparison")
