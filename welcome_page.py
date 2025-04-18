@@ -26,52 +26,9 @@ def show_welcome_page():
     
     st.markdown("### Please select your experiment group")
     
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### Study 3: The Moderating Role of Keyword Style")
-        st.markdown("""
-        - The Moderating Role of Keyword Style
-        """)
-        if st.button("study3"):
-            st.session_state.experiment_group = "AI Customization Group"
-            st.session_state.user_info = {
-                'age': 25,
-                'gender': "Male",
-                'shopping_frequency': "Weekly",
-                'customize_experience': "Some experience",
-                'ai_attitude': 5,
-                'uniqueness_importance': 5
-            }
-            st.session_state.page = "design"
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col2:
-        st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### Low Recommendation - With Explanation")
-        st.markdown("""
-        - Simple customization tasks
-        - Basic design options
-        - AI design explanations
-        - Smart recommendations
-        """)
-        if st.button("Choose Low Recommendation - With Explanation"):
-            st.session_state.experiment_group = "AI Design Group"
-            st.session_state.user_info = {
-                'age': 25,
-                'gender': "Male",
-                'shopping_frequency': "Weekly",
-                'customize_experience': "Some experience",
-                'ai_attitude': 5,
-                'uniqueness_importance': 5
-            }
-            st.session_state.page = "design"
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    with col3:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
         st.markdown("#### study1")
         st.markdown("""
@@ -90,8 +47,8 @@ def show_welcome_page():
             st.session_state.page = "design"
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
-        
-    with col4:
+    
+    with col2:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
         st.markdown("#### Study 2: The Moderating Role of User Involvement")
         st.markdown("""
@@ -99,6 +56,26 @@ def show_welcome_page():
         """)
         if st.button("study2"):
             st.session_state.experiment_group = "AI Creation Group"
+            st.session_state.user_info = {
+                'age': 25,
+                'gender': "Male",
+                'shopping_frequency': "Weekly",
+                'customize_experience': "Some experience",
+                'ai_attitude': 5,
+                'uniqueness_importance': 5
+            }
+            st.session_state.page = "design"
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+        
+    with col3:
+        st.markdown('<div class="group-card">', unsafe_allow_html=True)
+        st.markdown("#### Study 3: The Moderating Role of Keyword Style")
+        st.markdown("""
+        - The Moderating Role of Keyword Style
+        """)
+        if st.button("study3"):
+            st.session_state.experiment_group = "AI Customization Group"
             st.session_state.user_info = {
                 'age': 25,
                 'gender': "Male",
@@ -127,10 +104,9 @@ def show_welcome_page():
                     st.markdown("#### Participant Statistics")
                     group_counts = experiment_df['experiment_group'].value_counts()
                     st.write(f"Total participants: {len(experiment_df)}")
-                    st.write(f"Low Recommendation - No Explanation: {group_counts.get('AI Customization Group', 0)} people")
-                    st.write(f"Low Recommendation - With Explanation: {group_counts.get('AI Design Group', 0)} people")
                     st.write(f"study1: {group_counts.get('study1: The Effects of AI Recommendation Levels on AI Creativity', 0)} people")
-                    st.write(f"High Recommendation - With Explanation: {group_counts.get('AI Creation Group', 0)} people")
+                    st.write(f"Study 2: {group_counts.get('AI Creation Group', 0)} people")
+                    st.write(f"Study 3: {group_counts.get('AI Customization Group', 0)} people")
                     
                     # Purchase intention comparison
                     st.markdown("#### Purchase Intention Comparison")
