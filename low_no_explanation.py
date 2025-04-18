@@ -596,119 +596,62 @@ def show_low_recommendation_without_explanation():
                     st.info("Could not load original T-shirt image, please refresh the page")
     
     with input_col:
-        # 设计提示词和推荐级别选择区
+        # 设计提示词和关键词选择区
         st.markdown("### Design Options")
         
-        # 重新实现推荐级别选择，确保不会有两排按钮
-        level_cols = st.columns(3)
-        levels = ["hedonic", "functional"]
-        level_labels = ["Hedonic", "Functional"]
+        # 创建两个选项卡，一个用于关键词选择，一个用于描述
+        tab1, tab2 = st.tabs(["🔤 Keywords", "📝 Description"])
         
-        with level_cols[0]:
-            if st.button(level_labels[0], key="btn_hedonic", 
-                       type="primary" if st.session_state.keyword_style == "hedonic" else "secondary",
-                       use_container_width=True):
-                st.session_state.keyword_style = "hedonic"
-                st.rerun()
-                
-        with level_cols[1]:
-            if st.button(level_labels[1], key="btn_functional", 
-                       type="primary" if st.session_state.keyword_style == "functional" else "secondary",
-                       use_container_width=True):
-                st.session_state.keyword_style = "functional"
-                st.rerun()
-        
-        # 提示词输入区
-        st.markdown("#### Describe your desired T-shirt design:")
-        
-        # 添加根据风格的不同说明
-        if st.session_state.keyword_style == "hedonic":
+        with tab1:
+            st.markdown("#### Select keywords for your T-shirt design:")
+            
+            # 创建统一的关键词列表（混合hedonic和functional关键词）
+            all_keywords = [
+                "Elegant", "Durable", "Vibrant", "Comfortable", 
+                "Artistic", "Breathable", "Playful", "Lightweight", 
+                "Stylish", "Practical"
+            ]
+            
+            # 添加关键词说明
             st.markdown("""
             <div style="margin-bottom: 15px; padding: 10px; background-color: #f0f2f6; border-radius: 5px;">
-            <p style="margin: 0; font-size: 14px;"><strong>Hedonic Keywords:</strong> Words associated with emotions, sentiments, or aesthetic qualities.<br>
-            Examples: happy, emotional, elegant, vibrant, playful, nostalgic, sentimental, artistic.</p>
+            <p style="margin: 0; font-size: 14px;">Select multiple keywords to describe your ideal T-shirt design. 
+            Our AI will combine these features to create a unique design for you.</p>
             </div>
             """, unsafe_allow_html=True)
             
-            # Hedonic风格的关键词选项
-            hedonic_keywords = [
-                "Elegant", "Vibrant", "Playful", "Nostalgic", "Artistic", 
-                "Joyful", "Sentimental", "Passionate", "Cozy", "Stylish",
-                "Dreamy", "Bold", "Minimalist", "Retro", "Cheerful"
-            ]
-            
-            # 创建3行5列的选择布局
-            for i in range(0, len(hedonic_keywords), 5):
-                keyword_cols = st.columns(5)
+            # 创建两行五列的选择布局
+            for i in range(0, len(all_keywords), 5):
+                cols = st.columns(5)
                 for j in range(5):
-                    if i+j < len(hedonic_keywords):
-                        with keyword_cols[j]:
-                            key_name = f"keyword_{hedonic_keywords[i+j].lower()}"
-                            if key_name not in st.session_state:
-                                st.session_state[key_name] = False
-                            st.session_state[key_name] = st.checkbox(hedonic_keywords[i+j], value=st.session_state[key_name], key=key_name)
+                    if i+j < len(all_keywords):
+                        with cols[j]:
+                            # 使用唯一标识符作为键
+                            keyword = all_keywords[i+j]
+                            key_name = f"kw_{keyword.lower()}"
+                            # 复选框默认不选中
+                            st.checkbox(keyword, key=key_name)
             
             # 自定义输入框
             st.markdown("#### Add your own keywords:")
             
-            # 初始化关键词状态
-            if 'custom_keyword1' not in st.session_state:
-                st.session_state.custom_keyword1 = ""
-            if 'custom_keyword2' not in st.session_state:
-                st.session_state.custom_keyword2 = ""
-            
+            # 创建两个自定义关键词输入框
             custom_cols = st.columns(2)
             with custom_cols[0]:
-                custom_keyword1 = st.text_input("Custom Keyword 1", value=st.session_state.custom_keyword1, 
-                                              placeholder="e.g., exciting", key="input_custom1")
+                custom_keyword1 = st.text_input("Custom Keyword 1", 
+                                              placeholder="e.g., blue", key="custom1")
             
             with custom_cols[1]:
-                custom_keyword2 = st.text_input("Custom Keyword 2", value=st.session_state.custom_keyword2, 
-                                              placeholder="e.g., enchanting", key="input_custom2")
-        else:
-            # Functional风格说明
-            st.markdown("""
-            <div style="margin-bottom: 15px; padding: 10px; background-color: #f0f2f6; border-radius: 5px;">
-            <p style="margin: 0; font-size: 14px;"><strong>Functional Keywords:</strong> Words associated with practical or technical attributes.<br>
-            Examples: durable, high-tech, breathable, water-resistant, comfortable, versatile, lightweight.</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-            # Functional风格的关键词选项
-            functional_keywords = [
-                "Durable", "Breathable", "Lightweight", "Comfortable", "Versatile",
-                "Water-resistant", "High-tech", "Athletic", "Practical", "Insulated",
-                "Quick-dry", "Sustainable", "UV-protective", "Stretchy", "Antimicrobial"
-            ]
-            
-            # 创建3行5列的选择布局
-            for i in range(0, len(functional_keywords), 5):
-                keyword_cols = st.columns(5)
-                for j in range(5):
-                    if i+j < len(functional_keywords):
-                        with keyword_cols[j]:
-                            key_name = f"keyword_{functional_keywords[i+j].lower()}"
-                            if key_name not in st.session_state:
-                                st.session_state[key_name] = False
-                            st.session_state[key_name] = st.checkbox(functional_keywords[i+j], value=st.session_state[key_name], key=key_name)
-            
-            # 自定义输入框
-            st.markdown("#### Add your own keywords:")
-            
-            # 初始化关键词状态
-            if 'custom_keyword1' not in st.session_state:
-                st.session_state.custom_keyword1 = ""
-            if 'custom_keyword2' not in st.session_state:
-                st.session_state.custom_keyword2 = ""
-            
-            custom_cols = st.columns(2)
-            with custom_cols[0]:
-                custom_keyword1 = st.text_input("Custom Keyword 1", value=st.session_state.custom_keyword1, 
-                                              placeholder="e.g., stain-resistant", key="input_custom1")
-            
-            with custom_cols[1]:
-                custom_keyword2 = st.text_input("Custom Keyword 2", value=st.session_state.custom_keyword2, 
-                                              placeholder="e.g., moisture-wicking", key="input_custom2")
+                custom_keyword2 = st.text_input("Custom Keyword 2", 
+                                              placeholder="e.g., nature", key="custom2")
+        
+        with tab2:
+            # 提供更详细的描述输入
+            st.markdown("#### Add a detailed description (optional):")
+            user_description = st.text_area("Describe what you want for your T-shirt design", 
+                                          placeholder="e.g., I want a casual T-shirt with nature elements...", 
+                                          key="description",
+                                          height=100)
         
         # 生成设计按钮
         generate_col = st.empty()
@@ -724,36 +667,30 @@ def show_low_recommendation_without_explanation():
             # 收集选择的关键词
             selected_keywords = []
             
-            # 根据风格收集选中的关键词
-            if st.session_state.keyword_style == "hedonic":
-                keywords_list = hedonic_keywords
-            else:
-                keywords_list = functional_keywords
-                
-            for keyword in keywords_list:
-                key_name = f"keyword_{keyword.lower()}"
+            # 收集选中的关键词
+            for keyword in all_keywords:
+                key_name = f"kw_{keyword.lower()}"
                 if key_name in st.session_state and st.session_state[key_name]:
                     selected_keywords.append(keyword)
             
             # 添加自定义关键词
-            st.session_state.custom_keyword1 = custom_keyword1
-            st.session_state.custom_keyword2 = custom_keyword2
-            
-            if custom_keyword1:
-                selected_keywords.append(custom_keyword1)
-            if custom_keyword2:
-                selected_keywords.append(custom_keyword2)
+            if custom_keyword1.strip():
+                selected_keywords.append(custom_keyword1.strip())
+            if custom_keyword2.strip():
+                selected_keywords.append(custom_keyword2.strip())
             
             # 检查是否至少选择了一个关键词
-            if not selected_keywords:
-                message_area.error("Please select at least one keyword or enter a custom keyword")
+            if not selected_keywords and not user_description.strip():
+                message_area.error("Please select at least one keyword or provide a description")
             else:
                 # 组合关键词成为完整提示词
-                user_prompt = ", ".join(selected_keywords)
-                if st.session_state.keyword_style == "hedonic":
-                    user_prompt += " (hedonic t-shirt design)"
-                else:
-                    user_prompt += " (functional t-shirt design)"
+                prompt_parts = []
+                if selected_keywords:
+                    prompt_parts.append(", ".join(selected_keywords))
+                if user_description.strip():
+                    prompt_parts.append(user_description.strip())
+                
+                user_prompt = " - ".join(prompt_parts)
                 
                 # 保存用户输入
                 st.session_state.user_prompt = user_prompt
@@ -827,29 +764,18 @@ def show_low_recommendation_without_explanation():
         # 重置基本状态变量
         for key in ['user_prompt', 'final_design', 'design_info', 'is_generating', 
                     'keyword_style', 'generated_designs', 'selected_design_index',
-                    'custom_keyword1', 'custom_keyword2']:
+                    'description', 'custom1', 'custom2']:
             if key in st.session_state:
                 del st.session_state[key]
         
-        # 清除所有hedonic关键词复选框状态
-        hedonic_keywords = [
-            "Elegant", "Vibrant", "Playful", "Nostalgic", "Artistic", 
-            "Joyful", "Sentimental", "Passionate", "Cozy", "Stylish",
-            "Dreamy", "Bold", "Minimalist", "Retro", "Cheerful"
+        # 清除所有关键词复选框状态
+        all_keywords = [
+            "Elegant", "Durable", "Vibrant", "Comfortable", 
+            "Artistic", "Breathable", "Playful", "Lightweight", 
+            "Stylish", "Practical"
         ]
-        for keyword in hedonic_keywords:
-            key_name = f"keyword_{keyword.lower()}"
-            if key_name in st.session_state:
-                del st.session_state[key_name]
-        
-        # 清除所有functional关键词复选框状态
-        functional_keywords = [
-            "Durable", "Breathable", "Lightweight", "Comfortable", "Versatile",
-            "Water-resistant", "High-tech", "Athletic", "Practical", "Insulated",
-            "Quick-dry", "Sustainable", "UV-protective", "Stretchy", "Antimicrobial"
-        ]
-        for keyword in functional_keywords:
-            key_name = f"keyword_{keyword.lower()}"
+        for keyword in all_keywords:
+            key_name = f"kw_{keyword.lower()}"
             if key_name in st.session_state:
                 del st.session_state[key_name]
         
