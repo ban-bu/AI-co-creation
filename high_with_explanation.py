@@ -694,10 +694,17 @@ def show_high_recommendation_with_explanation():
     st.markdown("---")
     if st.button("🏠 Return to Home"):
         # 重置相关状态变量
+        # 基础状态变量
         for key in ['user_prompt', 'final_design', 'design_info', 'is_generating', 
-                    'recommendation_level', 'generated_designs', 'selected_design_index']:
+                   'recommendation_level', 'generated_designs', 'selected_design_index']:
             if key in st.session_state:
                 del st.session_state[key]
+                
+        # 清除所有可能的关键词输入变量（支持到10个关键词）
+        for i in range(1, 11):
+            key_name = f'keyword{i}'
+            if key_name in st.session_state:
+                del st.session_state[key_name]
         
         # 设置页面为welcome
         st.session_state.page = "welcome"
