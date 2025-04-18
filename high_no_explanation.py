@@ -627,27 +627,63 @@ def show_high_recommendation_without_explanation():
         
         # 提示词输入区
         st.markdown("#### Describe your desired T-shirt design:")
-        user_prompt = st.text_area(
-            "Design Prompt",
-            value=st.session_state.user_prompt,
-            height=120,
-            placeholder="e.g., sports style, business style, casual, holiday theme, etc."
-        )
+        
+        # 添加简短说明
+        st.markdown("""
+        <div style="margin-bottom: 15px; padding: 10px; background-color: #f0f2f6; border-radius: 5px;">
+        <p style="margin: 0; font-size: 14px;">Enter three keywords to describe your ideal T-shirt design. 
+        Our AI will combine these features to create unique designs for you.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # 三个关键词输入框
+        keyword_cols = st.columns(3)
+        
+        # 初始化关键词状态
+        if 'keyword1' not in st.session_state:
+            st.session_state.keyword1 = ""
+        if 'keyword2' not in st.session_state:
+            st.session_state.keyword2 = ""
+        if 'keyword3' not in st.session_state:
+            st.session_state.keyword3 = ""
+        
+        # 关键词输入框
+        with keyword_cols[0]:
+            keyword1 = st.text_input("Style", value=st.session_state.keyword1, 
+                                    placeholder="e.g., casual, elegant", key="input_keyword1")
+        
+        with keyword_cols[1]:
+            keyword2 = st.text_input("Theme", value=st.session_state.keyword2, 
+                                    placeholder="e.g., nature, sports", key="input_keyword2")
+        
+        with keyword_cols[2]:
+            keyword3 = st.text_input("Color", value=st.session_state.keyword3, 
+                                    placeholder="e.g., blue, vibrant", key="input_keyword3")
         
         # 生成设计按钮
         generate_col = st.empty()
         with generate_col:
             generate_button = st.button("🎨 Generate T-shirt Design", key="generate_design", use_container_width=True)
-
+        
         # 创建进度和消息区域在输入框下方
         progress_area = st.empty()
         message_area = st.empty()
         
         # 生成设计按钮事件处理
         if generate_button:
-            if not user_prompt:
-                st.error("Please enter a design prompt")
+            # 保存用户输入的关键词
+            st.session_state.keyword1 = keyword1
+            st.session_state.keyword2 = keyword2
+            st.session_state.keyword3 = keyword3
+            
+            # 检查是否至少输入了一个关键词
+            if not (keyword1 or keyword2 or keyword3):
+                st.error("Please enter at least one keyword")
             else:
+                # 组合关键词成为完整提示词
+                keywords = [k for k in [keyword1, keyword2, keyword3] if k]
+                user_prompt = ", ".join(keywords)
+                
                 # 保存用户输入
                 st.session_state.user_prompt = user_prompt
                 
