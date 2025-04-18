@@ -30,14 +30,11 @@ def show_welcome_page():
     
     with col1:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### Low Recommendation - No Explanation")
+        st.markdown("#### Study 3: The Moderating Role of Keyword Style")
         st.markdown("""
-        - Simple customization tasks
-        - Basic design options
-        - No AI explanation
-        - Intuitive interface
+        - The Moderating Role of Keyword Style
         """)
-        if st.button("Choose Low Recommendation - No Explanation"):
+        if st.button("study3"):
             st.session_state.experiment_group = "AI Customization Group"
             st.session_state.user_info = {
                 'age': 25,
@@ -96,14 +93,11 @@ def show_welcome_page():
         
     with col4:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### High Recommendation - With Explanation")
+        st.markdown("#### Study 2: The Moderating Role of User Involvement")
         st.markdown("""
-        - Advanced customization options
-        - Rich design features
-        - AI design explanations
-        - Intelligent design assistance
+        - The Moderating Role of User Involvement
         """)
-        if st.button("Choose High Recommendation - With Explanation"):
+        if st.button("study2"):
             st.session_state.experiment_group = "AI Creation Group"
             st.session_state.user_info = {
                 'age': 25,
