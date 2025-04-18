@@ -442,8 +442,8 @@ def generate_multiple_designs(design_prompt, count=1):
     return designs
 
 def show_low_recommendation_without_explanation():
-    st.title("👕 AI Co-Creation Experiment Platform")
-    st.markdown("### Low AI Recommendation - Let AI Design Your T-shirt")
+    st.title("👕 AI Recommendation Experiment Platform")
+    st.markdown("### Study3-Let AI Design Your T-shirt")
     
     # 初始化会话状态变量
     if 'user_prompt' not in st.session_state:
@@ -536,7 +536,7 @@ def show_low_recommendation_without_explanation():
                     
                     # 显示第二行
                     for i in range(3, design_count):
-                        with row2_cols[i-3]:
+                        with row2_cols[i-3]:  
                             design, _ = st.session_state.generated_designs[i]
                             # 添加选中状态的样式
                             if i == st.session_state.selected_design_index:

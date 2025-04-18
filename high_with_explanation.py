@@ -442,8 +442,8 @@ def generate_multiple_designs(design_prompt, count=1):
     return designs
 
 def show_high_recommendation_with_explanation():
-    st.title("👕 AI Co-Creation Experiment Platform")
-    st.markdown("### High AI Recommendation - Let AI Design Your T-shirt")
+    st.title("👕 AI Recommendation Experiment Platform")
+    st.markdown("### Study2-Let AI Design Your T-shirt")
     
     # 初始化会话状态变量
     if 'user_prompt' not in st.session_state:
