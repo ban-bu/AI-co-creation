@@ -76,14 +76,11 @@ def show_welcome_page():
     
     with col3:
         st.markdown('<div class="group-card">', unsafe_allow_html=True)
-        st.markdown("#### High Recommendation - No Explanation")
+        st.markdown("#### study1")
         st.markdown("""
-        - Advanced customization options
-        - Rich design features
-        - No AI explanation
-        - Professional design tools
+        - The Effects of AI Recommendation Levels on AI Creativity
         """)
-        if st.button("Choose High Recommendation - No Explanation"):
+        if st.button("study1"):
             st.session_state.experiment_group = "study1: The Effects of AI Recommendation Levels on AI Creativity"
             st.session_state.user_info = {
                 'age': 25,
@@ -138,7 +135,7 @@ def show_welcome_page():
                     st.write(f"Total participants: {len(experiment_df)}")
                     st.write(f"Low Recommendation - No Explanation: {group_counts.get('AI Customization Group', 0)} people")
                     st.write(f"Low Recommendation - With Explanation: {group_counts.get('AI Design Group', 0)} people")
-                    st.write(f"High Recommendation - No Explanation: {group_counts.get('study1: The Effects of AI Recommendation Levels on AI Creativity', 0)} people")
+                    st.write(f"study1: {group_counts.get('study1: The Effects of AI Recommendation Levels on AI Creativity', 0)} people")
                     st.write(f"High Recommendation - With Explanation: {group_counts.get('AI Creation Group', 0)} people")
                     
                     # Purchase intention comparison
